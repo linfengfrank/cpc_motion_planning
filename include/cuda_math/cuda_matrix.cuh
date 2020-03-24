@@ -54,31 +54,43 @@ public:
 
   }
 
+//  __device__
+//  int grid2index(int g[N]) const
+//  {
+//    int idx = 0;
+//    for (int i = 0; i < N; ++i)
+//    {
+//      for (int j = i+1; j < N; ++j)
+//      {
+//        g[i] *= m_dim_width[j];
+//      }
+//      idx += g[i];
+//    }
+//    return idx;
+//  }
+
+//  __device__
+//  T& at(int g[N])
+//  {
+//    return m_data[grid2index(g)];
+//  }
+
+//  __device__
+//  const T& const_at(int g[N]) const
+//  {
+//    return m_data[grid2index(g)];
+//  }
+
   __device__
-  int grid2index(int g[N]) const
+  T& at(int i)
   {
-    int idx = 0;
-    for (int i = 0; i < N; ++i)
-    {
-      for (int j = i+1; j < N; ++j)
-      {
-        g[i] *= m_dim_width[j];
-      }
-      idx += g[i];
-    }
-    return idx;
+    return m_data[i];
   }
 
   __device__
-  T& at(int g[N])
+  const T& const_at(int i) const
   {
-    return m_data[grid2index(g)];
-  }
-
-  __device__
-  const T& const_at(int g[N]) const
-  {
-    return m_data[grid2index(g)];
+    return m_data[i];
   }
 
   size_t m_dim_width[N];
@@ -87,46 +99,20 @@ public:
 };
 
 typedef Matrix<1,float> Vecf;
+typedef Matrix<3,float> Mat3f;
 
-
-// Only works for N = 1
 __device__ __forceinline__
-int search_idx(float val, const Vecf &bins)
+float& mat3f_get_val(int i, int j, int k, Mat3f &mat)
 {
-    int M = static_cast<int>(bins.m_dim_width[0] - 1);
-    int left = 0;
-    int right = M;
-    int mid = 0;
-    int idx = 0;
-
-    if (val >= bins.const_at(&M))
-    {
-        idx = M-1;
-    }
-    else
-    {
-        while(1)
-        {
-            mid = (left+right)/2;
-            if (val >= bins.const_at(&mid))
-            {
-                left = mid;
-            }
-            else
-            {
-                right = mid;
-            }
-
-            if (right - left == 1)
-            {
-                idx = left;
-                break;
-            }
-        }
-    }
-
-    return idx;
+  int idx = i*mat.m_dim_width[1]*mat.m_dim_width[2] + j*mat.m_dim_width[2] + k;
+  return mat.at(idx);
 }
 
+__device__ __forceinline__
+const float& mat3f_get_val_const(int i, int j, int k, const Mat3f &mat)
+{
+  int idx = i*mat.m_dim_width[1]*mat.m_dim_width[2] + j*mat.m_dim_width[2] + k;
+  return mat.const_at(idx);
+}
 }
 #endif

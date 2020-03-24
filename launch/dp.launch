@@ -1,5 +1,6 @@
+<?xml version="1.0"?>
 <launch>
-<node pkg="cpc_motion_planning" type="dynamic_programming" name="dynamic_programming" output="screen" launch-prefix="xterm -e cuda-gdb --args">
+<node pkg="cpc_motion_planning" type="dynamic_programming" name="dynamic_programming" output="screen">
   
 </node>
 </launch>
