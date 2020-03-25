@@ -7,15 +7,17 @@ __global__
 void test(CUDA_MAT::Mat4Act S_A, CUDA_MAT::Mat4f S_old, CUDA_MAT::Mat4f S_new, CUDA_MAT::Vecf bin_p, CUDA_MAT::Vecf bin_v, CUDA_MAT::Vecf bin_theta, CUDA_MAT::Vecf bin_w)
 {
   float s_curr[4];
-  s_curr[0] =  -2.5f + 0.1f*blockIdx.x;
-  s_curr[1] =  -2.5f + 0.1f*blockIdx.y;
-  s_curr[2] =  -2.5f + 0.1f*blockIdx.z;
+  s_curr[0] =  -10.0f + 0.4f*blockIdx.x;
+  s_curr[1] =  -5.0f + 0.2f*blockIdx.y;
+  s_curr[2] =  -3.14f + 0.13f*blockIdx.z;
   s_curr[3] =  -2.5f + 0.1f*threadIdx.x;
 
 
   float val;
   float s_next[4];
   float val_min = 10000;
+  float acc_lat;
+  float acc_tot;
   dp_action best_action;
   bool updated = false;
 
@@ -27,8 +29,31 @@ void test(CUDA_MAT::Mat4Act S_A, CUDA_MAT::Mat4f S_old, CUDA_MAT::Mat4f S_new, C
       s_next[1] = s_curr[1] + acc*DT;
       s_next[2] = s_curr[2] + s_curr[3]*DT + 0.5*alpha*DT*DT;
       s_next[3] = s_curr[3] + alpha*DT;
-      val = acc*acc + alpha*alpha + CUDA_MAT::get_value(s_next,S_old,bin_p,bin_v,bin_theta,bin_w) +
-          s_next[0]*s_next[0] + s_next[1]*s_next[1] +s_next[2]*s_next[2] + s_next[3]*s_next[3];
+      val = 0.5*acc*acc + 0.5*alpha*alpha + CUDA_MAT::get_value(s_next,S_old,bin_p,bin_v,bin_theta,bin_w) +
+          0.4*s_next[0]*s_next[0] + s_next[1]*s_next[1] +s_next[2]*s_next[2] + s_next[3]*s_next[3];
+      if (s_next[1] - 4 > 0)
+        val += 10*(s_next[1] - 4);
+
+      if (s_next[1] < -4)
+        val += 10*(-s_next[1] - 4);
+
+      if (s_next[3] - 2 > 0)
+        val += 10*(s_next[3] - 2);
+
+      if (s_next[3] < -2)
+        val += 10*(-s_next[3] - 2);
+
+      acc_lat = s_next[1]*s_next[3];
+      acc_tot = sqrt(acc_lat*acc_lat + acc*acc);
+
+      if (fabs(acc_lat) > 2)
+        val += 10*(fabs(acc_lat) - 2);
+
+      if (acc_tot - 3 > 0)
+        val += 10*(acc_tot - 3);
+
+      val+= 0.5*acc_tot*acc_tot;
+
       if (val < val_min)
       {
         updated = true;
@@ -60,7 +85,7 @@ void program(const CUDA_MAT::Mat4Act &S_A, const CUDA_MAT::Mat4f &S_1, const CUD
   block_size.y = 1;
   block_size.z = 1;
 
-  for (int i=0; i<100; i++)
+  for (int i=0; i<140; i++)
   {
     printf("Iteration %d\n",i);
     if (i % 2 == 0)
