@@ -143,18 +143,19 @@ namespace GPU_DP
 __device__ __host__ __forceinline__
 float pos_gen_val(int i)
 {
-  if (i<15)
-  {
-    return -9.0f + 0.5f*static_cast<float>(i);
-  }
-  else if (i>34)
-  {
-    return -15.0f + 0.5f*static_cast<float>(i);
-  }
-  else
-  {
-    return -4.8f + 0.2f*static_cast<float>(i);
-  }
+//  if (i<15)
+//  {
+//    return -9.0f + 0.5f*static_cast<float>(i);
+//  }
+//  else if (i>34)
+//  {
+//    return -15.0f + 0.5f*static_cast<float>(i);
+//  }
+//  else
+//  {
+//    return -4.8f + 0.2f*static_cast<float>(i);
+//  }
+  return -10.0f + 0.2f*static_cast<float>(i);
 }
 
 __device__ __host__ __forceinline__

@@ -12,7 +12,7 @@ int main(int argc, char **argv)
   std::cout<<"Allocating device memory"<<std::endl;
   std::ofstream myfile;
   //------
-  size_t M_pos = 50;
+  size_t M_pos = 100;
   CUDA_MAT::Vecf pos_bins(&M_pos);
   pos_bins.setup_device();
   float *pos_bin_data = new float[M_pos];
