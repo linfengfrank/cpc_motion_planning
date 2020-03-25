@@ -2,15 +2,14 @@
 #define DT 0.05
 namespace GPU_DP
 {
-
 __global__
 void test(CUDA_MAT::Mat4Act S_A, CUDA_MAT::Mat4f S_old, CUDA_MAT::Mat4f S_new, CUDA_MAT::Vecf bin_p, CUDA_MAT::Vecf bin_v, CUDA_MAT::Vecf bin_theta, CUDA_MAT::Vecf bin_w)
 {
   float s_curr[4];
-  s_curr[0] =  -10.0f + 0.4f*blockIdx.x;
-  s_curr[1] =  -5.0f + 0.2f*blockIdx.y;
-  s_curr[2] =  -3.14f + 0.13f*blockIdx.z;
-  s_curr[3] =  -2.5f + 0.1f*threadIdx.x;
+  s_curr[0] =  pos_gen_val(blockIdx.x);
+  s_curr[1] =  vel_gen_val(blockIdx.y);
+  s_curr[2] =  theta_gen_val(blockIdx.z);
+  s_curr[3] =  w_gen_val(threadIdx.x);
 
 
   float val;
@@ -23,7 +22,7 @@ void test(CUDA_MAT::Mat4Act S_A, CUDA_MAT::Mat4f S_old, CUDA_MAT::Mat4f S_new, C
 
   for (float acc=-2;acc<2;acc+=0.2)
   {
-    for (float alpha=-5;alpha<5;alpha+=0.3)
+    for (float alpha=-3;alpha<3;alpha+=0.3)
     {
       s_next[0] = s_curr[0] + s_curr[1]*DT + 0.5*acc*DT*DT;
       s_next[1] = s_curr[1] + acc*DT;
@@ -76,12 +75,12 @@ void program(const CUDA_MAT::Mat4Act &S_A, const CUDA_MAT::Mat4f &S_1, const CUD
              const CUDA_MAT::Vecf &bin_theta, const CUDA_MAT::Vecf &bin_w)
 {
   dim3 grid_size;
-  grid_size.x = 50;
-  grid_size.y = 50;
-  grid_size.z = 50;
+  grid_size.x = bin_p.m_dim_width[0];
+  grid_size.y = bin_v.m_dim_width[0];
+  grid_size.z = bin_theta.m_dim_width[0];
 
   dim3 block_size;
-  block_size.x = 50;
+  block_size.x = bin_w.m_dim_width[0];
   block_size.y = 1;
   block_size.z = 1;
 

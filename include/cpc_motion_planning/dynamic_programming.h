@@ -140,6 +140,41 @@ dp_action& mat4act_get_val(int i, int j, int k, int n, Mat4Act &mat)
 }
 namespace GPU_DP
 {
+__device__ __host__ __forceinline__
+float pos_gen_val(int i)
+{
+  if (i<15)
+  {
+    return -9.0f + 0.5f*static_cast<float>(i);
+  }
+  else if (i>34)
+  {
+    return -15.0f + 0.5f*static_cast<float>(i);
+  }
+  else
+  {
+    return -4.8f + 0.2f*static_cast<float>(i);
+  }
+}
+
+__device__ __host__ __forceinline__
+float vel_gen_val(int i)
+{
+   return -5.0f + 0.2f*static_cast<float>(i);
+}
+
+__device__ __host__ __forceinline__
+float theta_gen_val(int i)
+{
+   return -3.14f + 0.13f*static_cast<float>(i);
+}
+
+__device__ __host__ __forceinline__
+float w_gen_val(int i)
+{
+   return -2.5f + 0.1f*static_cast<float>(i);
+}
+
 void program(const CUDA_MAT::Mat4Act &S_A, const CUDA_MAT::Mat4f &S_1, const CUDA_MAT::Mat4f &S_2, const CUDA_MAT::Vecf &bin_p, const CUDA_MAT::Vecf &bin_v, const CUDA_MAT::Vecf &bin_theta
              ,const CUDA_MAT::Vecf &bin_w);
 }
