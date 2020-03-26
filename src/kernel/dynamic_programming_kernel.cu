@@ -54,7 +54,7 @@ void test(CUDA_MAT::Mat4Act S_A, CUDA_MAT::Mat4f S_old, CUDA_MAT::Mat4f S_new, C
 
 //      val+= 0.5*acc_tot*acc_tot;
 
-      if (fabs(s_curr[0]) > 0.15 || fabs(s_curr[1]) > 0.15 || fabs(s_curr[2]) > 0.15 || fabs(s_curr[3]) > 0.15)
+      if (fabs(s_curr[0]) > 0.25 || fabs(s_curr[1]) > 0.25 || fabs(s_curr[2]) > 0.25 || fabs(s_curr[3]) > 0.25)
       {
         val += 32;
       }
