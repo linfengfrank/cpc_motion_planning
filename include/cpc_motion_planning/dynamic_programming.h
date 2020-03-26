@@ -155,13 +155,13 @@ float pos_gen_val(int i)
 //  {
 //    return -4.8f + 0.2f*static_cast<float>(i);
 //  }
-  return -6.0f + 0.2f*static_cast<float>(i);
+  return -10.0f + 0.2f*static_cast<float>(i);
 }
 
 __device__ __host__ __forceinline__
 float vel_gen_val(int i)
 {
-   return -2.0f + 0.1f*static_cast<float>(i);
+   return -5.0f + 0.2f*static_cast<float>(i);
 }
 
 __device__ __host__ __forceinline__

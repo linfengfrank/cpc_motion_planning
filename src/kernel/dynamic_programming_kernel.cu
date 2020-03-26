@@ -30,27 +30,27 @@ void test(CUDA_MAT::Mat4Act S_A, CUDA_MAT::Mat4f S_old, CUDA_MAT::Mat4f S_new, C
       s_next[3] = s_curr[3] + alpha*DT;
       val = CUDA_MAT::get_value(s_next,S_old,bin_p,bin_v,bin_theta,bin_w);
       val += 10*acc*acc + 10*alpha*alpha;
-      val += 1*s_curr[0]*s_curr[0] + s_curr[1]*s_curr[1] +s_curr[2]*s_curr[2] + s_curr[3]*s_curr[3];
-      if (s_curr[1] - 1.5 > 0)
-        val += 40*(s_curr[1] - 1.5);
+      val += 1*s_curr[0]*s_curr[0] + 0.2*s_curr[1]*s_curr[1] +s_curr[2]*s_curr[2] + 0.2*s_curr[3]*s_curr[3];
+      if (s_curr[1] - 4 > 0)
+        val += 80*(s_curr[1] - 4);
 
-      if (s_curr[1] < -1.5)
-        val += 40*(-s_curr[1] - 1.5);
+      if (s_curr[1] < -4)
+        val += 80*(-s_curr[1] - 4);
 
       if (s_curr[3] - 2 > 0)
-        val += 40*(s_curr[3] - 2);
+        val += 80*(s_curr[3] - 2);
 
       if (s_curr[3] < -2)
-        val += 40*(-s_curr[3] - 2);
+        val += 80*(-s_curr[3] - 2);
 
       acc_lat = s_curr[1]*s_curr[3];
       acc_tot = sqrt(acc_lat*acc_lat + acc*acc);
 
-      if (fabs(acc_lat) > 2)
-        val += 40*(fabs(acc_lat) - 2);
+//      if (fabs(acc_lat) > 2)
+//        val += 80*(fabs(acc_lat) - 2);
 
       if (acc_tot - 2.0 > 0)
-        val += 40*(acc_tot - 2.0);
+        val += 80*(acc_tot - 2.0);
 
 //      val+= 0.5*acc_tot*acc_tot;
 
@@ -90,7 +90,7 @@ void program(const CUDA_MAT::Mat4Act &S_A, const CUDA_MAT::Mat4f &S_1, const CUD
   block_size.y = 1;
   block_size.z = 1;
 
-  for (int i=0; i<100; i++)
+  for (int i=0; i<140; i++)
   {
     printf("Iteration %d\n",i);
     if (i % 2 == 0)
