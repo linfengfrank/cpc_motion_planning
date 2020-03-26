@@ -31,11 +31,11 @@ void test(CUDA_MAT::Mat4Act S_A, CUDA_MAT::Mat4f S_old, CUDA_MAT::Mat4f S_new, C
       val = CUDA_MAT::get_value(s_next,S_old,bin_p,bin_v,bin_theta,bin_w);
       val += 10*acc*acc + 10*alpha*alpha;
       val += 1*s_curr[0]*s_curr[0] + 0.2*s_curr[1]*s_curr[1] +s_curr[2]*s_curr[2] + 0.2*s_curr[3]*s_curr[3];
-      if (s_curr[1] - 4 > 0)
-        val += 80*(s_curr[1] - 4);
+      if (s_curr[1] - 1.5 > 0)
+        val += 80*(s_curr[1] - 1.5);
 
-      if (s_curr[1] < -4)
-        val += 80*(-s_curr[1] - 4);
+      if (s_curr[1] < -1.5)
+        val += 80*(-s_curr[1] - 1.5);
 
       if (s_curr[3] - 2 > 0)
         val += 80*(s_curr[3] - 2);
