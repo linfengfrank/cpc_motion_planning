@@ -14,7 +14,7 @@ void test(CUDA_MAT::Mat4Act S_A, CUDA_MAT::Mat4f S_old, CUDA_MAT::Mat4f S_new, C
 
   float val;
   float s_next[4];
-  float val_min = 10000;
+  float val_min = 1e6;
   float acc_lat;
   float acc_tot;
   dp_action best_action;
@@ -28,30 +28,36 @@ void test(CUDA_MAT::Mat4Act S_A, CUDA_MAT::Mat4f S_old, CUDA_MAT::Mat4f S_new, C
       s_next[1] = s_curr[1] + acc*DT;
       s_next[2] = s_curr[2] + s_curr[3]*DT + 0.5*alpha*DT*DT;
       s_next[3] = s_curr[3] + alpha*DT;
-      val = 0.5*acc*acc + 0.5*alpha*alpha + CUDA_MAT::get_value(s_next,S_old,bin_p,bin_v,bin_theta,bin_w) +
-          0.4*s_next[0]*s_next[0] + s_next[1]*s_next[1] +s_next[2]*s_next[2] + s_next[3]*s_next[3];
-      if (s_next[1] - 4 > 0)
-        val += 10*(s_next[1] - 4);
+      val = CUDA_MAT::get_value(s_next,S_old,bin_p,bin_v,bin_theta,bin_w);
+      val += 10*acc*acc + 10*alpha*alpha;
+      val += 1*s_curr[0]*s_curr[0] + s_curr[1]*s_curr[1] +s_curr[2]*s_curr[2] + s_curr[3]*s_curr[3];
+      if (s_curr[1] - 1.5 > 0)
+        val += 40*(s_curr[1] - 1.5);
 
-      if (s_next[1] < -4)
-        val += 10*(-s_next[1] - 4);
+      if (s_curr[1] < -1.5)
+        val += 40*(-s_curr[1] - 1.5);
 
-      if (s_next[3] - 2 > 0)
-        val += 10*(s_next[3] - 2);
+      if (s_curr[3] - 2 > 0)
+        val += 40*(s_curr[3] - 2);
 
-      if (s_next[3] < -2)
-        val += 10*(-s_next[3] - 2);
+      if (s_curr[3] < -2)
+        val += 40*(-s_curr[3] - 2);
 
-      acc_lat = s_next[1]*s_next[3];
+      acc_lat = s_curr[1]*s_curr[3];
       acc_tot = sqrt(acc_lat*acc_lat + acc*acc);
 
       if (fabs(acc_lat) > 2)
-        val += 10*(fabs(acc_lat) - 2);
+        val += 40*(fabs(acc_lat) - 2);
 
-      if (acc_tot - 3 > 0)
-        val += 10*(acc_tot - 3);
+      if (acc_tot - 2.0 > 0)
+        val += 40*(acc_tot - 2.0);
 
-      val+= 0.5*acc_tot*acc_tot;
+//      val+= 0.5*acc_tot*acc_tot;
+
+      if (fabs(s_curr[0]) > 0.15 || fabs(s_curr[1]) > 0.15 || fabs(s_curr[2]) > 0.15 || fabs(s_curr[3]) > 0.15)
+      {
+        val += 32;
+      }
 
       if (val < val_min)
       {
@@ -84,7 +90,7 @@ void program(const CUDA_MAT::Mat4Act &S_A, const CUDA_MAT::Mat4f &S_1, const CUD
   block_size.y = 1;
   block_size.z = 1;
 
-  for (int i=0; i<140; i++)
+  for (int i=0; i<100; i++)
   {
     printf("Iteration %d\n",i);
     if (i % 2 == 0)
