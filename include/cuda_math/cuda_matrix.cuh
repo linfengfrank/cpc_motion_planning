@@ -10,6 +10,7 @@
 #include <cfloat>
 #include <cassert>
 #include <cuda_geometry/cuda_geometry.cuh>
+#include <fstream>
 
 namespace CUDA_MAT
 {
@@ -26,6 +27,49 @@ public:
       m_byte_size *= m_dim_width[i];
     }
     m_byte_size *= sizeof(T);
+  }
+
+  // load the matrix from a file
+  Matrix(std::string file_name)
+  {
+    // open the file
+    std::ifstream file;
+    file.open(file_name.c_str(), std::ios::binary);
+
+    int Dim;
+    file.read(reinterpret_cast<char *>(&Dim),sizeof(int));
+
+    if (Dim == N)
+    {
+      // read the header to determine the size of the matrix
+      m_byte_size = 1;
+      int size=1;
+      for (int i=0; i<N; i++)
+      {
+        int width;
+        file.read(reinterpret_cast<char *>(&width),sizeof(int));
+        m_dim_width[i] = width;
+        m_byte_size *= m_dim_width[i];
+        size *= m_dim_width[i];
+      }
+      m_byte_size *= sizeof(T);
+
+      // create the device buffers
+      setup_device();
+
+      // load the data onto the device
+      T *data = new T[size];
+      file.read(reinterpret_cast<char *>(data),m_byte_size);
+      CUDA_MEMCPY_H2D(m_data,data,m_byte_size);
+      delete [] data;
+    }
+    else
+    {
+      std::cout<<"Matrix dimension mismatch during file reading."<<std::endl;
+    }
+
+    // close the file
+    file.close();
   }
 
   void setup_device()
@@ -49,37 +93,38 @@ public:
     CUDA_MEMCPY_D2H(data,m_data,m_byte_size);
   }
 
+  void write_to_file(std::string file_name)
+  {
+    // open the file
+    std::ofstream file;
+    file.open(file_name.c_str(), std::ios::binary);
+
+    // construct a small header to record the dimension of this hyper matrix
+    int* header = new int[1 + N];
+    header[0] = N;
+    int size = 1;
+    for (int i=0; i<N; i++)
+    {
+      header[i+1] = static_cast<int>(m_dim_width[i]);
+      size *= m_dim_width[i];
+    }
+    file.write(reinterpret_cast<const char *>(header),sizeof(int)*(N+1));
+    delete [] header;
+
+    // download data from device and write it to file
+    T* data = new T[size];
+    download_data(data);
+    file.write(reinterpret_cast<const char *>(data), m_byte_size);
+    delete [] data;
+
+    // close the file
+    file.close();
+  }
+
   ~Matrix()
   {
 
   }
-
-//  __device__
-//  int grid2index(int g[N]) const
-//  {
-//    int idx = 0;
-//    for (int i = 0; i < N; ++i)
-//    {
-//      for (int j = i+1; j < N; ++j)
-//      {
-//        g[i] *= m_dim_width[j];
-//      }
-//      idx += g[i];
-//    }
-//    return idx;
-//  }
-
-//  __device__
-//  T& at(int g[N])
-//  {
-//    return m_data[grid2index(g)];
-//  }
-
-//  __device__
-//  const T& const_at(int g[N]) const
-//  {
-//    return m_data[grid2index(g)];
-//  }
 
   __device__
   T& at(int i)
