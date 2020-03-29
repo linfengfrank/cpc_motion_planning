@@ -5,6 +5,7 @@
 #include <cpc_motion_planning/dynamic_programming.h>
 #include <fstream>
 #include <cpc_motion_planning/cuda_matrix_factory.h>
+#include <chrono>
 
 int main(int argc, char **argv)
 {
@@ -62,7 +63,12 @@ int main(int argc, char **argv)
 
   //------
   std::cout<<"Start dynamic programming"<<std::endl;
+  auto start = std::chrono::steady_clock::now();
   GPU_DP::program(S_A,S_1,S_2,pos_bins,vel_bins,theta_bins,w_bins,M_S);
+  auto end = std::chrono::steady_clock::now();
+  std::cout << "Consumed: "
+            << std::chrono::duration_cast<std::chrono::seconds>(end - start).count()
+            << " s" << std::endl;
 
   //------
   std::cout<<"Write data to files"<<std::endl;
