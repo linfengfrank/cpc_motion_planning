@@ -1,11 +1,21 @@
 #ifndef DYNAMIC_PROGRAMMING_H
 #define DYNAMIC_PROGRAMMING_H
 #include <cuda_math/cuda_matrix.cuh>
-
 struct dp_action
 {
   float acc;
   float alpha;
+};
+
+struct VoidPtrCarrier
+{
+  void * m_ptr[7];
+
+  __device__  __host__
+  void*& operator[](int i)
+  {
+    return m_ptr[i];
+  }
 };
 
 namespace CUDA_MAT

@@ -3,16 +3,17 @@
 namespace GPU_DP
 {
 __global__
-void test(void *S_A_ptr, void *S_old_ptr, void *S_new_ptr, void *bin_p_ptr, void *bin_v_ptr, void *bin_theta_ptr, void *bin_w_ptr)
+void test(VoidPtrCarrier data)
+//void test(void *S_A_ptr, void *S_old_ptr, void *S_new_ptr, void *bin_p_ptr, void *bin_v_ptr, void *bin_theta_ptr, void *bin_w_ptr)
 //void test(CUDA_MAT::Mat4Act S_A, CUDA_MAT::Mat4f S_old, CUDA_MAT::Mat4f S_new, CUDA_MAT::Vecf bin_p, CUDA_MAT::Vecf bin_v, CUDA_MAT::Vecf bin_theta, CUDA_MAT::Vecf bin_w)
 {
-  CUDA_MAT::Mat4Act *S_A = static_cast<CUDA_MAT::Mat4Act*>(S_A_ptr);
-  CUDA_MAT::Mat4f *S_old = static_cast<CUDA_MAT::Mat4f*>(S_old_ptr);
-  CUDA_MAT::Mat4f *S_new = static_cast<CUDA_MAT::Mat4f*>(S_new_ptr);
-  CUDA_MAT::Vecf *bin_p = static_cast<CUDA_MAT::Vecf*>(bin_p_ptr);
-  CUDA_MAT::Vecf *bin_v = static_cast<CUDA_MAT::Vecf*>(bin_v_ptr);
-  CUDA_MAT::Vecf *bin_theta = static_cast<CUDA_MAT::Vecf*>(bin_theta_ptr);
-  CUDA_MAT::Vecf *bin_w = static_cast<CUDA_MAT::Vecf*>(bin_w_ptr);
+  CUDA_MAT::Mat4Act *S_A = static_cast<CUDA_MAT::Mat4Act*>(data[0]);
+  CUDA_MAT::Mat4f *S_old = static_cast<CUDA_MAT::Mat4f*>(data[1]);
+  CUDA_MAT::Mat4f *S_new = static_cast<CUDA_MAT::Mat4f*>(data[2]);
+  CUDA_MAT::Vecf *bin_p = static_cast<CUDA_MAT::Vecf*>(data[3]);
+  CUDA_MAT::Vecf *bin_v = static_cast<CUDA_MAT::Vecf*>(data[4]);
+  CUDA_MAT::Vecf *bin_theta = static_cast<CUDA_MAT::Vecf*>(data[5]);
+  CUDA_MAT::Vecf *bin_w = static_cast<CUDA_MAT::Vecf*>(data[6]);
 
   float s_curr[4];
   s_curr[0] =  pos_gen_val(blockIdx.x);
@@ -99,13 +100,29 @@ void program(void *S_A, void *S_1, void *S_2, void *bin_p, void *bin_v,
   block_size.y = 1;
   block_size.z = 1;
 
+  VoidPtrCarrier ptr_car;
+  ptr_car[0] = S_A;
+  ptr_car[3] = bin_p;
+  ptr_car[4] = bin_v;
+  ptr_car[5] = bin_theta;
+  ptr_car[6] = bin_w;
+
+
   for (int i=0; i<100; i++)
   {
     printf("Iteration %d\n",i);
     if (i % 2 == 0)
-      test<<<grid_size,block_size>>>(S_A,S_1,S_2,bin_p,bin_v,bin_theta,bin_w);
+    {
+      ptr_car[1] = S_1;
+      ptr_car[2] = S_2;
+      test<<<grid_size,block_size>>>(ptr_car);
+    }
     else
-      test<<<grid_size,block_size>>>(S_A,S_2,S_1,bin_p,bin_v,bin_theta,bin_w);
+    {
+      ptr_car[1] = S_2;
+      ptr_car[2] = S_1;
+      test<<<grid_size,block_size>>>(ptr_car);
+    }
 
     cudaDeviceSynchronize();
   }

@@ -77,7 +77,7 @@ int main(int argc, char **argv)
   factory.write_cuda_matrix<1,float>(pos_bins,"/home/sp/cpc_ws/pos_bin.dat");
   factory.write_cuda_matrix<1,float>(vel_bins,"/home/sp/cpc_ws/vel_bin.dat");
   factory.write_cuda_matrix<1,float>(theta_bins,"/home/sp/cpc_ws/theta_bin.dat");
-  factory.write_cuda_matrix<1,float>(w_bins,"/home/sp/cpc_ws/theta_bin.dat");
+  factory.write_cuda_matrix<1,float>(w_bins,"/home/sp/cpc_ws/w_bin.dat");
 
   std::cout<<"Release the resources"<<std::endl;
   factory.free_cuda_matrix<1,float>(pos_bins);
