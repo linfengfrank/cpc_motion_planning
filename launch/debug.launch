@@ -1,0 +1,5 @@
+<?xml version="1.0"?>
+<launch>
+<node pkg="cpc_motion_planning" type="dynamic_programming" name="dynamic_programming" output="screen" launch-prefix="valgrind --error-limit=no --track-origins=yes --num-callers=100 --log-file='/home/sp/cuda_dp.log'">
+</node>
+</launch>
