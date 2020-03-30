@@ -1,4 +1,4 @@
-#include <cpc_motion_planning/dynamic_programming.h>
+#include <cpc_motion_planning/dynamic_programming.cuh>
 #define DT 0.05
 namespace GPU_DP
 {

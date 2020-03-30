@@ -2,7 +2,7 @@
 #include <iostream>
 #include <cuda_geometry/cuda_geometry.cuh>
 #include <cuda_math/cuda_matrix.cuh>
-#include <cpc_motion_planning/dynamic_programming.h>
+#include <cpc_motion_planning/dynamic_programming.cuh>
 #include <fstream>
 #include <cpc_motion_planning/cuda_matrix_factory.h>
 #include <chrono>
