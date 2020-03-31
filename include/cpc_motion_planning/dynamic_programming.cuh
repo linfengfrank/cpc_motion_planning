@@ -248,7 +248,7 @@ float w_gen_val(int i)
    return -2.5f + 0.1f*static_cast<float>(i);
 }
 
-void program(void* S_A, void* S_1, void* S_2, void* bin_p, void* bin_v, void* bin_theta
-             ,void* bin_w, size_t* bin_size);
+template<int N>
+void program(VoidPtrCarrier<N> ptr_car, size_t* bin_size);
 }
 #endif

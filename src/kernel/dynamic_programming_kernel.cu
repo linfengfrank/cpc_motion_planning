@@ -86,8 +86,8 @@ void test(VoidPtrCarrier<N> data)
   //printf("%f\n",val);
 }
 
-void program(void *S_A, void *S_1, void *S_2, void *bin_p, void *bin_v,
-             void *bin_theta, void *bin_w, size_t *bin_size)
+template<int N>
+void program(VoidPtrCarrier<N> ptr_car, size_t *bin_size)
 {
   dim3 grid_size;
   grid_size.x = bin_size[0];
@@ -99,12 +99,6 @@ void program(void *S_A, void *S_1, void *S_2, void *bin_p, void *bin_v,
   block_size.y = 1;
   block_size.z = 1;
 
-  VoidPtrCarrier<7> ptr_car;
-  ptr_car[0] = S_A;
-  ptr_car[3] = bin_p;
-  ptr_car[4] = bin_v;
-  ptr_car[5] = bin_theta;
-  ptr_car[6] = bin_w;
 
 
   for (int i=0; i<100; i++)
@@ -112,18 +106,22 @@ void program(void *S_A, void *S_1, void *S_2, void *bin_p, void *bin_v,
     printf("Iteration %d\n",i);
     if (i % 2 == 0)
     {
-      ptr_car[1] = S_1;
-      ptr_car[2] = S_2;
-      test<7><<<grid_size,block_size>>>(ptr_car);
+      void* tmp = ptr_car[2];
+      ptr_car[2] = ptr_car[1];
+      ptr_car[1] = tmp;
+      test<N><<<grid_size,block_size>>>(ptr_car);
     }
     else
     {
-      ptr_car[1] = S_2;
-      ptr_car[2] = S_1;
-      test<7><<<grid_size,block_size>>>(ptr_car);
+      void* tmp = ptr_car[2];
+      ptr_car[2] = ptr_car[1];
+      ptr_car[1] = tmp;
+      test<N><<<grid_size,block_size>>>(ptr_car);
     }
 
     cudaDeviceSynchronize();
   }
 }
 }
+template void GPU_DP::program<7>(VoidPtrCarrier<7> ptr_car, size_t *bin_size);
+

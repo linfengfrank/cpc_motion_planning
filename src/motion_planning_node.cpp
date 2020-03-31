@@ -8,6 +8,8 @@ int main(int argc, char *argv[])
     p.load_data_matrix();
     p.create_particles();
 
+    p.plan();
+
     std::cout<<"Free"<<std::endl;
     p.free_data_matrix();
     p.delete_particles();

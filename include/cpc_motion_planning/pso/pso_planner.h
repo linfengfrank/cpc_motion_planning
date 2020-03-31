@@ -19,6 +19,11 @@ public:
 
   }
 
+  void plan()
+  {
+    test_plan<5>(m_carrier);
+  }
+
   void create_particles()
   {
     Particle* data = new Particle[m_num_of_ptcls];
