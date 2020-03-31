@@ -159,6 +159,17 @@ target_link_libraries(dynamic_programming
     ${CUDA_LIBRARIES}
     ${catkin_LIBRARIES})
 
+cuda_add_executable(${PROJECT_NAME}_node
+    src/motion_planning_node.cpp
+    src/motion_planner.cpp
+    src/kernel/pso_kernels.cu)
+
+target_link_libraries(${PROJECT_NAME}_node
+    ${CUDA_curand_LIBRARY}
+    ${CUDA_cublas_LIBRARY}
+    ${CUDA_LIBRARIES}
+    ${catkin_LIBRARIES})
+
 ## Rename C++ executable without prefix
 ## The above recommended prefix causes long target names, the following renames the
 ## target back to the shorter version for ease of user use

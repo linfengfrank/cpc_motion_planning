@@ -34,6 +34,66 @@ public:
     return ptr;
   }
 
+  template <int N,typename T>
+  void* load_cuda_matrix(std::string file_name)
+  {
+    // open the file
+    std::ifstream file;
+    file.open(file_name.c_str(), std::ios::binary);
+
+    if (!file.is_open())
+    {
+      std::cout<<"File open failed."<<std::endl;
+      file.close();
+      return nullptr;
+    }
+
+    int Dim;
+    file.read(reinterpret_cast<char *>(&Dim),sizeof(int));
+
+    if (Dim <= 0 || Dim != N)
+    {
+      std::cout<<"Matrix dimension wrong."<<std::endl;
+      file.close();
+      return nullptr;
+    }
+
+    // read the header to determine the size of the matrix
+    int byte_size = 1;
+    int size=1;
+    size_t dim_width[N];
+    for (int i=0; i<Dim; i++)
+    {
+      int width;
+      file.read(reinterpret_cast<char *>(&width),sizeof(int));
+      dim_width[i] = width;
+      byte_size *= dim_width[i];
+      size *= dim_width[i];
+    }
+    byte_size *= sizeof(T);
+
+    // make matrix
+    Matrix<N,T> mat(dim_width);
+
+    // create the device buffers
+    mat.setup_device();
+
+    // load the data onto the device
+    T *data = new T[size];
+    file.read(reinterpret_cast<char *>(data),byte_size);
+    CUDA_MEMCPY_H2D(mat.m_data,data,byte_size);
+    delete [] data;
+
+    // close the file
+    file.close();
+
+    void* ptr;
+    CUDA_ALLOC_DEV_MEM(&ptr, sizeof(Matrix<N,T>));
+    CUDA_MEMCPY_H2D(ptr, &mat, sizeof(Matrix<N,T>));
+
+    return ptr;
+  }
+
   template <int N, typename T>
   void free_cuda_matrix(void *ptr)
   {
