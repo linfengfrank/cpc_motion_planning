@@ -35,7 +35,7 @@ public:
   }
 
   template <int N,typename T>
-  void* load_cuda_matrix(std::string file_name)
+  void* load_cuda_matrix(std::string file_name, bool load_to_host=false)
   {
     // open the file
     std::ifstream file;
@@ -73,7 +73,7 @@ public:
     byte_size *= sizeof(T);
 
     // make matrix
-    Matrix<N,T> mat(dim_width);
+    Matrix<N,T> mat(dim_width,load_to_host);
 
     // create the device buffers
     mat.setup_device();
@@ -81,36 +81,61 @@ public:
     // load the data onto the device
     T *data = new T[size];
     file.read(reinterpret_cast<char *>(data),byte_size);
-    CUDA_MEMCPY_H2D(mat.m_data,data,byte_size);
+    mat.upload_data(data);
     delete [] data;
 
     // close the file
     file.close();
 
     void* ptr;
-    CUDA_ALLOC_DEV_MEM(&ptr, sizeof(Matrix<N,T>));
-    CUDA_MEMCPY_H2D(ptr, &mat, sizeof(Matrix<N,T>));
+    if(!load_to_host)
+    {
+      CUDA_ALLOC_DEV_MEM(&ptr, sizeof(Matrix<N,T>));
+      CUDA_MEMCPY_H2D(ptr, &mat, sizeof(Matrix<N,T>));
+    }
+    else
+    {
+      ptr = malloc(sizeof(Matrix<N,T>));
+      memcpy(ptr,&mat,sizeof(Matrix<N,T>));
+    }
 
     return ptr;
   }
 
   template <int N, typename T>
-  void free_cuda_matrix(void *ptr)
+  void free_cuda_matrix(void *ptr, bool load_from_host=false)
   {
-    void* mat = malloc(sizeof(Matrix<N,T>));
-    CUDA_MEMCPY_D2H(mat,ptr,sizeof(Matrix<N,T>));
-    reinterpret_cast<Matrix<N,T>*>(mat)->free_device();
-    CUDA_FREE_DEV_MEM(ptr);
-    free(mat);
+    if (!load_from_host)
+    {
+      void* mat = malloc(sizeof(Matrix<N,T>));
+      CUDA_MEMCPY_D2H(mat,ptr,sizeof(Matrix<N,T>));
+      reinterpret_cast<Matrix<N,T>*>(mat)->free_device();
+      CUDA_FREE_DEV_MEM(ptr);
+      free(mat);
+    }
+    else
+    {
+      Matrix<N,T>* mat = static_cast<Matrix<N,T>*>(ptr);
+      mat->free_device();
+      free(mat);
+    }
   }
 
   template <int N, typename T>
-  void write_cuda_matrix(void *ptr, std::string file_name)
+  void write_cuda_matrix(void *ptr, std::string file_name, bool load_from_host=false)
   {
-    void* mat = malloc(sizeof(Matrix<N,T>));
-    CUDA_MEMCPY_D2H(mat,ptr,sizeof(Matrix<N,T>));
-    reinterpret_cast<Matrix<N,T>*>(mat)->write_to_file(file_name);
-    free(mat);
+    if (!load_from_host)
+    {
+      void* mat = malloc(sizeof(Matrix<N,T>));
+      CUDA_MEMCPY_D2H(mat,ptr,sizeof(Matrix<N,T>));
+      reinterpret_cast<Matrix<N,T>*>(mat)->write_to_file(file_name);
+      free(mat);
+    }
+    else
+    {
+      Matrix<N,T>* mat = static_cast<Matrix<N,T>*>(ptr);
+      mat->write_to_file(file_name);
+    }
   }
 
 };

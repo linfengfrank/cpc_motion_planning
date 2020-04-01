@@ -81,6 +81,28 @@ struct Trace
   }
 };
 
+__host__ __device__ __forceinline__
+float rand_float_gen(curandState *rs, float min, float max)
+{
+#ifdef  __CUDA_ARCH__
+  float myrandf = curand_uniform(rs);
+#else
+  float myrandf = 0.0;
+#endif
+  myrandf *= (max - min + 0.999999f);
+  myrandf += min;
+  return myrandf;
+}
+
+__host__ __device__ __forceinline__
+void bound_between(float &val, float min, float max)
+{
+    if (val < min)
+        val = min;
+    else if (val > max)
+        val = max;
+}
+
 struct Particle
 {
   Trace curr_loc;  //location
@@ -89,5 +111,7 @@ struct Particle
   float best_cost; //self best cost
   curandState rs;  //random state
 };
+
+typedef CUDA_MAT::Matrix<1,Particle> Mat1P;
 }
 #endif // PSO_CUH

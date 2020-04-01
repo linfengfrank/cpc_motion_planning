@@ -15,7 +15,7 @@ struct VoidPtrCarrier
 {
   void * m_ptr[N];
 
-  __device__  __host__
+  __host__ __device__
   void*& operator[](int i)
   {
     return m_ptr[i];
@@ -26,21 +26,21 @@ namespace CUDA_MAT
 {
 typedef Matrix<3, dp_action> Mat3Act;
 typedef Matrix<4, dp_action> Mat4Act;
-__device__ __forceinline__
+__host__ __device__ __forceinline__
 dp_action& mat3act_get_val(int i, int j, int k, Mat3Act &mat)
 {
   int idx = i*mat.m_dim_width[1]*mat.m_dim_width[2] + j*mat.m_dim_width[2] + k;
   return mat.at(idx);
 }
 
-__device__ __forceinline__
+__host__ __device__ __forceinline__
 dp_action& mat4act_get_val(int i, int j, int k, int n, Mat4Act &mat)
 {
   int idx = i*mat.m_dim_width[1]*mat.m_dim_width[2]*mat.m_dim_width[3] + j*mat.m_dim_width[2]*mat.m_dim_width[3] + k*mat.m_dim_width[3] + n;
   return mat.at(idx);
 }
 
-__device__ __forceinline__
+__host__ __device__ __forceinline__
 const dp_action& mat4act_get_val_const(int i, int j, int k, int n, const Mat4Act &mat)
 {
   int idx = i*mat.m_dim_width[1]*mat.m_dim_width[2]*mat.m_dim_width[3] + j*mat.m_dim_width[2]*mat.m_dim_width[3] + k*mat.m_dim_width[3] + n;
@@ -48,7 +48,7 @@ const dp_action& mat4act_get_val_const(int i, int j, int k, int n, const Mat4Act
 }
 
 // Only works for N = 1
-__device__ __forceinline__
+__host__ __device__ __forceinline__
 int search_idx(float val, const Vecf &bins)
 {
   int M = static_cast<int>(bins.m_dim_width[0] - 1);
@@ -85,7 +85,7 @@ int search_idx(float val, const Vecf &bins)
   return idx;
 }
 //---
-__device__ __forceinline__
+__host__ __device__ __forceinline__
 void get_opposite_pnt(int *loc, int *opp, const int *idx)
 {
   for (int i=0;i<4;i++)
@@ -101,7 +101,7 @@ void get_opposite_pnt(int *loc, int *opp, const int *idx)
   }
 }
 //---
-__device__ __forceinline__
+__host__ __device__ __forceinline__
 void bound(float &val, float min, float max)
 {
   // bound the value
@@ -112,7 +112,7 @@ void bound(float &val, float min, float max)
     val =  max;
 }
 //---
-__device__ __forceinline__
+__host__ __device__ __forceinline__
 float get_value(float s[4], const CUDA_MAT::Mat4f &S, const Vecf &bins_0, const Vecf &bins_1, const Vecf &bins_2, const Vecf &bins_3)
 {
   bound(s[0],bins_0.const_at(0), bins_0.const_at(static_cast<int>(bins_0.m_dim_width[0] - 1)));
@@ -160,7 +160,7 @@ float get_value(float s[4], const CUDA_MAT::Mat4f &S, const Vecf &bins_0, const 
   return output;
 }
 //---
-__device__ __forceinline__
+__host__ __device__ __forceinline__
 dp_action get_control(float s[4], const CUDA_MAT::Mat4Act &SA, const Vecf &bins_0, const Vecf &bins_1, const Vecf &bins_2, const Vecf &bins_3)
 {
   bound(s[0],bins_0.const_at(0), bins_0.const_at(static_cast<int>(bins_0.m_dim_width[0] - 1)));
@@ -212,7 +212,7 @@ dp_action get_control(float s[4], const CUDA_MAT::Mat4Act &SA, const Vecf &bins_
 }
 namespace GPU_DP
 {
-__device__ __host__ __forceinline__
+__host__ __device__ __forceinline__
 float pos_gen_val(int i)
 {
 //  if (i<15)
@@ -230,19 +230,19 @@ float pos_gen_val(int i)
   return -6.0f + 0.2f*static_cast<float>(i);
 }
 
-__device__ __host__ __forceinline__
+__host__ __device__ __forceinline__
 float vel_gen_val(int i)
 {
    return -2.0f + 0.1f*static_cast<float>(i);
 }
 
-__device__ __host__ __forceinline__
+__host__ __device__ __forceinline__
 float theta_gen_val(int i)
 {
    return -3.14f + 0.13f*static_cast<float>(i);
 }
 
-__device__ __host__ __forceinline__
+__host__ __device__ __forceinline__
 float w_gen_val(int i)
 {
    return -2.5f + 0.1f*static_cast<float>(i);
