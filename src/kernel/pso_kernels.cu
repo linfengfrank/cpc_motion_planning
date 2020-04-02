@@ -40,11 +40,12 @@ void initialize_particles_kernel(Swarm sw, bool first_run,
 {
   int idx = threadIdx.x+blockDim.x*blockIdx.x;
 
-  //if (first_run || idx != ptcl_size-1)
-  //{
-  initialize_a_particle(s0, sw.ptcls[idx]);
+  if (first_run || idx != sw.ptcl_size-1)
+  {
+    initialize_a_particle(s0, sw.ptcls[idx]);
+  }
   sw.ptcls[idx].best_cost = evaluate_trajectory(s0, goal, sw.ptcls[idx].best_loc, ptr_car);
-  //}
+
 }
 
 //---
@@ -118,7 +119,7 @@ void copy_best_values(const Swarm &sw, float *best_values)
 }
 
 template void PSO::initialize_particles<5>(const Swarm &sw, bool first_run,
-                          const State &s, const State &goal,VoidPtrCarrier<5> ptr_car);
+const State &s, const State &goal,VoidPtrCarrier<5> ptr_car);
 
 template void PSO::iterate_particles<5>(const Swarm &sw, float weight,
-                       const State &s, const State &goal,VoidPtrCarrier<5> ptr_car);
+const State &s, const State &goal,VoidPtrCarrier<5> ptr_car);

@@ -53,8 +53,10 @@ void MotionPlanner::plan_call_back(const ros::TimerEvent&)
   //  tf::Matrix3x3 m(q);
   //  m.getRPY(phi, theta, psi);
 
+  static int icc = 0;
+
   PSO::State s;
-  s.p.x = 0;//m_odo.pose.pose.position.x;
+  s.p.x = 0;//static_cast<float>((icc++)/5)*0.2;//m_odo.pose.pose.position.x;
   s.p.y = 0;//m_odo.pose.pose.position.y;
   s.s = 0;
   s.v = 0;//m_odo.twist.twist.linear.x + m_odo.twist.twist.linear.y;

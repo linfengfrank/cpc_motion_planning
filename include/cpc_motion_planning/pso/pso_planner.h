@@ -12,7 +12,8 @@ class Planner
 {
 public:
   Planner(int num_of_ptcls=50, int num_of_epoches=20):
-    m_num_of_epoches(num_of_epoches)
+    m_num_of_epoches(num_of_epoches),
+    m_first_time(true)
   {
     m_swam.ptcl_size = num_of_ptcls;
   }
@@ -27,7 +28,8 @@ public:
     //test_plan<N>(s,goal,m_ptcls, m_best_values, m_num_of_ptcls, &result, true,m_carrier,m_cbls_hdl);
     cublasStatus_t cbls_stt;
 
-    initialize_particles(m_swam,true,s,goal,m_carrier);
+    initialize_particles(m_swam,m_first_time,s,goal,m_carrier);
+    m_first_time = false;
     for (int i=0;i<m_num_of_epoches;i++)
     {
       float weight = 0.95-(0.95-0.4)/static_cast<float>(m_num_of_epoches)*static_cast<float>(i);
@@ -94,6 +96,7 @@ public:
   int m_num_of_epoches;
   cublasHandle_t m_cbls_hdl;
   Particle result;
+  bool m_first_time;
 
 };
 
