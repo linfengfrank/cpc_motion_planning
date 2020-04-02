@@ -30,7 +30,8 @@ public:
     initialize_particles(m_swam,true,s,goal,m_carrier);
     for (int i=0;i<m_num_of_epoches;i++)
     {
-      iterate_particles(m_swam,1.0f,s,goal,m_carrier);
+      float weight = 0.95-(0.95-0.4)/static_cast<float>(m_num_of_epoches)*static_cast<float>(i);
+      iterate_particles(m_swam,weight,s,goal,m_carrier);
       copy_best_values(m_swam,m_best_values);
 
       int best_idx = -1;
