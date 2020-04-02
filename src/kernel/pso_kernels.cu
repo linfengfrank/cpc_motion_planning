@@ -80,77 +80,45 @@ void iterate_particles_kernel(Particle *ptcls, int ptcl_size, float weight,
   }
 }
 
+//---------
 __global__
 void copy_best_value_kernel(Particle *ptcls, float* best_values)
 {
   int idx = threadIdx.x+blockDim.x*blockIdx.x;
-
   best_values[idx] = ptcls[idx].best_cost;
-  //printf("%f\n",best_values[idx]);
 }
 
-__global__
-void copy_best_ptcl_kernel(Particle *ptcls, int ptcl_size, int best_idx)
-{
-  int idx = threadIdx.x+blockDim.x*blockIdx.x;
-
-  //ptcls[ptcl_size-1] = ptcls[best_idx];
-  printf(">> %f, %f\n",ptcls[ptcl_size-1].best_cost, ptcls[best_idx].best_cost);
-}
-
-//---
-template<int N>
-__global__
-void test_kernel(VoidPtrCarrier<N> ptr_car)
-{
-  State s;
-  Trace tr;
-  State goal;
-  goal.p = make_float2(10,10);
-  tr[0] = make_float3(2,2,0);
-  tr[1] = make_float3(2,2,0);
-  float cost = evaluate_trajectory<N>(s,goal,tr,ptr_car);
-  printf("Cost: %f\n",cost);
-}
-
-//---
+//---------
 void setup_random_states(Particle *ptcls, int size)
 {
   setup_random_states_kernel<<<1,size>>>(ptcls);
 }
 
-//---
+//---------
 template<int N>
-void test_plan(const State &s, const State &goal, Particle *ptcls,
-               float *best_values, int ptcls_size, Particle *result,
-               bool first_run, VoidPtrCarrier<N> ptr_car,
-               cublasHandle_t &_cbls_hdl)
+void initialize_particles(Particle *ptcls, int ptcls_size, bool first_run,
+                          const State &s, const State &goal,VoidPtrCarrier<N> ptr_car)
 {
-//    State s;
-//    State goal;
-//    goal.p = make_float2(5,0);
-
-  cublasStatus_t _cbls_stt;
-
   initialize_particles_kernel<N><<<1,ptcls_size>>>(ptcls,ptcls_size,first_run,s,goal,ptr_car);
-  for (int i=0;i<40;i++)
-  {
-    iterate_particles_kernel<N><<<1,ptcls_size>>>(ptcls,ptcls_size,1.0f,s,goal,ptr_car);
-    copy_best_value_kernel<<<1,ptcls_size>>>(ptcls,best_values);
+}
 
-    int best_idx = -1;
-    _cbls_stt = cublasIsamin(_cbls_hdl,ptcls_size,best_values,1,&best_idx);
+//---------
+template<int N>
+void iterate_particles(Particle *ptcls, int ptcls_size, float weight,
+                       const State &s, const State &goal,VoidPtrCarrier<N> ptr_car)
+{
+  iterate_particles_kernel<N><<<1,ptcls_size>>>(ptcls,ptcls_size,weight,s,goal,ptr_car);
+}
 
-    if(best_idx != -1)
-    {
-      CUDA_MEMCPY_D2D(ptcls+ptcls_size-1,ptcls+best_idx-1,sizeof(Particle));
-    }
-  }
-
-  CUDA_MEMCPY_D2H(result,ptcls+ptcls_size-1,sizeof(Particle));
-  cudaDeviceSynchronize();
-
+//---------
+void copy_best_values(Particle *ptcls, int ptcls_size, float *best_values)
+{
+  copy_best_value_kernel<<<1,ptcls_size>>>(ptcls,best_values);
 }
 }
-template void PSO::test_plan<5>(const State &s, const State &goal, Particle *ptcls,
-float *best_values, int ptcls_size, Particle *result, bool first_run, VoidPtrCarrier<5> ptr_car, cublasHandle_t &_cbls_hdl);
+
+template void PSO::initialize_particles<5>(Particle *ptcls, int ptcls_size, bool first_run,
+                          const State &s, const State &goal,VoidPtrCarrier<5> ptr_car);
+
+template void PSO::iterate_particles<5>(Particle *ptcls, int ptcls_size, float weight,
+                       const State &s, const State &goal,VoidPtrCarrier<5> ptr_car);

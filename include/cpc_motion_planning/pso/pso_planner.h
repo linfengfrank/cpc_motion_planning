@@ -11,9 +11,10 @@ template <int N>
 class Planner
 {
 public:
-  Planner(int num_of_ptcls)
+  Planner(int num_of_ptcls=50, int num_of_epoches=20):
+    m_num_of_ptcls(num_of_ptcls),
+    m_num_of_epoches(num_of_epoches)
   {
-    m_num_of_ptcls = num_of_ptcls;
   }
 
   ~Planner()
@@ -23,7 +24,26 @@ public:
 
   void plan(const State &s, const State &goal)
   {
-    test_plan<N>(s,goal,m_ptcls, m_best_values, m_num_of_ptcls, &result, true,m_carrier,m_cbls_hdl);
+    //test_plan<N>(s,goal,m_ptcls, m_best_values, m_num_of_ptcls, &result, true,m_carrier,m_cbls_hdl);
+    cublasStatus_t cbls_stt;
+
+    initialize_particles(m_ptcls,m_num_of_ptcls,true,s,goal,m_carrier);
+    for (int i=0;i<m_num_of_epoches;i++)
+    {
+      iterate_particles(m_ptcls,m_num_of_ptcls,1.0f,s,goal,m_carrier);
+      copy_best_values(m_ptcls,m_num_of_ptcls,m_best_values);
+
+      int best_idx = -1;
+      cbls_stt = cublasIsamin(m_cbls_hdl,m_num_of_ptcls,m_best_values,1,&best_idx);
+
+      if(best_idx != -1)
+      {
+        CUDA_MEMCPY_D2D(m_ptcls+m_num_of_ptcls-1,m_ptcls+best_idx-1,sizeof(Particle));
+      }
+    }
+
+    CUDA_MEMCPY_D2H(&result, m_ptcls+m_num_of_ptcls-1,sizeof(Particle));
+    cudaDeviceSynchronize();
   }
 
   void create_particles()
@@ -68,7 +88,8 @@ public:
   VoidPtrCarrier<N> m_carrier;
   Particle *m_ptcls;
   float *m_best_values; // A fix to use cublas
-  size_t m_num_of_ptcls;
+  int m_num_of_ptcls;
+  int m_num_of_epoches;
   cublasHandle_t m_cbls_hdl;
   Particle result;
 
