@@ -4,6 +4,7 @@
 #include <cpc_motion_planning/cuda_matrix_factory.h>
 #include <cpc_motion_planning/pso/pso_utilities.cuh>
 #include <cpc_motion_planning/pso/pso_kernels.cuh>
+
 namespace PSO
 {
 template <int N>
@@ -20,23 +21,28 @@ public:
 
   }
 
-  void plan()
+  void plan(const State &s, const State &goal)
   {
-    test_plan<N>(m_ptcls,m_num_of_ptcls,true,m_carrier);
+    test_plan<N>(s,goal,m_ptcls, m_best_values, m_num_of_ptcls, &result, true,m_carrier,m_cbls_hdl);
   }
 
   void create_particles()
   {
     Particle* data = new Particle[m_num_of_ptcls];
-    m_ptcls = m_factory.make_cuda_matrix<1,Particle>(&m_num_of_ptcls, data);
+    CUDA_ALLOC_DEV_MEM(&m_ptcls,m_num_of_ptcls*sizeof(Particle));
+    CUDA_MEMCPY_H2D(m_ptcls,data,m_num_of_ptcls*sizeof(Particle));
     delete [] data;
-
     setup_random_states(m_ptcls, m_num_of_ptcls);
+
+    CUDA_ALLOC_DEV_MEM(&m_best_values,m_num_of_ptcls*sizeof(float));
+    cublasCreate(&m_cbls_hdl);
   }
 
   void delete_particles()
   {
-    m_factory.free_cuda_matrix<1,Particle>(m_ptcls);
+    CUDA_FREE_DEV_MEM(m_ptcls);
+    CUDA_FREE_DEV_MEM(m_best_values);
+    cublasDestroy(m_cbls_hdl);
   }
 
   void load_data_matrix(bool load_to_host = false)
@@ -60,8 +66,11 @@ public:
 public:
   CUDA_MAT::CudaMatrixFactory m_factory;
   VoidPtrCarrier<N> m_carrier;
-  void *m_ptcls;
+  Particle *m_ptcls;
+  float *m_best_values; // A fix to use cublas
   size_t m_num_of_ptcls;
+  cublasHandle_t m_cbls_hdl;
+  Particle result;
 
 };
 

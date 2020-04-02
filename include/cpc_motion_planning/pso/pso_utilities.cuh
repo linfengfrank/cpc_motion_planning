@@ -7,7 +7,6 @@ namespace PSO
 {
 const int PSO_STEPS = 2; //planning steps
 const float PSO_STEP_DT = 2; //lasting time of each step
-const float PSO_dt = 0.05f; //forward simulation dt
 const float PSO_TOTAL_T = PSO_STEPS*PSO_STEP_DT;
 
 struct Trace
