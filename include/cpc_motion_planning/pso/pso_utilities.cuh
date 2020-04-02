@@ -111,6 +111,10 @@ struct Particle
   curandState rs;  //random state
 };
 
-typedef CUDA_MAT::Matrix<1,Particle> Mat1P;
+struct Swarm
+{
+  Particle *ptcls;
+  int ptcl_size;
+};
 }
 #endif // PSO_CUH

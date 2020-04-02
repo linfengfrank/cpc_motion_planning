@@ -12,9 +12,9 @@ class Planner
 {
 public:
   Planner(int num_of_ptcls=50, int num_of_epoches=20):
-    m_num_of_ptcls(num_of_ptcls),
     m_num_of_epoches(num_of_epoches)
   {
+    m_swam.ptcl_size = num_of_ptcls;
   }
 
   ~Planner()
@@ -27,40 +27,40 @@ public:
     //test_plan<N>(s,goal,m_ptcls, m_best_values, m_num_of_ptcls, &result, true,m_carrier,m_cbls_hdl);
     cublasStatus_t cbls_stt;
 
-    initialize_particles(m_ptcls,m_num_of_ptcls,true,s,goal,m_carrier);
+    initialize_particles(m_swam,true,s,goal,m_carrier);
     for (int i=0;i<m_num_of_epoches;i++)
     {
-      iterate_particles(m_ptcls,m_num_of_ptcls,1.0f,s,goal,m_carrier);
-      copy_best_values(m_ptcls,m_num_of_ptcls,m_best_values);
+      iterate_particles(m_swam,1.0f,s,goal,m_carrier);
+      copy_best_values(m_swam,m_best_values);
 
       int best_idx = -1;
-      cbls_stt = cublasIsamin(m_cbls_hdl,m_num_of_ptcls,m_best_values,1,&best_idx);
+      cbls_stt = cublasIsamin(m_cbls_hdl,m_swam.ptcl_size,m_best_values,1,&best_idx);
 
       if(best_idx != -1)
       {
-        CUDA_MEMCPY_D2D(m_ptcls+m_num_of_ptcls-1,m_ptcls+best_idx-1,sizeof(Particle));
+        CUDA_MEMCPY_D2D(m_swam.ptcls+m_swam.ptcl_size-1,m_swam.ptcls+best_idx-1,sizeof(Particle));
       }
     }
 
-    CUDA_MEMCPY_D2H(&result, m_ptcls+m_num_of_ptcls-1,sizeof(Particle));
+    CUDA_MEMCPY_D2H(&result, m_swam.ptcls+m_swam.ptcl_size-1,sizeof(Particle));
     cudaDeviceSynchronize();
   }
 
   void create_particles()
   {
-    Particle* data = new Particle[m_num_of_ptcls];
-    CUDA_ALLOC_DEV_MEM(&m_ptcls,m_num_of_ptcls*sizeof(Particle));
-    CUDA_MEMCPY_H2D(m_ptcls,data,m_num_of_ptcls*sizeof(Particle));
+    Particle* data = new Particle[m_swam.ptcl_size];
+    CUDA_ALLOC_DEV_MEM(&m_swam.ptcls,m_swam.ptcl_size*sizeof(Particle));
+    CUDA_MEMCPY_H2D(m_swam.ptcls,data,m_swam.ptcl_size*sizeof(Particle));
     delete [] data;
-    setup_random_states(m_ptcls, m_num_of_ptcls);
+    setup_random_states(m_swam);
 
-    CUDA_ALLOC_DEV_MEM(&m_best_values,m_num_of_ptcls*sizeof(float));
+    CUDA_ALLOC_DEV_MEM(&m_best_values,m_swam.ptcl_size*sizeof(float));
     cublasCreate(&m_cbls_hdl);
   }
 
   void delete_particles()
   {
-    CUDA_FREE_DEV_MEM(m_ptcls);
+    CUDA_FREE_DEV_MEM(m_swam.ptcls);
     CUDA_FREE_DEV_MEM(m_best_values);
     cublasDestroy(m_cbls_hdl);
   }
@@ -86,9 +86,10 @@ public:
 public:
   CUDA_MAT::CudaMatrixFactory m_factory;
   VoidPtrCarrier<N> m_carrier;
-  Particle *m_ptcls;
+  Swarm m_swam;
+  //Particle *m_ptcls;
   float *m_best_values; // A fix to use cublas
-  int m_num_of_ptcls;
+  //int m_num_of_ptcls;
   int m_num_of_epoches;
   cublasHandle_t m_cbls_hdl;
   Particle result;
