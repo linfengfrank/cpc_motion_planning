@@ -67,14 +67,14 @@ __host__ __device__ __forceinline__
 float process_cost(const State &s, const State &goal)
 {
   float2 dist_err = s.p - goal.p;
-  return 0.5f*sqrt(dist_err.x*dist_err.x + dist_err.y*dist_err.y);
+  return 0.5f*sqrt(dist_err.x*dist_err.x + dist_err.y*dist_err.y) + 0.2f*sqrt(s.v*s.v + s.w*s.w);
 }
 
 __host__ __device__ __forceinline__
 float final_cost(const State &s, const State &goal)
 {
   float2 dist_err = s.p - goal.p;
-  return 4.0f*sqrt(dist_err.x*dist_err.x + dist_err.y*dist_err.y);
+  return 4.0f*sqrt(dist_err.x*dist_err.x + dist_err.y*dist_err.y) + 0.2f*sqrt(s.v*s.v + s.w*s.w);
 }
 
 //---

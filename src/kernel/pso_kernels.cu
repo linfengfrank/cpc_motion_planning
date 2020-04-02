@@ -9,7 +9,7 @@ float evaluate_trajectory(const State &s0, const State &goal, const Trace &tr, V
 {
   State s = s0;
   float cost = 0;
-  float dt = 0.05f;
+  float dt = 0.1f;
   for (float t=0.0f; t<PSO_TOTAL_T; t+=dt)
   {
     int i = static_cast<int>(floor(t/PSO_STEP_DT));
