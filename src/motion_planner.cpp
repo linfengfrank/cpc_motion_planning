@@ -13,7 +13,7 @@ MotionPlanner::MotionPlanner():
 
   m_planning_timer = m_nh.createTimer(ros::Duration(0.2), &MotionPlanner::plan_call_back, this);
 
-  m_pso_planner = new PSO::Planner<5>(200,25);
+  m_pso_planner = new PSO::Planner<5>(200,40);
   m_pso_planner->load_data_matrix();
   m_pso_planner->create_particles();
 

@@ -87,6 +87,18 @@ struct Trace
     }
     return *this;
   }
+
+  //---
+  __device__ __host__
+  float square()
+  {
+    float square = 0;
+    for (unsigned int i=0;i<PSO_STEPS;i++)
+    {
+      square += dot(site[i],site[i]);
+    }
+    return square;
+  }
 };
 
 __host__ __device__ __forceinline__

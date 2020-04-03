@@ -22,6 +22,8 @@ float evaluate_trajectory(const State &s0, const State &goal, const Trace &tr, V
     cost += process_cost(s,goal,map);
   }
   cost += final_cost(s,goal,map);
+  Trace diff = tr - last_tr;
+  cost += sqrt(diff.square());
   return cost;
 }
 
