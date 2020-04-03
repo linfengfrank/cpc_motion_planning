@@ -14,6 +14,15 @@ struct Trace
   float3 site[PSO_STEPS];
 
   __device__ __host__
+  Trace()
+  {
+    for (unsigned int i=0;i<PSO_STEPS;i++)
+    {
+      site[i] = make_float3(0,0,0);
+    }
+  }
+
+  __device__ __host__
   float3& operator[](unsigned int i)
   {
     return site[i];

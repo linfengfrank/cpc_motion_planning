@@ -4,6 +4,7 @@
 #include <cpc_motion_planning/pso/pso_utilities.cuh>
 #include <cpc_motion_planning/dynamic_programming.cuh>
 #include <cuda_geometry/helper_math.h>
+#include <cuda_geometry/cuda_edtmap.cuh>
 namespace PSO
 {
 struct State
@@ -65,14 +66,14 @@ float3 dp_control(const State &s, const float3 &site, VoidPtrCarrier<N> &aux_dat
 }
 
 __host__ __device__ __forceinline__
-float process_cost(const State &s, const State &goal)
+float process_cost(const State &s, const State &goal, const EDTMap &map)
 {
   float2 dist_err = s.p - goal.p;
   return 0.5f*sqrt(dist_err.x*dist_err.x + dist_err.y*dist_err.y) + 0.2f*sqrt(s.v*s.v + s.w*s.w);
 }
 
 __host__ __device__ __forceinline__
-float final_cost(const State &s, const State &goal)
+float final_cost(const State &s, const State &goal, const EDTMap &map)
 {
   float2 dist_err = s.p - goal.p;
   return 4.0f*sqrt(dist_err.x*dist_err.x + dist_err.y*dist_err.y) + 0.2f*sqrt(s.v*s.v + s.w*s.w);

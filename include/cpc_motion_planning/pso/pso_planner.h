@@ -23,17 +23,17 @@ public:
 
   }
 
-  void plan(const State &s, const State &goal)
+  void plan(const State &s, const State &goal, const EDTMap &map)
   {
     //test_plan<N>(s,goal,m_ptcls, m_best_values, m_num_of_ptcls, &result, true,m_carrier,m_cbls_hdl);
     cublasStatus_t cbls_stt;
 
-    initialize_particles(m_swam,m_first_time,s,goal,m_carrier,m_ubc);
-    m_first_time = false;
+    initialize_particles(m_swam, m_first_time, s, goal, m_carrier, m_ubc, map, result.best_loc);
+    //m_first_time = false;
     for (int i=0;i<m_num_of_epoches;i++)
     {
       float weight = 0.95-(0.95-0.4)/static_cast<float>(m_num_of_epoches)*static_cast<float>(i);
-      iterate_particles(m_swam,weight,s,goal,m_carrier,m_ubc);
+      iterate_particles(m_swam, weight, s, goal, m_carrier, m_ubc, map, result.best_loc);
       copy_best_values(m_swam,m_best_values);
 
       int best_idx = -1;

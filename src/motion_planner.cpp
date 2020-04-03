@@ -66,7 +66,7 @@ void MotionPlanner::plan_call_back(const ros::TimerEvent&)
   PSO::State goal;
   goal.p = make_float2(10,10);
   auto start = std::chrono::steady_clock::now();
-  m_pso_planner->plan(s,goal);
+  m_pso_planner->plan(s,goal,*m_edt_map);
   auto end = std::chrono::steady_clock::now();
   std::cout << "Consumed: "
             << std::chrono::duration_cast<std::chrono::milliseconds>(end - start).count()
