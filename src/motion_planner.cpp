@@ -61,7 +61,7 @@ void MotionPlanner::plan_call_back(const ros::TimerEvent&)
   s.s = 0;
   s.v = 0;//m_odo.twist.twist.linear.x + m_odo.twist.twist.linear.y;
   s.w = 0;
-  s.theta = psi;
+  s.theta = 0;
 
   PSO::State goal;
   goal.p = make_float2(10,10);

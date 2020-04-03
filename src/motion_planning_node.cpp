@@ -18,6 +18,13 @@ int main(int argc, char *argv[])
   MotionPlanner p;
   ros::spin();
 
+
+
+//  CUDA_GEO::pos origin(0,0,0);
+//  int3 edt_map_size = make_int3(100,100,10);
+//   EDTMap m_edt_map(origin,0.2,edt_map_size);
+
+
 //  PSO::Planner<5> p(200,25);
 //  std::cout<<"Init"<<std::endl;
 //  p.load_data_matrix();
@@ -36,7 +43,7 @@ int main(int argc, char *argv[])
 
 //    auto start = std::chrono::steady_clock::now();
 //    s.s = 0;
-//    p.plan(s, goal);
+//    p.plan(s, goal,m_edt_map);
 //    auto end = std::chrono::steady_clock::now();
 //    std::cout << "Consumed: "
 //              << std::chrono::duration_cast<std::chrono::milliseconds>(end - start).count()
