@@ -2,6 +2,7 @@
 #define CUDA_MATRIX_FACTORY_H
 #include <cuda_math/cuda_matrix.cuh>
 #include <vector>
+#include <cpc_motion_planning/dynamic_programming.cuh>
 namespace CUDA_MAT
 {
 class CudaMatrixFactory
@@ -101,6 +102,48 @@ public:
 
     return ptr;
   }
+
+  void load_uniform_bin(std::string file_name,  UniformBin &bin)
+  {
+    // open the file
+    std::ifstream file;
+    file.open(file_name.c_str(), std::ios::binary);
+
+    if (!file.is_open())
+    {
+      std::cout<<"File open failed."<<std::endl;
+      file.close();
+      return;
+    }
+
+    int Dim;
+    file.read(reinterpret_cast<char *>(&Dim),sizeof(int));
+
+    if (Dim != 1)
+    {
+      std::cout<<"Matrix dimension is not 1. Not a bin file."<<std::endl;
+      file.close();
+      return ;
+    }
+
+    // read the header to determine the size of the matrix
+    int width;
+    file.read(reinterpret_cast<char *>(&width),sizeof(int));
+
+    int byte_size = width * static_cast<int>(sizeof(float));
+
+    // load the data onto the device
+    float *data = new float[width];
+    file.read(reinterpret_cast<char *>(data),byte_size);
+
+    bin.min = data[0];
+    bin.grid = data[1] - data[0];
+    bin.size = width;
+
+    delete [] data;
+    return;
+  }
+
 
   template <int N, typename T>
   void free_cuda_matrix(void *ptr, bool load_from_host=false)

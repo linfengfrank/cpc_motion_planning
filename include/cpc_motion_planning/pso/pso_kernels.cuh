@@ -9,12 +9,12 @@ void setup_random_states(const Swarm &sw);
 //---------
 template<int N>
 void initialize_particles(const Swarm &sw, bool first_run,
-                          const State &s, const State &goal,VoidPtrCarrier<N> ptr_car);
+                          const State &s, const State &goal,VoidPtrCarrier<N> ptr_car, const  UniformBinCarrier &ubc);
 
 //---------
 template<int N>
 void iterate_particles(const Swarm &sw, float weight,
-                          const State &s, const State &goal,VoidPtrCarrier<N> ptr_car);
+                          const State &s, const State &goal,VoidPtrCarrier<N> ptr_car, const  UniformBinCarrier &ubc);
 
 //---------
 void copy_best_values(const Swarm &sw, float *best_values);

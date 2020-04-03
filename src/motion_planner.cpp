@@ -81,7 +81,7 @@ void MotionPlanner::plan_call_back(const ros::TimerEvent&)
       i = PSO::PSO_STEPS - 1;
 
     //std::cout<<i<<std::endl;
-    float3 u = PSO::dp_control<5>(s, m_pso_planner->result.best_loc[i], m_display_planner->m_carrier);
+    float3 u = PSO::dp_control<5>(s, m_pso_planner->result.best_loc[i], m_display_planner->m_carrier, m_display_planner->m_ubc);
     PSO::model_forward(s,u,dt);
 
     pcl::PointXYZ clrP;
@@ -92,10 +92,6 @@ void MotionPlanner::plan_call_back(const ros::TimerEvent&)
   }
   m_traj_pub.publish(m_traj_pnt_cld);
   m_traj_pnt_cld->clear();
-
-
-
-
 }
 
 void MotionPlanner::map_call_back(const cpc_aux_mapping::grid_map::ConstPtr &msg)

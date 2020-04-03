@@ -28,12 +28,12 @@ public:
     //test_plan<N>(s,goal,m_ptcls, m_best_values, m_num_of_ptcls, &result, true,m_carrier,m_cbls_hdl);
     cublasStatus_t cbls_stt;
 
-    initialize_particles(m_swam,m_first_time,s,goal,m_carrier);
+    initialize_particles(m_swam,m_first_time,s,goal,m_carrier,m_ubc);
     m_first_time = false;
     for (int i=0;i<m_num_of_epoches;i++)
     {
       float weight = 0.95-(0.95-0.4)/static_cast<float>(m_num_of_epoches)*static_cast<float>(i);
-      iterate_particles(m_swam,weight,s,goal,m_carrier);
+      iterate_particles(m_swam,weight,s,goal,m_carrier,m_ubc);
       copy_best_values(m_swam,m_best_values);
 
       int best_idx = -1;
@@ -75,6 +75,11 @@ public:
     m_carrier[2] = m_factory.load_cuda_matrix<1,float>("/home/sp/cpc_ws/vel_bin.dat",load_to_host);
     m_carrier[3] = m_factory.load_cuda_matrix<1,float>("/home/sp/cpc_ws/theta_bin.dat",load_to_host);
     m_carrier[4] = m_factory.load_cuda_matrix<1,float>("/home/sp/cpc_ws/w_bin.dat",load_to_host);
+
+    m_factory.load_uniform_bin("/home/sp/cpc_ws/pos_bin.dat",m_ubc.bins[0]);
+    m_factory.load_uniform_bin("/home/sp/cpc_ws/vel_bin.dat",m_ubc.bins[1]);
+    m_factory.load_uniform_bin("/home/sp/cpc_ws/theta_bin.dat",m_ubc.bins[2]);
+    m_factory.load_uniform_bin("/home/sp/cpc_ws/w_bin.dat",m_ubc.bins[3]);
   }
 
   void free_data_matrix(bool load_from_host = false)
@@ -97,6 +102,7 @@ public:
   cublasHandle_t m_cbls_hdl;
   Particle result;
   bool m_first_time;
+  UniformBinCarrier m_ubc;
 
 };
 

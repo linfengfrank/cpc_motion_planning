@@ -23,7 +23,7 @@ int main(int argc, char *argv[])
 //  p.load_data_matrix();
 //  p.create_particles();
 
-//  PSO::Planner<5> p_host(1);
+//  PSO::Planner<5> p_host(1,1);
 //  p_host.load_data_matrix(true);
 
 //  PSO::State s;
@@ -31,20 +31,20 @@ int main(int argc, char *argv[])
 //  s.v = 0;
 //  PSO::State goal;
 //  goal.p = make_float2(10,-10);
-//  for (int ctt = 0; ctt<100; ctt++)
+//  for (int ctt = 0; ctt<2; ctt++)
 //  {
 
 //    auto start = std::chrono::steady_clock::now();
 //    s.s = 0;
 //    p.plan(s, goal);
 //    auto end = std::chrono::steady_clock::now();
-//        std::cout << "Consumed: "
-//                  << std::chrono::duration_cast<std::chrono::milliseconds>(end - start).count()
-//                  << "ms" << std::endl;
+//    std::cout << "Consumed: "
+//              << std::chrono::duration_cast<std::chrono::milliseconds>(end - start).count()
+//              << "ms" << std::endl;
 
 //    for (int k=0;k<4;k++)
 //    {
-//      float3 u = PSO::dp_control<5>(s, p.result.best_loc[0], p_host.m_carrier);
+//      float3 u = PSO::dp_control<5>(s, p.result.best_loc[0], p_host.m_carrier, p_host.m_ubc);
 //      PSO::model_forward(s,u,0.05f);
 //      printf("%f %f %f %f\n",s.p.x,s.p.y,s.v,s.w);
 

@@ -42,7 +42,7 @@ void model_forward(State &s, const float3 &u, const float &dt)
 
 template<int N>
 __host__ __device__ __forceinline__
-float3 dp_control(const State &s, const float3 &site, VoidPtrCarrier<N> &aux_data)
+float3 dp_control(const State &s, const float3 &site, VoidPtrCarrier<N> &aux_data, const UniformBinCarrier &ubc)
 {
   // Cast all the needed pointers
   CUDA_MAT::Mat4Act *S_A = static_cast<CUDA_MAT::Mat4Act*>(aux_data[0]);
@@ -57,8 +57,9 @@ float3 dp_control(const State &s, const float3 &site, VoidPtrCarrier<N> &aux_dat
   s_relative[1] = s.v; // relative velocity
   s_relative[2] = s.theta - site.y; // relative velocity
   s_relative[3] = s.w; //relative angular speed
-  dp_action u = CUDA_MAT::get_control(s_relative, *S_A, *bin_p, *bin_v, *bin_theta, *bin_w);
 
+  //dp_action u = CUDA_MAT::get_control(s_relative, *S_A, *bin_p, *bin_v, *bin_theta, *bin_w);
+  dp_action u = CUDA_MAT::get_control_uniform_bin(s_relative, *S_A, ubc);
   // Return the control
   return make_float3(u.acc,u.alpha,0.0f);
 }
