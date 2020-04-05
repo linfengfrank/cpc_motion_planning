@@ -3,12 +3,14 @@
 #include <chrono>
 MotionPlanner::MotionPlanner():
   m_received_map(false),
-  m_received_state(false),
+  m_raw_odo_received(false),
+  m_slam_odo_received(false),
   m_goal_received(false),
   m_edt_map(nullptr)
 {
   m_map_sub = m_nh.subscribe("/edt_map", 1, &MotionPlanner::map_call_back, this);
-  m_state_sub = m_nh.subscribe("/odom", 1, &MotionPlanner::odo_call_back, this);
+  m_raw_odom_sub = m_nh.subscribe("/raw_odom", 1, &MotionPlanner::raw_odo_call_back, this);
+  m_slam_odom_sub = m_nh.subscribe("/slam_odom", 1, &MotionPlanner::slam_odo_call_back, this);
   m_goal_sub = m_nh.subscribe("/move_base_simple/goal",1,&MotionPlanner::goal_call_back, this);
 
   m_traj_pub = m_nh.advertise<PointCloud> ("pred_traj", 1);
@@ -52,28 +54,28 @@ MotionPlanner::~MotionPlanner()
 
 void MotionPlanner::plan_call_back(const ros::TimerEvent&)
 {
-  if (!m_received_state || !m_received_map || !m_goal_received)
+  if (!m_slam_odo_received || !m_raw_odo_received || !m_received_map || !m_goal_received)
     return;
 
   double phi,theta,psi;
 
-  tf::Quaternion q(m_odo.pose.pose.orientation.x,
-                   m_odo.pose.pose.orientation.y,
-                   m_odo.pose.pose.orientation.z,
-                   m_odo.pose.pose.orientation.w);
+  tf::Quaternion q(m_slam_odo.pose.pose.orientation.x,
+                   m_slam_odo.pose.pose.orientation.y,
+                   m_slam_odo.pose.pose.orientation.z,
+                   m_slam_odo.pose.pose.orientation.w);
   tf::Matrix3x3 m(q);
   m.getRPY(phi, theta, psi);
 
   PSO::State s;
-  s.p.x = m_odo.pose.pose.position.x;
-  s.p.y = m_odo.pose.pose.position.y;
+  s.p.x = m_slam_odo.pose.pose.position.x;
+  s.p.y = m_slam_odo.pose.pose.position.y;
   s.s = 0;
-  s.v = m_odo.twist.twist.linear.x;//m_s.v;
-  s.w = m_odo.twist.twist.angular.z;//m_s.w;
+  s.v = m_raw_odo.twist.twist.linear.x;//m_s.v;
+  s.w = m_raw_odo.twist.twist.angular.z;//m_s.w;
   s.theta = psi;
 
 
-  std::cout<<"w: "<<s.w<<std::endl;
+  //std::cout<<"w: "<<s.w<<std::endl;
   auto start = std::chrono::steady_clock::now();
   m_pso_planner->plan(s,m_goal,*m_edt_map);
   auto end = std::chrono::steady_clock::now();
@@ -139,10 +141,16 @@ void MotionPlanner::map_call_back(const cpc_aux_mapping::grid_map::ConstPtr &msg
   CUDA_MEMCPY_H2D(m_edt_map->m_sd_map,msg->payload8.data(),static_cast<size_t>(m_edt_map->m_byte_size));
 }
 
-void MotionPlanner::odo_call_back(const nav_msgs::Odometry::ConstPtr &msg)
+void MotionPlanner::raw_odo_call_back(const nav_msgs::Odometry::ConstPtr &msg)
 {
-  m_received_state = true;
-  m_odo = *msg;
+  m_raw_odo_received = true;
+  m_raw_odo = *msg;
+}
+
+void MotionPlanner::slam_odo_call_back(const nav_msgs::Odometry::ConstPtr &msg)
+{
+  m_slam_odo_received = true;
+  m_slam_odo = *msg;
 }
 
 void MotionPlanner::goal_call_back(const geometry_msgs::PoseStamped::ConstPtr &msg)
