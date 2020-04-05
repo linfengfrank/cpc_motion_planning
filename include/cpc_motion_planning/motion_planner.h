@@ -33,6 +33,7 @@ private:
     nav_msgs::Odometry m_odo;
 
     ros::Publisher m_traj_pub;
+    ros::Publisher m_cmd_pub;
 
     bool m_received_map;
     bool m_received_state;
@@ -42,6 +43,7 @@ private:
     PSO::Planner<5> *m_display_planner;
     PointCloud::Ptr m_traj_pnt_cld;
     PSO::State m_goal;
+    PSO::State m_s;
 
 };
 

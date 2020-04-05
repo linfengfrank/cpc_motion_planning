@@ -8,12 +8,13 @@ MotionPlanner::MotionPlanner():
   m_edt_map(nullptr)
 {
   m_map_sub = m_nh.subscribe("/edt_map", 1, &MotionPlanner::map_call_back, this);
-  m_state_sub = m_nh.subscribe("/ground_truth/state", 1, &MotionPlanner::odo_call_back, this);
+  m_state_sub = m_nh.subscribe("/odom", 1, &MotionPlanner::odo_call_back, this);
   m_goal_sub = m_nh.subscribe("/move_base_simple/goal",1,&MotionPlanner::goal_call_back, this);
 
   m_traj_pub = m_nh.advertise<PointCloud> ("pred_traj", 1);
+  m_cmd_pub = m_nh.advertise<geometry_msgs::Twist>("/husky_velocity_controller/cmd_vel",1);
 
-  m_planning_timer = m_nh.createTimer(ros::Duration(0.2), &MotionPlanner::plan_call_back, this);
+  m_planning_timer = m_nh.createTimer(ros::Duration(0.1), &MotionPlanner::plan_call_back, this);
 
   m_pso_planner = new PSO::Planner<5>(150,30);
   m_pso_planner->load_data_matrix();
@@ -23,6 +24,14 @@ MotionPlanner::MotionPlanner():
   m_display_planner->load_data_matrix(true);
   m_traj_pnt_cld = PointCloud::Ptr(new PointCloud);
   m_traj_pnt_cld->header.frame_id = "/world";
+
+  m_s.p.x = 0;
+  m_s.p.y = 0;
+  m_s.s = 0;
+  m_s.v = 0;
+  m_s.theta = 0;
+  m_s.w = 0;
+
 }
 
 MotionPlanner::~MotionPlanner()
@@ -59,12 +68,12 @@ void MotionPlanner::plan_call_back(const ros::TimerEvent&)
   s.p.x = m_odo.pose.pose.position.x;
   s.p.y = m_odo.pose.pose.position.y;
   s.s = 0;
-  s.v = sqrt(m_odo.twist.twist.linear.x*m_odo.twist.twist.linear.x + m_odo.twist.twist.linear.y*m_odo.twist.twist.linear.y);
-  s.w = m_odo.twist.twist.angular.z;
+  s.v = m_odo.twist.twist.linear.x;//m_s.v;
+  s.w = m_odo.twist.twist.angular.z;//m_s.w;
   s.theta = psi;
 
 
-
+  std::cout<<"w: "<<s.w<<std::endl;
   auto start = std::chrono::steady_clock::now();
   m_pso_planner->plan(s,m_goal,*m_edt_map);
   auto end = std::chrono::steady_clock::now();
@@ -73,12 +82,16 @@ void MotionPlanner::plan_call_back(const ros::TimerEvent&)
             << "ms" << std::endl;
 
 
+  //PSO::State cmd_state;
   float dt = 0.1f;
   for (float t=0.0f; t<PSO::PSO_TOTAL_T; t+=dt)
   {
     int i = static_cast<int>(floor(t/PSO::PSO_STEP_DT));
     if (i > PSO::PSO_STEPS - 1)
       i = PSO::PSO_STEPS - 1;
+
+    if (t<0.11f)
+      m_s = s;
 
     //std::cout<<i<<std::endl;
     float3 u = PSO::dp_control<5>(s, m_pso_planner->result.best_loc[i], m_display_planner->m_carrier, m_display_planner->m_ubc);
@@ -92,6 +105,20 @@ void MotionPlanner::plan_call_back(const ros::TimerEvent&)
   }
   m_traj_pub.publish(m_traj_pnt_cld);
   m_traj_pnt_cld->clear();
+
+  //publish cmd_vel
+  geometry_msgs::Twist cmd;
+  cmd.linear.x = m_s.v;
+  cmd.linear.y = 0;
+  cmd.linear.z = 0;
+
+  cmd.angular.x = 0;
+  cmd.angular.y = 0;
+  cmd.angular.z = m_s.w;
+
+
+  m_cmd_pub.publish(cmd);
+
 }
 
 void MotionPlanner::map_call_back(const cpc_aux_mapping::grid_map::ConstPtr &msg)
