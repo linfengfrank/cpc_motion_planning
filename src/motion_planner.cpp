@@ -1,6 +1,12 @@
 #include "cpc_motion_planning/motion_planner.h"
 #include "tf/tf.h"
 #include <chrono>
+
+template <typename T> int sgn(T val)
+{
+    return (T(0) < val) - (val < T(0));
+}
+
 MotionPlanner::MotionPlanner():
   m_received_map(false),
   m_raw_odo_received(false),
@@ -70,20 +76,43 @@ void MotionPlanner::plan_call_back(const ros::TimerEvent&)
   s.p.x = m_slam_odo.pose.pose.position.x;
   s.p.y = m_slam_odo.pose.pose.position.y;
   s.s = 0;
-  s.v = m_s.v;//m_raw_odo.twist.twist.linear.x;//m_s.v;
-  s.w = m_s.w;//m_raw_odo.twist.twist.angular.z;//m_s.w;
   s.theta = psi;
 
-  float yaw_diff = s.theta - m_goal.theta;
-  yaw_diff = yaw_diff - floor((yaw_diff + M_PI) / (2 * M_PI)) * 2 * M_PI;
 
-  std::cout<<"w err: "<<m_s.w-m_slam_odo.twist.twist.angular.z<<", "<<m_s.v-m_slam_odo.twist.twist.linear.x<<", "<<yaw_diff<<std::endl;
+  float v_err = m_s.v-m_slam_odo.twist.twist.linear.x;
+  float w_err = m_s.w-m_slam_odo.twist.twist.angular.z;
+
+  if (fabs(v_err) > 0.5 )
+  {
+    std::cout<<"------Reset v------"<<std::endl;
+    s.v = m_raw_odo.twist.twist.linear.x + sgn<float>(v_err)*0.3;
+  }
+  else
+  {
+    s.v = m_s.v;
+  }
+
+  if (fabs(w_err) > 0.5)
+  {
+    std::cout<<"------Reset w------"<<std::endl;
+    s.w = m_raw_odo.twist.twist.angular.z + sgn<float>(w_err)*0.3;
+  }
+  else
+  {
+    s.w = m_s.w;
+  }
+
+  std::cout<<"v,w err: "<<v_err<<", "<<w_err<<std::endl;
+  //  float yaw_diff = s.theta - m_goal.theta;
+  //  yaw_diff = yaw_diff - floor((yaw_diff + M_PI) / (2 * M_PI)) * 2 * M_PI;
+
+
   auto start = std::chrono::steady_clock::now();
   m_pso_planner->plan(s,m_goal,*m_edt_map);
   auto end = std::chrono::steady_clock::now();
-//  std::cout << "Consumed: "
-//            << std::chrono::duration_cast<std::chrono::milliseconds>(end - start).count()
-//            << "ms" << std::endl;
+  //  std::cout << "Consumed: "
+  //            << std::chrono::duration_cast<std::chrono::milliseconds>(end - start).count()
+  //            << "ms" << std::endl;
 
 
   //PSO::State cmd_state;
