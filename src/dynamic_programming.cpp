@@ -14,7 +14,7 @@ int main(int argc, char **argv)
   CUDA_MAT::CudaMatrixFactory factory;
 
   std::cout<<"Create bins"<<std::endl;
-  size_t M_pos = 60;
+  size_t M_pos = 100;
   float *pos_bin_data = new float[M_pos];
   for (int i=0;i<M_pos;i++)
   {
@@ -22,7 +22,7 @@ int main(int argc, char **argv)
   }
 
   //------
-  size_t M_vel = 40;
+  size_t M_vel = 50;
   float *vel_bin_data = new float[M_vel];
   for (int i=0;i<M_vel;i++)
   {

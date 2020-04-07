@@ -92,6 +92,17 @@ float process_cost(const State &s, const State &goal, const EDTMap &map)
     cost += 100;
 #endif
 
+  if (sqrt(dist_err.x*dist_err.x + dist_err.y*dist_err.y) > 4)
+  {
+    cost += 0.5f*M_PI;
+  }
+  else
+  {
+    float yaw_diff = s.theta - goal.theta;
+    yaw_diff = yaw_diff - floor((yaw_diff + M_PI) / (2 * M_PI)) * 2 * M_PI;
+    cost += 0.5f*fabs(yaw_diff);
+  }
+
   return  cost;
 }
 
@@ -122,6 +133,17 @@ float final_cost(const State &s, const State &goal, const EDTMap &map)
     cost += 100;
 #endif
 
+  if (sqrt(dist_err.x*dist_err.x + dist_err.y*dist_err.y) > 4)
+  {
+    cost += 4*M_PI;
+  }
+  else
+  {
+    float yaw_diff = s.theta - goal.theta;
+    yaw_diff = yaw_diff - floor((yaw_diff + M_PI) / (2 * M_PI)) * 2 * M_PI;
+    cost += 4*fabs(yaw_diff);
+  }
+
   return  cost;
 }
 
@@ -142,7 +164,7 @@ void bound_ptcl_location(Particle &p, const State &s)
 {
   for (int n = 0; n < PSO_STEPS; n++)
   {
-    bound_between(p.curr_loc.site[n].x,  s.s-5.0f,  s.s+5.0f);
+    bound_between(p.curr_loc.site[n].x,  s.s-9.0f,  s.s+9.0f);
     bound_between(p.curr_loc.site[n].y,  s.theta-3, s.theta+3);
   }
 }

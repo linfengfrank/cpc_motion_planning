@@ -29,9 +29,9 @@ void test(VoidPtrCarrier<N> data)
   dp_action best_action;
   bool updated = false;
 
-  for (float acc=-2;acc<2;acc+=0.2)
+  for (float acc=-2;acc<2.1;acc+=0.2)
   {
-    for (float alpha=-3;alpha<3;alpha+=0.3)
+    for (float alpha=-3;alpha<3.1;alpha+=0.3)
     {
       s_next[0] = s_curr[0] + s_curr[1]*DT + 0.5*acc*DT*DT;
       s_next[1] = s_curr[1] + acc*DT;
@@ -40,11 +40,11 @@ void test(VoidPtrCarrier<N> data)
       val = CUDA_MAT::get_value(s_next,*S_old, *bin_p, *bin_v, *bin_theta, *bin_w);
       val += 10*acc*acc + 10*alpha*alpha;
       val += 1*s_curr[0]*s_curr[0] + 0.2*s_curr[1]*s_curr[1] +s_curr[2]*s_curr[2] + 0.2*s_curr[3]*s_curr[3];
-      if (s_curr[1] - 1.5 > 0)
-        val += 80*(s_curr[1] - 1.5);
+      if (s_curr[1] - 4.0 > 0)
+        val += 80*(s_curr[1] - 4.0);
 
-      if (s_curr[1] < -1.5)
-        val += 80*(-s_curr[1] - 1.5);
+      if (s_curr[1] < -4.0)
+        val += 80*(-s_curr[1] - 4.0);
 
       if (s_curr[3] - 2 > 0)
         val += 80*(s_curr[3] - 2);
@@ -58,8 +58,8 @@ void test(VoidPtrCarrier<N> data)
 //      if (fabs(acc_lat) > 2)
 //        val += 80*(fabs(acc_lat) - 2);
 
-      if (acc_tot - 2.0 > 0)
-        val += 80*(acc_tot - 2.0);
+      if (acc_tot - 1.5 > 0)
+        val += 80*(acc_tot - 1.5);
 
 //      val+= 0.5*acc_tot*acc_tot;
 
@@ -101,7 +101,7 @@ void program(VoidPtrCarrier<N> ptr_car, size_t *bin_size)
 
 
 
-  for (int i=0; i<100; i++)
+  for (int i=0; i<140; i++)
   {
     printf("Iteration %d\n",i);
     if (i % 2 == 0)
