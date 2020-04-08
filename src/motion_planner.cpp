@@ -23,7 +23,7 @@ MotionPlanner::MotionPlanner():
   m_ref_pub = m_nh.advertise<cpc_motion_planning::ref_data>("ref_traj",1);
   m_cmd_pub = m_nh.advertise<geometry_msgs::Twist>("/husky_velocity_controller/cmd_vel",1);
 
-  m_planning_timer = m_nh.createTimer(ros::Duration(0.1), &MotionPlanner::plan_call_back, this);
+  m_planning_timer = m_nh.createTimer(ros::Duration(PSO::PSO_REPLAN_DT), &MotionPlanner::plan_call_back, this);
 
   m_pso_planner = new PSO::Planner<5>(150,30);
   m_pso_planner->load_data_matrix();
@@ -119,7 +119,7 @@ void MotionPlanner::plan_call_back(const ros::TimerEvent&)
 
 
   //PSO::State cmd_state;
-  float dt = 0.1f;
+  float dt = PSO::PSO_SIM_DT;
   int cols = 0;
   for (float t=0.0f; t<PSO::PSO_TOTAL_T; t+=dt)
   {
@@ -127,7 +127,7 @@ void MotionPlanner::plan_call_back(const ros::TimerEvent&)
     if (i > PSO::PSO_STEPS - 1)
       i = PSO::PSO_STEPS - 1;
 
-    if (t<0.11f)
+    if (t<PSO::PSO_REPLAN_DT+1e-1f)
       m_s = s;
 
     //std::cout<<i<<std::endl;
