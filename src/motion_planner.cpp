@@ -20,6 +20,7 @@ MotionPlanner::MotionPlanner():
   m_goal_sub = m_nh.subscribe("/move_base_simple/goal",1,&MotionPlanner::goal_call_back, this);
 
   m_traj_pub = m_nh.advertise<PointCloud> ("pred_traj", 1);
+  m_ref_pub = m_nh.advertise<cpc_motion_planning::ref_data>("ref_traj",1);
   m_cmd_pub = m_nh.advertise<geometry_msgs::Twist>("/husky_velocity_controller/cmd_vel",1);
 
   m_planning_timer = m_nh.createTimer(ros::Duration(0.1), &MotionPlanner::plan_call_back, this);
@@ -40,6 +41,8 @@ MotionPlanner::MotionPlanner():
   m_s.theta = 0;
   m_s.w = 0;
 
+  //Initialize the control message
+  m_ref_msg.rows = 2;
 }
 
 MotionPlanner::~MotionPlanner()
@@ -117,6 +120,7 @@ void MotionPlanner::plan_call_back(const ros::TimerEvent&)
 
   //PSO::State cmd_state;
   float dt = 0.1f;
+  int cols = 0;
   for (float t=0.0f; t<PSO::PSO_TOTAL_T; t+=dt)
   {
     int i = static_cast<int>(floor(t/PSO::PSO_STEP_DT));
@@ -135,7 +139,16 @@ void MotionPlanner::plan_call_back(const ros::TimerEvent&)
     clrP.y = s.p.y;
     clrP.z = 0.2f;
     m_traj_pnt_cld->points.push_back(clrP);
+
+    m_ref_msg.data.push_back(s.v);
+    m_ref_msg.data.push_back(s.w);
+    cols++;
   }
+
+  m_ref_msg.cols = cols;
+  m_ref_pub.publish(m_ref_msg);
+  m_ref_msg.data.clear();
+
   m_traj_pub.publish(m_traj_pnt_cld);
   m_traj_pnt_cld->clear();
 

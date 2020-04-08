@@ -9,6 +9,7 @@
 #include <pcl_ros/point_cloud.h>
 #include <pcl/point_types.h>
 #include <geometry_msgs/PoseStamped.h>
+#include <cpc_motion_planning/ref_data.h>
 
 class MotionPlanner
 {
@@ -35,6 +36,7 @@ private:
     nav_msgs::Odometry m_raw_odo, m_slam_odo;
 
     ros::Publisher m_traj_pub;
+    ros::Publisher m_ref_pub;
     ros::Publisher m_cmd_pub;
 
     bool m_received_map;
@@ -47,6 +49,7 @@ private:
     PointCloud::Ptr m_traj_pnt_cld;
     PSO::State m_goal;
     PSO::State m_s;
+    cpc_motion_planning::ref_data m_ref_msg;
 
 };
 
