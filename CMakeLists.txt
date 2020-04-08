@@ -122,7 +122,7 @@ generate_messages(
 catkin_package(
   INCLUDE_DIRS include
 #  LIBRARIES cpc_motion_planning
-#  CATKIN_DEPENDS roscpp rospy std_msgs
+  CATKIN_DEPENDS roscpp rospy std_msgs cpc_aux_mapping
 #  DEPENDS system_lib
 )
 

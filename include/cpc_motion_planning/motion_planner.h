@@ -25,6 +25,7 @@ private:
   void raw_odo_call_back(const nav_msgs::Odometry::ConstPtr &msg);
   void slam_odo_call_back(const nav_msgs::Odometry::ConstPtr &msg);
   void goal_call_back(const geometry_msgs::PoseStamped::ConstPtr &msg);
+  void curr_ref_call_back(const cpc_motion_planning::ref_data::ConstPtr &msg);
 
 private:
     ros::NodeHandle m_nh;
@@ -32,12 +33,12 @@ private:
     ros::Subscriber m_raw_odom_sub;
     ros::Subscriber m_slam_odom_sub;
     ros::Subscriber m_goal_sub;
+    ros::Subscriber m_curr_ref_sub;
     ros::Timer m_planning_timer;
     nav_msgs::Odometry m_raw_odo, m_slam_odo;
 
     ros::Publisher m_traj_pub;
     ros::Publisher m_ref_pub;
-    ros::Publisher m_cmd_pub;
 
     bool m_received_map;
     bool m_raw_odo_received;
@@ -48,7 +49,7 @@ private:
     PSO::Planner<5> *m_display_planner;
     PointCloud::Ptr m_traj_pnt_cld;
     PSO::State m_goal;
-    PSO::State m_s;
+    float m_ref_v, m_ref_w;
     cpc_motion_planning::ref_data m_ref_msg;
 
 };
