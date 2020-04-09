@@ -25,7 +25,7 @@ MotionPlanner::MotionPlanner():
 
   m_planning_timer = m_nh.createTimer(ros::Duration(PSO::PSO_REPLAN_DT), &MotionPlanner::plan_call_back, this);
 
-  m_pso_planner = new PSO::Planner<5>(150,30);
+  m_pso_planner = new PSO::Planner<5>(150,60);
   m_pso_planner->load_data_matrix();
   m_pso_planner->create_particles();
 
@@ -87,27 +87,27 @@ void MotionPlanner::plan_call_back(const ros::TimerEvent&)
   float v_err = m_ref_v-m_slam_odo.twist.twist.linear.x;
   float w_err = m_ref_w-m_slam_odo.twist.twist.angular.z;
 
-  if (fabs(v_err) > 0.5 )
+  if (fabs(v_err) > 1.0 )
   {
     std::cout<<"------Reset v------"<<std::endl;
-    s.v = m_raw_odo.twist.twist.linear.x + sgn<float>(v_err)*0.3;
+    s.v = m_raw_odo.twist.twist.linear.x + sgn<float>(v_err)*0.5;
   }
   else
   {
     s.v = m_ref_v;
   }
 
-  if (fabs(w_err) > 0.5)
+  if (fabs(w_err) > 1.0)
   {
     std::cout<<"------Reset w------"<<std::endl;
-    s.w = m_raw_odo.twist.twist.angular.z + sgn<float>(w_err)*0.3;
+    s.w = m_raw_odo.twist.twist.angular.z + sgn<float>(w_err)*0.5;
   }
   else
   {
     s.w = m_ref_w;
   }
 
-  std::cout<<"v,w err: "<<v_err<<", "<<w_err<<std::endl;
+  //std::cout<<"v,w err: "<<v_err<<", "<<w_err<<std::endl;
   //  float yaw_diff = s.theta - m_goal.theta;
   //  yaw_diff = yaw_diff - floor((yaw_diff + M_PI) / (2 * M_PI)) * 2 * M_PI;
 
@@ -115,10 +115,13 @@ void MotionPlanner::plan_call_back(const ros::TimerEvent&)
   auto start = std::chrono::steady_clock::now();
   m_pso_planner->plan(s,m_goal,*m_edt_map);
   auto end = std::chrono::steady_clock::now();
-    std::cout << "Consumed: "
-              << std::chrono::duration_cast<std::chrono::milliseconds>(end - start).count()
-              << "ms" << std::endl;
+  std::cout << "Consumed: "
+            << std::chrono::duration_cast<std::chrono::milliseconds>(end - start).count()
+            << "ms" << std::endl;
 
+  std::cout<<s.p.x<<" "<<s.p.y<<" "<<s.s<<" "<<s.theta<<" "<<s.v<<" "<<s.w<<" "<<std::endl;
+  std::cout<<"v,w err: "<<v_err<<", "<<w_err<<std::endl;
+  std::cout<<"--------------"<<std::endl;
 
   //PSO::State cmd_state;
   float dt = PSO::PSO_CTRL_DT;

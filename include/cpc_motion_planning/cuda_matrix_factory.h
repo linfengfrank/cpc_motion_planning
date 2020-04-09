@@ -139,6 +139,7 @@ public:
     bin.min = data[0];
     bin.grid = data[1] - data[0];
     bin.size = width;
+    bin.max = bin.min + (bin.size - 1)*bin.grid;
 
     delete [] data;
     return;

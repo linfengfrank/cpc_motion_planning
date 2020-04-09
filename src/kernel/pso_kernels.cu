@@ -23,7 +23,7 @@ float evaluate_trajectory(const State &s0, const State &goal, const Trace &tr, V
   }
   cost += final_cost(s,goal,map);
   Trace diff = tr - last_tr;
-  cost += sqrt(diff.square());
+  cost += sqrt(diff.square())/static_cast<float>(PSO_STEPS);
   return cost;
 }
 
@@ -123,6 +123,15 @@ void copy_best_values(const Swarm &sw, float *best_values)
 {
   copy_best_value_kernel<<<1,sw.ptcl_size>>>(sw.ptcls,best_values);
 }
+
+template<int N>
+float evaluate_trajectory_wrapper(const State &s0, const State &goal, const Trace &tr, VoidPtrCarrier<N> ptr_car,const UniformBinCarrier &ubc,
+               const EDTMap &map, const Trace &last_tr)
+{
+  return evaluate_trajectory(s0, goal, tr, ptr_car,ubc,
+                             map, last_tr);
+}
+
 }
 
 template void PSO::initialize_particles<5>(const Swarm &sw, bool first_run,
@@ -131,4 +140,7 @@ const EDTMap &map, const Trace &last_tr);
 
 template void PSO::iterate_particles<5>(const Swarm &sw, float weight,
 const State &s, const State &goal,VoidPtrCarrier<5> ptr_car, const  UniformBinCarrier &ubc,
+const EDTMap &map, const Trace &last_tr);
+
+template float PSO::evaluate_trajectory_wrapper<5>(const State &s0, const State &goal, const Trace &tr, VoidPtrCarrier<5> ptr_car,const UniformBinCarrier &ubc,
 const EDTMap &map, const Trace &last_tr);

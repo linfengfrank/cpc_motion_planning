@@ -24,7 +24,7 @@ struct VoidPtrCarrier
 
 struct UniformBin
 {
-  float min;
+  float min, max;
   float grid;
   int size;
 };
@@ -228,6 +228,7 @@ dp_action get_control_uniform_bin(float s[4], const CUDA_MAT::Mat4Act &SA, const
   float volume = 1.0f;
   for (int i=0; i<4; i++)
   {
+    bound(s[i],ubc.bins[i].min, ubc.bins[i].max);
     idx[i] = floor((s[i] - ubc.bins[i].min) / ubc.bins[i].grid);
 
     if (idx[i] < 0)

@@ -21,5 +21,10 @@ void iterate_particles(const Swarm &sw, float weight,
 
 //---------
 void copy_best_values(const Swarm &sw, float *best_values);
+
+//---------
+template<int N>
+float evaluate_trajectory_wrapper(const State &s0, const State &goal, const Trace &tr, VoidPtrCarrier<N> ptr_car,const UniformBinCarrier &ubc,
+               const EDTMap &map, const Trace &last_tr);
 }
 #endif // PSO_KERNELS_CUH
