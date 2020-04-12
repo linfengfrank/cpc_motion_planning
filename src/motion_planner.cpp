@@ -84,8 +84,8 @@ void MotionPlanner::plan_call_back(const ros::TimerEvent&)
   s.theta = psi;
 
 
-  float v_err = m_ref_v-m_slam_odo.twist.twist.linear.x;
-  float w_err = m_ref_w-m_slam_odo.twist.twist.angular.z;
+  float v_err = m_ref_v-m_raw_odo.twist.twist.linear.x;
+  float w_err = m_ref_w-m_raw_odo.twist.twist.angular.z;
 
   if (fabs(v_err) > 1.0 )
   {

@@ -88,7 +88,7 @@ float process_cost(const State &s, const State &goal, const EDTMap &map)
   float rd = map.edt_const_at(ix,iy,iz).d*0.2;
   cost += exp(-6*rd)*400;
 
-  if (rd < 0.8)
+  if (rd < 1.0)
     cost += 100;
 #endif
 
@@ -129,7 +129,7 @@ float final_cost(const State &s, const State &goal, const EDTMap &map)
   float rd = map.edt_const_at(ix,iy,iz).d*0.2;
   cost += exp(-6*rd)*400;
 
-  if (rd < 0.8)
+  if (rd < 1.0)
     cost += 100;
 #endif
 
