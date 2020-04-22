@@ -25,11 +25,11 @@ MotionPlanner::MotionPlanner():
 
   m_planning_timer = m_nh.createTimer(ros::Duration(PSO::PSO_REPLAN_DT), &MotionPlanner::plan_call_back, this);
 
-  m_pso_planner = new PSO::Planner<5>(150,60);
+  m_pso_planner = new PSO::Planner(150,60);
   m_pso_planner->load_data_matrix();
   m_pso_planner->create_particles();
 
-  m_display_planner = new PSO::Planner<5>(1,1);
+  m_display_planner = new PSO::Planner(1,1);
   m_display_planner->load_data_matrix(true);
   m_traj_pnt_cld = PointCloud::Ptr(new PointCloud);
   m_traj_pnt_cld->header.frame_id = "/world";

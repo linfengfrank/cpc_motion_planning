@@ -45,8 +45,8 @@ private:
     bool m_slam_odo_received;
     bool m_goal_received;
     EDTMap *m_edt_map;
-    PSO::Planner<5> *m_pso_planner;
-    PSO::Planner<5> *m_display_planner;
+    PSO::Planner *m_pso_planner;
+    PSO::Planner *m_display_planner;
     PointCloud::Ptr m_traj_pnt_cld;
     PSO::State m_goal;
     float m_ref_v, m_ref_w;

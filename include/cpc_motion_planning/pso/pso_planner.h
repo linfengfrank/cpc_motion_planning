@@ -7,7 +7,6 @@
 
 namespace PSO
 {
-template <int N>
 class Planner
 {
 public:
