@@ -93,7 +93,7 @@ public:
 
 public:
   CUDA_MAT::CudaMatrixFactory m_factory;
-  VoidPtrCarrier<N> m_carrier;
+  VoidPtrCarrier m_carrier;
   Swarm m_swam;
   //Particle *m_ptcls;
   float *m_best_values; // A fix to use cublas

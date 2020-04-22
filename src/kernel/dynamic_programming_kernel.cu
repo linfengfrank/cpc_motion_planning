@@ -2,9 +2,8 @@
 #define DT 0.05
 namespace GPU_DP
 {
-template <int N>
 __global__
-void test(VoidPtrCarrier<N> data)
+void test(VoidPtrCarrier data)
 {
   CUDA_MAT::Mat4Act *S_A = static_cast<CUDA_MAT::Mat4Act*>(data[0]);
   CUDA_MAT::Mat4f *S_old = static_cast<CUDA_MAT::Mat4f*>(data[1]);
@@ -86,8 +85,7 @@ void test(VoidPtrCarrier<N> data)
   //printf("%f\n",val);
 }
 
-template<int N>
-void program(VoidPtrCarrier<N> ptr_car, size_t *bin_size)
+void program(VoidPtrCarrier ptr_car, size_t *bin_size)
 {
   dim3 grid_size;
   grid_size.x = bin_size[0];
@@ -109,19 +107,19 @@ void program(VoidPtrCarrier<N> ptr_car, size_t *bin_size)
       void* tmp = ptr_car[2];
       ptr_car[2] = ptr_car[1];
       ptr_car[1] = tmp;
-      test<N><<<grid_size,block_size>>>(ptr_car);
+      test<<<grid_size,block_size>>>(ptr_car);
     }
     else
     {
       void* tmp = ptr_car[2];
       ptr_car[2] = ptr_car[1];
       ptr_car[1] = tmp;
-      test<N><<<grid_size,block_size>>>(ptr_car);
+      test<<<grid_size,block_size>>>(ptr_car);
     }
 
     cudaDeviceSynchronize();
   }
 }
 }
-template void GPU_DP::program<7>(VoidPtrCarrier<7> ptr_car, size_t *bin_size);
+//template void GPU_DP::program<7>(VoidPtrCarrier<7> ptr_car, size_t *bin_size);
 

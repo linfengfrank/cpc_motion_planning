@@ -63,7 +63,7 @@ int main(int argc, char **argv)
 
   //------
   std::cout<<"Start dynamic programming"<<std::endl;
-  VoidPtrCarrier<7> ptr_car;
+  VoidPtrCarrier ptr_car;
   ptr_car[0] = S_A;
   ptr_car[1] = S_1;
   ptr_car[2] = S_2;
@@ -73,7 +73,7 @@ int main(int argc, char **argv)
   ptr_car[6] = w_bins;
 
   auto start = std::chrono::steady_clock::now();
-  GPU_DP::program<7>(ptr_car, M_S);
+  GPU_DP::program(ptr_car, M_S);
   auto end = std::chrono::steady_clock::now();
   std::cout << "Consumed: "
             << std::chrono::duration_cast<std::chrono::seconds>(end - start).count()

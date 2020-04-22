@@ -10,10 +10,10 @@ struct dp_action
   dp_action():acc(0),alpha(0)
   {}
 };
-template<int N>
+
 struct VoidPtrCarrier
 {
-  void * m_ptr[N];
+  void * m_ptr[8];
 
   __host__ __device__
   void*& operator[](int i)
@@ -31,7 +31,7 @@ struct UniformBin
 
 struct UniformBinCarrier
 {
-  UniformBin bins[4];
+  UniformBin bins[8];
 };
 
 namespace CUDA_MAT
@@ -310,7 +310,6 @@ float w_gen_val(int i)
    return -2.5f + 0.1f*static_cast<float>(i);
 }
 
-template<int N>
-void program(VoidPtrCarrier<N> ptr_car, size_t* bin_size);
+void program(VoidPtrCarrier ptr_car, size_t* bin_size);
 }
 #endif

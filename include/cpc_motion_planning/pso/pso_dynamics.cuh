@@ -41,9 +41,8 @@ void model_forward(State &s, const float3 &u, const float &dt)
   s.w = s.w + u.y*dt;
 }
 
-template<int N>
 __host__ __device__ __forceinline__
-float3 dp_control(const State &s, const float3 &site, VoidPtrCarrier<N> &aux_data, const UniformBinCarrier &ubc)
+float3 dp_control(const State &s, const float3 &site, VoidPtrCarrier &aux_data, const UniformBinCarrier &ubc)
 {
   // Cast all the needed pointers
   CUDA_MAT::Mat4Act *S_A = static_cast<CUDA_MAT::Mat4Act*>(aux_data[0]);
