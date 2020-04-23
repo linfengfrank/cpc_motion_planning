@@ -37,6 +37,8 @@ MotionPlanner::MotionPlanner():
   m_ref_v = 0.0f;
   m_ref_w = 0.0f;
 
+  m_v_err_reset_ctt = 0;
+  m_w_err_reset_ctt = 0;
   //Initialize the control message
   m_ref_msg.rows = 2;
 }
@@ -88,19 +90,31 @@ void MotionPlanner::plan_call_back(const ros::TimerEvent&)
   float w_err = m_ref_w-m_raw_odo.twist.twist.angular.z;
 
   if (fabs(v_err) > 1.0 )
+    m_v_err_reset_ctt++;
+  else
+    m_v_err_reset_ctt = 0;
+
+  if (fabs(w_err) > 1.0)
+    m_w_err_reset_ctt++;
+  else
+    m_w_err_reset_ctt = 0;
+
+  if (m_v_err_reset_ctt > 5)
   {
     std::cout<<"------Reset v------"<<std::endl;
     s.v = m_raw_odo.twist.twist.linear.x + sgn<float>(v_err)*0.5;
+    m_v_err_reset_ctt = 0;
   }
   else
   {
     s.v = m_ref_v;
   }
 
-  if (fabs(w_err) > 1.0)
+  if (m_w_err_reset_ctt > 5)
   {
     std::cout<<"------Reset w------"<<std::endl;
     s.w = m_raw_odo.twist.twist.angular.z + sgn<float>(w_err)*0.5;
+    m_w_err_reset_ctt = 0;
   }
   else
   {

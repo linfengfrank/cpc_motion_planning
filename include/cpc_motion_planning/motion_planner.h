@@ -51,6 +51,7 @@ private:
     PSO::State m_goal;
     float m_ref_v, m_ref_w;
     cpc_motion_planning::ref_data m_ref_msg;
+    int m_v_err_reset_ctt, m_w_err_reset_ctt;
 
 };
 
