@@ -61,7 +61,7 @@ float3 dp_control(const State &s, const float3 &site, VoidPtrCarrier &aux_data, 
   //dp_action u = CUDA_MAT::get_control(s_relative, *S_A, *bin_p, *bin_v, *bin_theta, *bin_w);
   dp_action u = CUDA_MAT::get_control_uniform_bin(s_relative, *S_A, ubc);
   // Return the control
-  return make_float3(u.acc,u.alpha,0.0f);
+  return make_float3(0,0,0.0f);
 }
 
 __host__ __device__ __forceinline__
