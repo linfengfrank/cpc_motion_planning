@@ -79,7 +79,7 @@ float process_cost(const State &s, const State &goal, const EDTMap &map)
 {
   float cost = 0;
   float3 dist_err = s.p - goal.p;
-  cost += 0.5f*sqrt(dist_err.x*dist_err.x + dist_err.y*dist_err.y + dist_err.z*dist_err.z);
+  cost += 0.5f*sqrt(dist_err.x*dist_err.x + dist_err.y*dist_err.y + 3*dist_err.z*dist_err.z);
   cost += 0.1f*sqrt(s.a.x*s.a.x + s.a.y*s.a.y + s.a.z*s.a.z);
 
 //  int ix = floor( (s.p.x - map.m_origin.x) / map.m_grid_step + 0.5);
