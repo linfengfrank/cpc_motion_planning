@@ -67,105 +67,105 @@ void MotionPlanner::curr_ref_call_back(const cpc_motion_planning::ref_data::Cons
 
 void MotionPlanner::plan_call_back(const ros::TimerEvent&)
 {
-  if (!m_slam_odo_received || !m_raw_odo_received || !m_received_map || !m_goal_received)
-    return;
+//  if (!m_slam_odo_received || !m_raw_odo_received || !m_received_map || !m_goal_received)
+//    return;
 
-  double phi,theta,psi;
+//  double phi,theta,psi;
 
-  tf::Quaternion q(m_slam_odo.pose.pose.orientation.x,
-                   m_slam_odo.pose.pose.orientation.y,
-                   m_slam_odo.pose.pose.orientation.z,
-                   m_slam_odo.pose.pose.orientation.w);
-  tf::Matrix3x3 m(q);
-  m.getRPY(phi, theta, psi);
+//  tf::Quaternion q(m_slam_odo.pose.pose.orientation.x,
+//                   m_slam_odo.pose.pose.orientation.y,
+//                   m_slam_odo.pose.pose.orientation.z,
+//                   m_slam_odo.pose.pose.orientation.w);
+//  tf::Matrix3x3 m(q);
+//  m.getRPY(phi, theta, psi);
 
-  PSO::State s;
-  s.p.x = m_slam_odo.pose.pose.position.x;
-  s.p.y = m_slam_odo.pose.pose.position.y;
-  s.s = 0;
-  s.theta = psi;
-
-
-  float v_err = m_ref_v-m_raw_odo.twist.twist.linear.x;
-  float w_err = m_ref_w-m_raw_odo.twist.twist.angular.z;
-
-  if (fabs(v_err) > 1.0 )
-    m_v_err_reset_ctt++;
-  else
-    m_v_err_reset_ctt = 0;
-
-  if (fabs(w_err) > 1.0)
-    m_w_err_reset_ctt++;
-  else
-    m_w_err_reset_ctt = 0;
-
-  if (m_v_err_reset_ctt > 5)
-  {
-    std::cout<<"------Reset v------"<<std::endl;
-    s.v = m_raw_odo.twist.twist.linear.x + sgn<float>(v_err)*0.5;
-    m_v_err_reset_ctt = 0;
-  }
-  else
-  {
-    s.v = m_ref_v;
-  }
-
-  if (m_w_err_reset_ctt > 5)
-  {
-    std::cout<<"------Reset w------"<<std::endl;
-    s.w = m_raw_odo.twist.twist.angular.z + sgn<float>(w_err)*0.5;
-    m_w_err_reset_ctt = 0;
-  }
-  else
-  {
-    s.w = m_ref_w;
-  }
-
-  //std::cout<<"v,w err: "<<v_err<<", "<<w_err<<std::endl;
-  //  float yaw_diff = s.theta - m_goal.theta;
-  //  yaw_diff = yaw_diff - floor((yaw_diff + M_PI) / (2 * M_PI)) * 2 * M_PI;
+//  PSO::State s;
+//  s.p.x = m_slam_odo.pose.pose.position.x;
+//  s.p.y = m_slam_odo.pose.pose.position.y;
+//  s.s = 0;
+//  s.theta = psi;
 
 
-  auto start = std::chrono::steady_clock::now();
-  m_pso_planner->plan(s,m_goal,*m_edt_map);
-  auto end = std::chrono::steady_clock::now();
-  std::cout << "Consumed: "
-            << std::chrono::duration_cast<std::chrono::milliseconds>(end - start).count()
-            << "ms" << std::endl;
+//  float v_err = m_ref_v-m_raw_odo.twist.twist.linear.x;
+//  float w_err = m_ref_w-m_raw_odo.twist.twist.angular.z;
 
-  std::cout<<s.p.x<<" "<<s.p.y<<" "<<s.s<<" "<<s.theta<<" "<<s.v<<" "<<s.w<<" "<<std::endl;
-  std::cout<<"v,w err: "<<v_err<<", "<<w_err<<std::endl;
-  std::cout<<"--------------"<<std::endl;
+//  if (fabs(v_err) > 1.0 )
+//    m_v_err_reset_ctt++;
+//  else
+//    m_v_err_reset_ctt = 0;
 
-  //PSO::State cmd_state;
-  float dt = PSO::PSO_CTRL_DT;
-  int cols = 0;
-  for (float t=0.0f; t<PSO::PSO_TOTAL_T; t+=dt)
-  {
-    int i = static_cast<int>(floor(t/PSO::PSO_STEP_DT));
-    if (i > PSO::PSO_STEPS - 1)
-      i = PSO::PSO_STEPS - 1;
+//  if (fabs(w_err) > 1.0)
+//    m_w_err_reset_ctt++;
+//  else
+//    m_w_err_reset_ctt = 0;
 
-    float3 u = PSO::dp_control(s, m_pso_planner->result.best_loc[i], m_display_planner->m_carrier, m_display_planner->m_ubc);
-    PSO::model_forward(s,u,dt);
+//  if (m_v_err_reset_ctt > 5)
+//  {
+//    std::cout<<"------Reset v------"<<std::endl;
+//    s.v = m_raw_odo.twist.twist.linear.x + sgn<float>(v_err)*0.5;
+//    m_v_err_reset_ctt = 0;
+//  }
+//  else
+//  {
+//    s.v = m_ref_v;
+//  }
 
-    pcl::PointXYZ clrP;
-    clrP.x = s.p.x;
-    clrP.y = s.p.y;
-    clrP.z = 0.2f;
-    m_traj_pnt_cld->points.push_back(clrP);
+//  if (m_w_err_reset_ctt > 5)
+//  {
+//    std::cout<<"------Reset w------"<<std::endl;
+//    s.w = m_raw_odo.twist.twist.angular.z + sgn<float>(w_err)*0.5;
+//    m_w_err_reset_ctt = 0;
+//  }
+//  else
+//  {
+//    s.w = m_ref_w;
+//  }
 
-    m_ref_msg.data.push_back(s.v);
-    m_ref_msg.data.push_back(s.w);
-    cols++;
-  }
+//  //std::cout<<"v,w err: "<<v_err<<", "<<w_err<<std::endl;
+//  //  float yaw_diff = s.theta - m_goal.theta;
+//  //  yaw_diff = yaw_diff - floor((yaw_diff + M_PI) / (2 * M_PI)) * 2 * M_PI;
 
-  m_ref_msg.cols = cols;
-  m_ref_pub.publish(m_ref_msg);
-  m_ref_msg.data.clear();
 
-  m_traj_pub.publish(m_traj_pnt_cld);
-  m_traj_pnt_cld->clear();
+//  auto start = std::chrono::steady_clock::now();
+//  m_pso_planner->plan(s,m_goal,*m_edt_map);
+//  auto end = std::chrono::steady_clock::now();
+//  std::cout << "Consumed: "
+//            << std::chrono::duration_cast<std::chrono::milliseconds>(end - start).count()
+//            << "ms" << std::endl;
+
+//  std::cout<<s.p.x<<" "<<s.p.y<<" "<<s.s<<" "<<s.theta<<" "<<s.v<<" "<<s.w<<" "<<std::endl;
+//  std::cout<<"v,w err: "<<v_err<<", "<<w_err<<std::endl;
+//  std::cout<<"--------------"<<std::endl;
+
+//  //PSO::State cmd_state;
+//  float dt = PSO::PSO_CTRL_DT;
+//  int cols = 0;
+//  for (float t=0.0f; t<PSO::PSO_TOTAL_T; t+=dt)
+//  {
+//    int i = static_cast<int>(floor(t/PSO::PSO_STEP_DT));
+//    if (i > PSO::PSO_STEPS - 1)
+//      i = PSO::PSO_STEPS - 1;
+
+//    float3 u = PSO::dp_control(s, m_pso_planner->result.best_loc[i], m_display_planner->m_carrier, m_display_planner->m_ubc);
+//    PSO::model_forward(s,u,dt);
+
+//    pcl::PointXYZ clrP;
+//    clrP.x = s.p.x;
+//    clrP.y = s.p.y;
+//    clrP.z = 0.2f;
+//    m_traj_pnt_cld->points.push_back(clrP);
+
+//    m_ref_msg.data.push_back(s.v);
+//    m_ref_msg.data.push_back(s.w);
+//    cols++;
+//  }
+
+//  m_ref_msg.cols = cols;
+//  m_ref_pub.publish(m_ref_msg);
+//  m_ref_msg.data.clear();
+
+//  m_traj_pub.publish(m_traj_pnt_cld);
+//  m_traj_pnt_cld->clear();
 }
 
 void MotionPlanner::map_call_back(const cpc_aux_mapping::grid_map::ConstPtr &msg)
@@ -215,5 +215,5 @@ void MotionPlanner::goal_call_back(const geometry_msgs::PoseStamped::ConstPtr &m
 
 
 
-  m_goal.theta = psi;
+  //m_goal.theta = psi;
 }

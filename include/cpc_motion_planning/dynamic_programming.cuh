@@ -210,7 +210,7 @@ dp_action get_control_uniform_bin(float s[3], const CUDA_MAT::Mat3Act &SA, const
             s_opp[i] = ubc.bins[i].min + ubc.bins[i].grid*static_cast<float>(opp[i]);
           }
 
-          weight = fabs(s[0]-s_opp[0])*fabs(s[1]-s_opp[1])*fabs(s[2]-s_opp[2])*fabs(s[3]-s_opp[3])/volume;
+          weight = fabs(s[0]-s_opp[0])*fabs(s[1]-s_opp[1])*fabs(s[2]-s_opp[2])/volume;
           val = mat3act_get_val_const(loc[0]+idx[0],loc[1]+idx[1],loc[2]+idx[2],SA);
           output.jerk += weight * val.jerk;
       }
