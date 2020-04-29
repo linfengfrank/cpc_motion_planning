@@ -19,6 +19,7 @@ MotionPlanner::MotionPlanner():
   m_curr_ref_sub = m_nh.subscribe("/current_ref",1,&MotionPlanner::curr_ref_call_back, this);
 
   m_traj_pub = m_nh.advertise<PointCloud> ("pred_traj", 1);
+  m_ctrl_pub = m_nh.advertise<PointCloud> ("ctrl_pnt", 1);
   m_ref_pub = m_nh.advertise<cpc_motion_planning::ref_data>("ref_traj",1);
 
   m_planning_timer = m_nh.createTimer(ros::Duration(PSO::PSO_REPLAN_DT), &MotionPlanner::plan_call_back, this);
@@ -31,6 +32,10 @@ MotionPlanner::MotionPlanner():
   m_display_planner->load_data_matrix(true);
   m_traj_pnt_cld = PointCloud::Ptr(new PointCloud);
   m_traj_pnt_cld->header.frame_id = "/world";
+
+  m_ctrl_pnt_cld = PointCloud::Ptr(new PointCloud);
+  m_ctrl_pnt_cld->header.frame_id = "/world";
+
 
   //Initialize the control message
   m_ref_msg.rows = 9;
@@ -83,12 +88,12 @@ void MotionPlanner::plan_call_back(const ros::TimerEvent&)
 
   PSO::State s = m_curr_ref;
 
- auto start = std::chrono::steady_clock::now();
- m_pso_planner->plan(s,m_goal,*m_edt_map);
- auto end = std::chrono::steady_clock::now();
+  auto start = std::chrono::steady_clock::now();
+  m_pso_planner->plan(s,m_goal,*m_edt_map);
+  auto end = std::chrono::steady_clock::now();
   std::cout << "Consumed: "
             << std::chrono::duration_cast<std::chrono::milliseconds>(end - start).count()
-            << "ms" << std::endl;
+            << "ms, cost: " << m_pso_planner->result.best_cost<<std::endl;
 
   //PSO::State cmd_state;
   float dt = PSO::PSO_CTRL_DT;
@@ -102,11 +107,18 @@ void MotionPlanner::plan_call_back(const ros::TimerEvent&)
     float3 u = PSO::dp_control(s, m_pso_planner->result.best_loc[i], m_display_planner->m_carrier, m_display_planner->m_ubc);
     PSO::model_forward(s,u,dt);
 
-    pcl::PointXYZ clrP;
-    clrP.x = s.p.x;
-    clrP.y = s.p.y;
-    clrP.z = s.p.z;
-    m_traj_pnt_cld->points.push_back(clrP);
+      pcl::PointXYZ clrP;
+      clrP.x = s.p.x;
+      clrP.y = s.p.y;
+      clrP.z = s.p.z;
+      m_traj_pnt_cld->points.push_back(clrP);
+
+
+      clrP.x = m_pso_planner->result.best_loc[i].x;
+      clrP.y = m_pso_planner->result.best_loc[i].y;
+      clrP.z = m_pso_planner->result.best_loc[i].z;
+      m_ctrl_pnt_cld->points.push_back(clrP);
+
 
     m_ref_msg.data.push_back(s.p.x);
     m_ref_msg.data.push_back(s.p.y);
@@ -129,6 +141,9 @@ void MotionPlanner::plan_call_back(const ros::TimerEvent&)
 
   m_traj_pub.publish(m_traj_pnt_cld);
   m_traj_pnt_cld->clear();
+
+  m_ctrl_pub.publish(m_ctrl_pnt_cld);
+  m_ctrl_pnt_cld->clear();
 }
 
 void MotionPlanner::map_call_back(const cpc_aux_mapping::grid_map::ConstPtr &msg)
@@ -162,14 +177,14 @@ void MotionPlanner::goal_call_back(const geometry_msgs::PoseStamped::ConstPtr &m
   m_goal.p.y = msg->pose.position.y;
   m_goal.p.z = 1.5;
 
-//  double phi,theta,psi;
+  //  double phi,theta,psi;
 
-//  tf::Quaternion q( msg->pose.orientation.x,
-//                    msg->pose.orientation.y,
-//                    msg->pose.orientation.z,
-//                    msg->pose.orientation.w);
-//  tf::Matrix3x3 m(q);
-//  m.getRPY(phi, theta, psi);
+  //  tf::Quaternion q( msg->pose.orientation.x,
+  //                    msg->pose.orientation.y,
+  //                    msg->pose.orientation.z,
+  //                    msg->pose.orientation.w);
+  //  tf::Matrix3x3 m(q);
+  //  m.getRPY(phi, theta, psi);
 
   //m_goal.theta = psi;
 }

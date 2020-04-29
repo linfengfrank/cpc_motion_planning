@@ -1,4 +1,5 @@
 #include <cpc_motion_planning/pso/pso_kernels.cuh>
+#include <cuda_geometry/helper_math.h>
 
 namespace PSO
 {
@@ -10,6 +11,7 @@ float evaluate_trajectory(const State &s0, const State &goal, const Trace &tr, V
   State s = s0;
   float cost = 0;
   float dt = PSO_SIM_DT;
+  float3 goal_p = goal.p;
   for (float t=0.0f; t<PSO_TOTAL_T; t+=dt)
   {
     int i = static_cast<int>(floor(t/PSO_STEP_DT));
@@ -18,11 +20,18 @@ float evaluate_trajectory(const State &s0, const State &goal, const Trace &tr, V
 
     float3 u = dp_control(s, tr[i], ptr_car, ubc);
     model_forward(s,u,dt);
+
+    cost += 0.1*sqrt(u.x*u.x + u.y*u.y + u.z*u.z);
     cost += process_cost(s,goal,map);
+
+    float3 ctr_pnt = tr[i];
+    float3 diff_tr = ctr_pnt - goal_p;
+
+    cost+= 0.05*sqrt(diff_tr.x*diff_tr.x + diff_tr.y*diff_tr.y + diff_tr.z*diff_tr.z);
   }
   cost += final_cost(s,goal,map);
-  Trace diff = tr - last_tr;
-  cost += sqrt(diff.square())/static_cast<float>(PSO_STEPS);
+//  Trace diff = tr - last_tr;
+//  cost += sqrt(diff.square())/static_cast<float>(PSO_STEPS);
   return cost;
 }
 

@@ -80,27 +80,28 @@ float process_cost(const State &s, const State &goal, const EDTMap &map)
   float cost = 0;
   float3 dist_err = s.p - goal.p;
   cost += 0.5f*sqrt(dist_err.x*dist_err.x + dist_err.y*dist_err.y + 3*dist_err.z*dist_err.z);
+  cost += 0.1f*sqrt(s.v.x*s.v.x + s.v.y*s.v.y + s.v.z*s.v.z);
   cost += 0.1f*sqrt(s.a.x*s.a.x + s.a.y*s.a.y + s.a.z*s.a.z);
 
-//  int ix = floor( (s.p.x - map.m_origin.x) / map.m_grid_step + 0.5);
-//  int iy = floor( (s.p.y - map.m_origin.y) / map.m_grid_step + 0.5);
-//  int iz = floor( (s.p.z - map.m_origin.z) / map.m_grid_step + 0.5);
+  int ix = floor( (s.p.x - map.m_origin.x) / map.m_grid_step + 0.5);
+  int iy = floor( (s.p.y - map.m_origin.y) / map.m_grid_step + 0.5);
+  int iz = floor( (s.p.z - map.m_origin.z) / map.m_grid_step + 0.5);
 
-//  if (ix<0 || ix>=map.m_map_size.x ||
-//          iy<0 || iy>=map.m_map_size.y ||
-//          iz<0 || iz>=map.m_map_size.z)
-//  {
-//      cost += 100;
-//      return cost;
-//  }
+  if (ix<0 || ix>=map.m_map_size.x ||
+          iy<0 || iy>=map.m_map_size.y ||
+          iz<0 || iz>=map.m_map_size.z)
+  {
+      cost += 100;
+      return cost;
+  }
 
-//#ifdef  __CUDA_ARCH__
-//  float rd = map.edt_const_at(ix,iy,iz).d*0.2;
-//  cost += exp(-6*rd)*400;
+#ifdef  __CUDA_ARCH__
+  float rd = map.edt_const_at(ix,iy,iz).d*0.2;
+  cost += exp(-6*rd)*400;
 
-//  if (rd < 1.0)
-//    cost += 100;
-//#endif
+  if (rd < 1.0)
+    cost += 100;
+#endif
 
   return  cost;
 }
@@ -110,28 +111,28 @@ float final_cost(const State &s, const State &goal, const EDTMap &map)
 {
   float cost = 0;
   float3 dist_err = s.p - goal.p;
-  cost += 8.0f*sqrt(dist_err.x*dist_err.x + dist_err.y*dist_err.y + dist_err.z*dist_err.z);
+  cost += 1.0f*sqrt(dist_err.x*dist_err.x + dist_err.y*dist_err.y + dist_err.z*dist_err.z);
   //cost += 0.1f*sqrt(s.a.x*s.a.x + s.a.y*s.a.y + s.a.z*s.a.z);
 
-//  int ix = floor( (s.p.x - map.m_origin.x) / map.m_grid_step + 0.5);
-//  int iy = floor( (s.p.y - map.m_origin.y) / map.m_grid_step + 0.5);
-//  int iz = floor( (s.p.z - map.m_origin.z) / map.m_grid_step + 0.5);
+  int ix = floor( (s.p.x - map.m_origin.x) / map.m_grid_step + 0.5);
+  int iy = floor( (s.p.y - map.m_origin.y) / map.m_grid_step + 0.5);
+  int iz = floor( (s.p.z - map.m_origin.z) / map.m_grid_step + 0.5);
 
-//  if (ix<0 || ix>=map.m_map_size.x ||
-//          iy<0 || iy>=map.m_map_size.y ||
-//          iz<0 || iz>=map.m_map_size.z)
-//  {
-//      cost += 100;
-//      return cost;
-//  }
+  if (ix<0 || ix>=map.m_map_size.x ||
+          iy<0 || iy>=map.m_map_size.y ||
+          iz<0 || iz>=map.m_map_size.z)
+  {
+      cost += 100;
+      return cost;
+  }
 
-//#ifdef  __CUDA_ARCH__
-//  float rd = map.edt_const_at(ix,iy,iz).d*0.2;
-//  cost += exp(-6*rd)*400;
+#ifdef  __CUDA_ARCH__
+  float rd = map.edt_const_at(ix,iy,iz).d*0.2;
+  cost += exp(-6*rd)*400;
 
-//  if (rd < 1.0)
-//    cost += 100;
-//#endif
+  if (rd < 1.0)
+    cost += 100;
+#endif
 
   return  cost;
 }
@@ -157,6 +158,7 @@ void bound_ptcl_location(Particle &p, const State &s)
     bound_between(p.curr_loc.site[n].x,  s.p.x-9.0f,  s.p.x+9.0f);
     bound_between(p.curr_loc.site[n].y,  s.p.y-9.0f,  s.p.y+9.0f);
     bound_between(p.curr_loc.site[n].z,  s.p.z-9.0f,  s.p.z+9.0f);
+    bound_between(p.curr_loc.site[n].z,  1.6f,  1.65f);
   }
 }
 
