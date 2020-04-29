@@ -1,6 +1,7 @@
 #include "cpc_motion_planning/motion_planner.h"
 #include "tf/tf.h"
 #include <chrono>
+#include <std_srvs/Empty.h>
 
 template <typename T> int sgn(T val)
 {
@@ -172,10 +173,18 @@ void MotionPlanner::vehicle_pose_call_back(const geometry_msgs::PoseStamped::Con
 
 void MotionPlanner::goal_call_back(const geometry_msgs::PoseStamped::ConstPtr &msg)
 {
+
+  m_goal.s.p.x = msg->pose.position.x;
+  m_goal.s.p.y = msg->pose.position.y;
+  m_goal.s.p.z = 1.5;
+  m_goal.oa = m_goal_received;
+  if (!m_goal_received)
+  {
+    std_srvs::Empty::Request eReq;
+    std_srvs::Empty::Response eRes;
+    ros::service::call("engage", eReq, eRes);
+  }
   m_goal_received = true;
-  m_goal.p.x = msg->pose.position.x;
-  m_goal.p.y = msg->pose.position.y;
-  m_goal.p.z = 1.5;
 
   //  double phi,theta,psi;
 

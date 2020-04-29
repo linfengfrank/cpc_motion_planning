@@ -23,7 +23,7 @@ public:
 
   }
 
-  void plan(const State &s, const State &goal, const EDTMap &map)
+  void plan(const State &s, const Target &goal, const EDTMap &map)
   {
     //test_plan<N>(s,goal,m_ptcls, m_best_values, m_num_of_ptcls, &result, true,m_carrier,m_cbls_hdl);
     cublasStatus_t cbls_stt;

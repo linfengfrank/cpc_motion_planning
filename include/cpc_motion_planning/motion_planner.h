@@ -46,7 +46,7 @@ private:
     PSO::Planner *m_pso_planner;
     PSO::Planner *m_display_planner;
     PointCloud::Ptr m_traj_pnt_cld, m_ctrl_pnt_cld;
-    PSO::State m_goal;
+    PSO::Target m_goal;
     PSO::State m_curr_ref;
     cpc_motion_planning::ref_data m_ref_msg;
 
