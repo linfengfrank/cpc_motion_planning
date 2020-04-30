@@ -5,11 +5,11 @@
 #include <cuda_math/cuda_matrix.cuh>
 namespace PSO
 {
-const int PSO_STEPS = 3; //planning steps
-const float PSO_STEP_DT = 1.333f; //lasting time of each step
+const int PSO_STEPS = 1; //planning steps
+const float PSO_STEP_DT = 4.0f; //lasting time of each step
 const float PSO_TOTAL_T = PSO_STEPS*PSO_STEP_DT;
 const float PSO_SIM_DT = 0.1f;
-const float PSO_REPLAN_DT = 0.1f;
+const float PSO_REPLAN_DT = 0.2f;
 const float PSO_CTRL_DT = 0.05f;
 
 struct Trace
