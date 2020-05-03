@@ -23,7 +23,6 @@ private:
   void plan_call_back(const ros::TimerEvent&);
   void map_call_back(const cpc_aux_mapping::grid_map::ConstPtr &msg);
   void goal_call_back(const geometry_msgs::PoseStamped::ConstPtr &msg);
-  void curr_ref_call_back(const cpc_motion_planning::ref_data::ConstPtr &msg);
   void vehicle_pose_call_back(const geometry_msgs::PoseStamped::ConstPtr &msg);
 
 private:
@@ -31,7 +30,6 @@ private:
     ros::Subscriber m_map_sub;
     ros::Subscriber m_pose_sub;
     ros::Subscriber m_goal_sub;
-    ros::Subscriber m_curr_ref_sub;
     ros::Timer m_planning_timer;
     geometry_msgs::PoseStamped m_pose;
 
@@ -49,7 +47,8 @@ private:
     PSO::Target m_goal;
     PSO::State m_curr_ref;
     cpc_motion_planning::ref_data m_ref_msg;
-
+    int m_plan_cycle;
+    int m_ref_start_idx;
 };
 
 #endif // MOTION_PLANNER_H
