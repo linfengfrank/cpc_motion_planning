@@ -38,7 +38,7 @@ MotionPlanner::MotionPlanner():
 
 
   //Initialize the control message
-  m_ref_msg.rows = 10;
+  m_ref_msg.rows = 9;
   m_plan_cycle = 0;
   m_ref_start_idx = 0;
 }
@@ -100,8 +100,8 @@ void MotionPlanner::plan_call_back(const ros::TimerEvent&)
     m_ctrl_pnt_cld->points.push_back(clrP);
 
     ref_counter++;
-    //std::cout<<ref_counter<<std::endl;
-    m_ref_msg.data.push_back(ref_counter);
+    //std::cout<<"b: "<<ref_counter<<std::endl;
+    m_ref_msg.ids.push_back(ref_counter);
     m_ref_msg.data.push_back(s.p.x);
     m_ref_msg.data.push_back(s.p.y);
     m_ref_msg.data.push_back(s.p.z);
@@ -125,6 +125,7 @@ void MotionPlanner::plan_call_back(const ros::TimerEvent&)
   m_ref_msg.cols = cols;
   m_ref_pub.publish(m_ref_msg);
   m_ref_msg.data.clear();
+  m_ref_msg.ids.clear();
 
   m_traj_pub.publish(m_traj_pnt_cld);
   m_traj_pnt_cld->clear();
