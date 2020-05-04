@@ -24,7 +24,7 @@ MotionPlanner::MotionPlanner():
 
   m_planning_timer = m_nh.createTimer(ros::Duration(PSO::PSO_REPLAN_DT), &MotionPlanner::plan_call_back, this);
 
-  m_pso_planner = new PSO::Planner(100,40,1);
+  m_pso_planner = new PSO::Planner(150,30,1);
   m_pso_planner->load_data_matrix();
   m_pso_planner->create_particles();
 
@@ -38,9 +38,17 @@ MotionPlanner::MotionPlanner():
 
 
   //Initialize the control message
-  m_ref_msg.rows = 9;
+  m_ref_msg.rows = 12;
   m_plan_cycle = 0;
   m_ref_start_idx = 0;
+
+  m_yaw_target = 0;
+  m_yaw_limit.vMax = 1;
+  m_yaw_limit.vMin = -1;
+  m_yaw_limit.aMax = 1;
+  m_yaw_limit.aMin = -1;
+  m_yaw_limit.jMax = 10;
+  m_yaw_limit.jMin = -10;
 }
 
 MotionPlanner::~MotionPlanner()
@@ -66,8 +74,22 @@ void MotionPlanner::plan_call_back(const ros::TimerEvent&)
 
   PSO::State s = m_curr_ref;
 
+  float3 diff = m_goal.s.p - s.p;
+  diff.z = 0;
+  double dist = sqrt(dot(diff,diff));
+  if (dist > 0.5)
+  {
+      m_yaw_target = atan2(diff.y,diff.x);
+      m_yaw_target = m_yaw_target - m_yaw_state.p;
+      m_yaw_target = m_yaw_target - floor((m_yaw_target + M_PI) / (2 * M_PI)) * 2 * M_PI;
+      m_yaw_target = m_yaw_target + m_yaw_state.p;
+  }
+
   auto start = std::chrono::steady_clock::now();
+  JLT::TPBVPParam yaw_param;
+  m_yaw_planner.solveTPBVP(m_yaw_target,0,m_yaw_state,m_yaw_limit,yaw_param);
   m_pso_planner->plan(s,m_goal,*m_edt_map);
+
   auto end = std::chrono::steady_clock::now();
   std::cout << "Consumed: "
             << std::chrono::duration_cast<std::chrono::milliseconds>(end - start).count()
@@ -86,6 +108,7 @@ void MotionPlanner::plan_call_back(const ros::TimerEvent&)
 
     float3 u = PSO::dp_control(s, m_pso_planner->result.best_loc[i], m_display_planner->m_carrier, m_display_planner->m_ubc);
     PSO::model_forward(s,u,dt);
+    JLT::State tmp_yaw_state = m_yaw_planner.TPBVPRefGen(yaw_param,t);
 
     pcl::PointXYZ clrP;
     clrP.x = s.p.x;
@@ -114,8 +137,15 @@ void MotionPlanner::plan_call_back(const ros::TimerEvent&)
     m_ref_msg.data.push_back(s.a.y);
     m_ref_msg.data.push_back(s.a.z);
 
+    m_ref_msg.data.push_back(tmp_yaw_state.p);
+    m_ref_msg.data.push_back(tmp_yaw_state.v);
+    m_ref_msg.data.push_back(tmp_yaw_state.a);
+
     if (ref_counter == next_ref_start_idx)
+    {
       m_curr_ref = s;
+      m_yaw_state = tmp_yaw_state;
+    }
 
     cols++;
   }
