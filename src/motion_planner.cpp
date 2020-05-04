@@ -24,7 +24,7 @@ MotionPlanner::MotionPlanner():
 
   m_planning_timer = m_nh.createTimer(ros::Duration(PSO::PSO_REPLAN_DT), &MotionPlanner::plan_call_back, this);
 
-  m_pso_planner = new PSO::Planner(100,40,3);
+  m_pso_planner = new PSO::Planner(100,40,1);
   m_pso_planner->load_data_matrix();
   m_pso_planner->create_particles();
 
@@ -77,7 +77,7 @@ void MotionPlanner::plan_call_back(const ros::TimerEvent&)
   float dt = PSO::PSO_CTRL_DT;
   int cols = 0;
   int ref_counter = m_ref_start_idx;
-  int next_ref_start_idx = (m_plan_cycle+1)*PSO::PSO_REPLAN_CYCLE+2;
+  int next_ref_start_idx = (m_plan_cycle+1)*PSO::PSO_REPLAN_CYCLE+PSO::PSO_PLAN_CONSUME_CYCLE;
   for (float t=0.0f; t<PSO::PSO_TOTAL_T; t+=dt)
   {
     int i = static_cast<int>(floor(t/PSO::PSO_STEP_DT));

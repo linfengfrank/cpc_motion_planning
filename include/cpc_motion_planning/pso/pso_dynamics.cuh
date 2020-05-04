@@ -86,7 +86,7 @@ float process_cost(const State &s, const Target &goal, const EDTMap &map)
 {
   float cost = 0;
   float3 dist_err = s.p - goal.s.p;
-  cost += 0.5f*sqrt(dist_err.x*dist_err.x + dist_err.y*dist_err.y + 6*dist_err.z*dist_err.z);
+  cost += 0.5f*sqrt(dist_err.x*dist_err.x + dist_err.y*dist_err.y + 3*dist_err.z*dist_err.z);
   cost += 0.1f*sqrt(s.v.x*s.v.x + s.v.y*s.v.y + s.v.z*s.v.z);
   cost += 0.1f*sqrt(s.a.x*s.a.x + s.a.y*s.a.y + s.a.z*s.a.z);
 
@@ -110,6 +110,9 @@ float process_cost(const State &s, const Target &goal, const EDTMap &map)
 
     if (rd < 1.0)
       cost += 100;
+
+    if (!map.edt_const_at(ix,iy,iz).s)
+        cost += 70;
 #endif
   }
 
@@ -121,7 +124,7 @@ float final_cost(const State &s, const Target &goal, const EDTMap &map)
 {
   float cost = 0;
   float3 dist_err = s.p - goal.s.p;
-  cost += 1.0f*sqrt(dist_err.x*dist_err.x + dist_err.y*dist_err.y + 6*dist_err.z*dist_err.z);
+  cost += 1.0f*sqrt(dist_err.x*dist_err.x + dist_err.y*dist_err.y + 3*dist_err.z*dist_err.z);
   //cost += 0.1f*sqrt(s.a.x*s.a.x + s.a.y*s.a.y + s.a.z*s.a.z);
 
   if (goal.oa)
@@ -144,6 +147,9 @@ float final_cost(const State &s, const Target &goal, const EDTMap &map)
 
     if (rd < 1.0)
       cost += 100;
+
+    if (!map.edt_const_at(ix,iy,iz).s)
+        cost += 70;
 #endif
   }
 
