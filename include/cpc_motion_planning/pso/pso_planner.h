@@ -4,7 +4,7 @@
 #include <cpc_motion_planning/cuda_matrix_factory.h>
 #include <cpc_motion_planning/pso/pso_utilities.cuh>
 #include <cpc_motion_planning/pso/pso_kernels.cuh>
-
+#include <cpc_motion_planning/pso/single_target_evluator.h>
 namespace PSO
 {
 class Planner
@@ -28,14 +28,16 @@ public:
     //test_plan<N>(s,goal,m_ptcls, m_best_values, m_num_of_ptcls, &result, true,m_carrier,m_cbls_hdl);
     cublasStatus_t cbls_stt;
 
+    m_eva.setTarget(goal);
+
     for (int ctt = 0; ctt <m_num_of_episodes; ctt ++)
     {
-      initialize_particles(m_swam, m_first_time, s, goal, m_carrier, m_ubc, map, result.best_loc);
+      initialize_particles(m_swam, m_first_time, s, goal, m_carrier, m_ubc, map, result.best_loc,m_eva);
       m_first_time = false;
       for (int i=0;i<m_num_of_epoches;i++)
       {
         float weight = 0.95-(0.95-0.4)/static_cast<float>(m_num_of_epoches)*static_cast<float>(i);
-        iterate_particles(m_swam, weight, s, goal, m_carrier, m_ubc, map, result.best_loc);
+        iterate_particles(m_swam, weight, s, goal, m_carrier, m_ubc, map, result.best_loc,m_eva);
         copy_best_values(m_swam,m_best_values);
 
         int best_idx = -1;
@@ -97,6 +99,7 @@ public:
   Particle result;
   bool m_first_time;
   UniformBinCarrier m_ubc;
+  SingleTargetEvaluator m_eva;
 
 };
 

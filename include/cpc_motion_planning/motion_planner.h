@@ -11,7 +11,7 @@
 #include <geometry_msgs/PoseStamped.h>
 #include <cpc_motion_planning/ref_data.h>
 #include <cpc_motion_planning/JLT.h>
-
+#include <cpc_motion_planning/pso/single_target_evluator.h>
 class MotionPlanner
 {
   typedef pcl::PointCloud<pcl::PointXYZ> PointCloud;

@@ -2,52 +2,12 @@
 #define PSO_DYNAMICS_CUH
 
 #include <cpc_motion_planning/pso/pso_utilities.cuh>
+#include <cpc_motion_planning/pso/uav_model.h>
 #include <cpc_motion_planning/dynamic_programming.cuh>
 #include <cuda_geometry/helper_math.h>
 #include <cuda_geometry/cuda_edtmap.cuh>
 namespace PSO
 {
-struct State
-{
-    float3 p;
-    float3 v;
-    float3 a;
-    __host__ __device__
-    State():
-      p(make_float3(0,0,0)),
-      v(make_float3(0,0,0)),
-      a(make_float3(0,0,0))
-    {
-    }
-};
-
-struct Target
-{
-  State s;
-  bool oa;
-};
-
-
-__host__ __device__ __forceinline__
-void model_forward(State &s, const float3 &u, const float &dt)
-{
-  // x
-  s.p.x = s.p.x + s.v.x*dt + 0.5f*s.a.x*dt*dt + 1.0f/6.0f*u.x*dt*dt*dt;
-  s.v.x = s.v.x + s.a.x*dt + 0.5f*u.x*dt*dt;
-  s.a.x = s.a.x + u.x*dt;
-
-  // y
-  s.p.y = s.p.y + s.v.y*dt + 0.5f*s.a.y*dt*dt + 1.0f/6.0f*u.y*dt*dt*dt;
-  s.v.y = s.v.y + s.a.y*dt + 0.5f*u.y*dt*dt;
-  s.a.y = s.a.y + u.y*dt;
-
-  // z
-  s.p.z = s.p.z + s.v.z*dt + 0.5f*s.a.z*dt*dt + 1.0f/6.0f*u.z*dt*dt*dt;
-  s.v.z = s.v.z + s.a.z*dt + 0.5f*u.z*dt*dt;
-  s.a.z = s.a.z + u.z*dt;
-
-
-}
 
 __host__ __device__ __forceinline__
 float3 dp_control(const State &s, const float3 &site, VoidPtrCarrier &aux_data, const UniformBinCarrier &ubc)
@@ -79,81 +39,6 @@ float3 dp_control(const State &s, const float3 &site, VoidPtrCarrier &aux_data, 
   u[2] = CUDA_MAT::get_control_uniform_bin(s_relative, *S_A, ubc);
 
   return make_float3(u[0].jerk, u[1].jerk, u[2].jerk);
-}
-
-__host__ __device__ __forceinline__
-float process_cost(const State &s, const Target &goal, const EDTMap &map)
-{
-  float cost = 0;
-  float3 dist_err = s.p - goal.s.p;
-  cost += 0.5f*sqrt(dist_err.x*dist_err.x + dist_err.y*dist_err.y + 3*dist_err.z*dist_err.z);
-  cost += 0.1f*sqrt(s.v.x*s.v.x + s.v.y*s.v.y + s.v.z*s.v.z);
-  cost += 0.1f*sqrt(s.a.x*s.a.x + s.a.y*s.a.y + s.a.z*s.a.z);
-
-  if (goal.oa)
-  {
-    int ix = floor( (s.p.x - map.m_origin.x) / map.m_grid_step + 0.5);
-    int iy = floor( (s.p.y - map.m_origin.y) / map.m_grid_step + 0.5);
-    int iz = floor( (s.p.z - map.m_origin.z) / map.m_grid_step + 0.5);
-
-    if (ix<0 || ix>=map.m_map_size.x ||
-        iy<0 || iy>=map.m_map_size.y ||
-        iz<0 || iz>=map.m_map_size.z)
-    {
-      cost += 100;
-      return cost;
-    }
-
-#ifdef  __CUDA_ARCH__
-    float rd = map.edt_const_at(ix,iy,iz).d*0.2;
-    cost += exp(-6*rd)*400;
-
-    if (rd < 0.6)
-      cost += 100;
-
-    if (!map.edt_const_at(ix,iy,iz).s)
-        cost += 70;
-#endif
-  }
-
-  return  cost;
-}
-
-__host__ __device__ __forceinline__
-float final_cost(const State &s, const Target &goal, const EDTMap &map)
-{
-  float cost = 0;
-  float3 dist_err = s.p - goal.s.p;
-  cost += 1.0f*sqrt(dist_err.x*dist_err.x + dist_err.y*dist_err.y + 3*dist_err.z*dist_err.z);
-  //cost += 0.1f*sqrt(s.a.x*s.a.x + s.a.y*s.a.y + s.a.z*s.a.z);
-
-  if (goal.oa)
-  {
-    int ix = floor( (s.p.x - map.m_origin.x) / map.m_grid_step + 0.5);
-    int iy = floor( (s.p.y - map.m_origin.y) / map.m_grid_step + 0.5);
-    int iz = floor( (s.p.z - map.m_origin.z) / map.m_grid_step + 0.5);
-
-    if (ix<0 || ix>=map.m_map_size.x ||
-        iy<0 || iy>=map.m_map_size.y ||
-        iz<0 || iz>=map.m_map_size.z)
-    {
-      cost += 100;
-      return cost;
-    }
-
-#ifdef  __CUDA_ARCH__
-    float rd = map.edt_const_at(ix,iy,iz).d*0.2;
-    cost += exp(-6*rd)*400;
-
-    if (rd < 0.6)
-      cost += 100;
-
-    if (!map.edt_const_at(ix,iy,iz).s)
-        cost += 70;
-#endif
-  }
-
-  return  cost;
 }
 
 //---
