@@ -46,7 +46,7 @@ private:
   PSO::Planner *m_display_planner;
   PointCloud::Ptr m_traj_pnt_cld, m_ctrl_pnt_cld;
   PSO::Target m_goal;
-  PSO::State m_curr_ref;
+  PSO::UAVModel::State m_curr_ref;
   cpc_motion_planning::ref_data m_ref_msg;
   int m_plan_cycle;
   int m_ref_start_idx;

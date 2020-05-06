@@ -9,7 +9,7 @@ __host__ __device__
 float evaluate_trajectory(const Trace &tr, VoidPtrCarrier ptr_car,const UniformBinCarrier &ubc,
                           const EDTMap &map, const Trace &last_tr, const Evaluator &eva, Model &m)
 {
-  State s = m.get_ini_state();
+  typename Model::State s = m.get_ini_state();
   float cost = 0;
   float dt = PSO_SIM_DT;
   //float3 goal_p = goal.s.p;
@@ -55,7 +55,7 @@ void initialize_particles_kernel(Swarm sw, bool first_run,
 
   if (first_run || idx != sw.ptcl_size-1)
   {
-    initialize_a_particle(m.get_ini_state(), sw.ptcls[idx]);
+    m.initialize_a_particle(sw.ptcls[idx]);
   }
   sw.ptcls[idx].best_cost = evaluate_trajectory(sw.ptcls[idx].best_loc, ptr_car, ubc, map, last_tr,eva,m);
 
@@ -81,10 +81,10 @@ void iterate_particles_kernel(Swarm sw, float weight,
       (sw.ptcls[idx].curr_loc - sw.ptcls[idx].best_loc)*r1 -
       (sw.ptcls[idx].curr_loc - sw.ptcls[sw.ptcl_size-1].curr_loc)*r2;
 
-  bound_ptcl_velocity(sw.ptcls[idx]);
+  m.bound_ptcl_velocity(sw.ptcls[idx]);
 
   sw.ptcls[idx].curr_loc = sw.ptcls[idx].curr_loc + sw.ptcls[idx].ptcl_vel;
-  bound_ptcl_location(sw.ptcls[idx], m.get_ini_state());
+  m.bound_ptcl_location(sw.ptcls[idx]);
 
   float cost = evaluate_trajectory(sw.ptcls[idx].curr_loc, ptr_car, ubc, map, last_tr,eva,m);
 
@@ -133,7 +133,7 @@ void copy_best_values(const Swarm &sw, float *best_values)
   copy_best_value_kernel<<<1,sw.ptcl_size>>>(sw.ptcls,best_values);
 }
 
-//float evaluate_trajectory_wrapper(const State &s0, const Trace &tr, VoidPtrCarrier ptr_car,const UniformBinCarrier &ubc,
+//float evaluate_trajectory_wrapper(const UAVModel::State &s0, const Trace &tr, VoidPtrCarrier ptr_car,const UniformBinCarrier &ubc,
 //               const EDTMap &map, const Trace &last_tr)
 //{
 //  return 0;

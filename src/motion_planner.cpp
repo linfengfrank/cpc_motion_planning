@@ -72,7 +72,7 @@ void MotionPlanner::plan_call_back(const ros::TimerEvent&)
   if (!m_pose_received || !m_received_map || !m_goal_received)
     return;
 
-  PSO::State s = m_curr_ref;
+  PSO::UAVModel::State s = m_curr_ref;
 
   float3 diff = m_goal.s.p - s.p;
   diff.z = 0;

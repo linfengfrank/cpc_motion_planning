@@ -24,7 +24,7 @@ public:
   }
 
   __host__ __device__
-  float process_cost(const State &s, const EDTMap &map) const
+  float process_cost(const UAVModel::State &s, const EDTMap &map) const
   {
     float cost = 0;
     float3 dist_err = s.p - m_goal.s.p;
@@ -62,7 +62,7 @@ public:
   }
 
   __host__ __device__
-  float final_cost(const State &s, const EDTMap &map) const
+  float final_cost(const UAVModel::State &s, const EDTMap &map) const
   {
     float cost = 0;
     float3 dist_err = s.p - m_goal.s.p;
