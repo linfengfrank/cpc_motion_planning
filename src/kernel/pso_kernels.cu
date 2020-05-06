@@ -48,7 +48,7 @@ void setup_random_states_kernel(Particle *ptcls)
 template<class Evaluator>
 __global__
 void initialize_particles_kernel(Swarm sw, bool first_run,
-                                 State s0, Target goal, VoidPtrCarrier ptr_car, UniformBinCarrier ubc,
+                                 State s0, VoidPtrCarrier ptr_car, UniformBinCarrier ubc,
                                  EDTMap map, Trace last_tr, Evaluator eva)
 {
   int idx = threadIdx.x+blockDim.x*blockIdx.x;
@@ -65,7 +65,7 @@ void initialize_particles_kernel(Swarm sw, bool first_run,
 template<class Evaluator>
 __global__
 void iterate_particles_kernel(Swarm sw, float weight,
-                              State s0, Target goal, VoidPtrCarrier ptr_car,  UniformBinCarrier ubc,
+                              State s0, VoidPtrCarrier ptr_car,  UniformBinCarrier ubc,
                               EDTMap map, Trace last_tr, Evaluator eva)
 {
   int idx = threadIdx.x+blockDim.x*blockIdx.x;
@@ -112,19 +112,19 @@ void setup_random_states(const Swarm &sw)
 //---------
 template<class Evaluator>
 void initialize_particles(const Swarm &sw, bool first_run,
-                          const State &s, const Target &goal,VoidPtrCarrier ptr_car, const  UniformBinCarrier &ubc,
+                          const State &s, VoidPtrCarrier ptr_car, const  UniformBinCarrier &ubc,
                           const EDTMap &map, const Trace &last_tr, const Evaluator &eva)
 {
-  initialize_particles_kernel<<<1,sw.ptcl_size>>>(sw,first_run,s,goal,ptr_car,ubc, map, last_tr,eva);
+  initialize_particles_kernel<<<1,sw.ptcl_size>>>(sw,first_run,s,ptr_car,ubc, map, last_tr,eva);
 }
 
 //---------
 template<class Evaluator>
 void iterate_particles(const Swarm &sw, float weight,
-                       const State &s, const Target &goal, VoidPtrCarrier ptr_car, const  UniformBinCarrier &ubc,
+                       const State &s, VoidPtrCarrier ptr_car, const  UniformBinCarrier &ubc,
                        const EDTMap &map, const Trace &last_tr, const Evaluator &eva)
 {
-  iterate_particles_kernel<<<1,sw.ptcl_size>>>(sw,weight,s,goal,ptr_car,ubc,map,last_tr,eva);
+  iterate_particles_kernel<<<1,sw.ptcl_size>>>(sw,weight,s,ptr_car,ubc,map,last_tr,eva);
 }
 
 //---------
@@ -133,7 +133,7 @@ void copy_best_values(const Swarm &sw, float *best_values)
   copy_best_value_kernel<<<1,sw.ptcl_size>>>(sw.ptcls,best_values);
 }
 
-float evaluate_trajectory_wrapper(const State &s0, const Target &goal, const Trace &tr, VoidPtrCarrier ptr_car,const UniformBinCarrier &ubc,
+float evaluate_trajectory_wrapper(const State &s0, const Trace &tr, VoidPtrCarrier ptr_car,const UniformBinCarrier &ubc,
                const EDTMap &map, const Trace &last_tr)
 {
   return 0;
@@ -144,12 +144,12 @@ float evaluate_trajectory_wrapper(const State &s0, const Target &goal, const Tra
 }
 
 template void PSO::initialize_particles<PSO::SingleTargetEvaluator>(const Swarm &sw, bool first_run,
-                                                                       const State &s, const Target &goal,VoidPtrCarrier ptr_car, const  UniformBinCarrier &ubc,
+                                                                       const State &s, VoidPtrCarrier ptr_car, const  UniformBinCarrier &ubc,
                                                                        const EDTMap &map, const Trace &last_tr, const PSO::SingleTargetEvaluator &eva);
 
 
 template void PSO::iterate_particles<PSO::SingleTargetEvaluator>(const Swarm &sw, float weight,
-                                                                    const State &s, const Target &goal, VoidPtrCarrier ptr_car, const  UniformBinCarrier &ubc,
+                                                                    const State &s, VoidPtrCarrier ptr_car, const  UniformBinCarrier &ubc,
                                                                     const EDTMap &map, const Trace &last_tr, const PSO::SingleTargetEvaluator &eva);
 
 template float PSO::evaluate_trajectory<PSO::SingleTargetEvaluator>(const State &s0, const Trace &tr, VoidPtrCarrier ptr_car,const UniformBinCarrier &ubc,
