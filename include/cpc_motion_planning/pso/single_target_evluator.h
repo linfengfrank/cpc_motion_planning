@@ -7,6 +7,13 @@ namespace PSO
 class SingleTargetEvaluator
 {
 public:
+
+  struct Target
+  {
+    UAVModel::State s;
+    bool oa;
+  };
+
   SingleTargetEvaluator()
   {
 

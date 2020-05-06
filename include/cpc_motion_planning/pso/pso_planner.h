@@ -23,7 +23,7 @@ public:
 
   }
 
-  void plan(const UAVModel::State &s, const Target &goal, const EDTMap &map)
+  void plan(const UAVModel::State &s, const SingleTargetEvaluator::Target &goal, const EDTMap &map)
   {
     //test_plan<N>(s,goal,m_ptcls, m_best_values, m_num_of_ptcls, &result, true,m_carrier,m_cbls_hdl);
     cublasStatus_t cbls_stt;
@@ -33,12 +33,12 @@ public:
 
     for (int ctt = 0; ctt <m_num_of_episodes; ctt ++)
     {
-      initialize_particles(m_swam, m_first_time, m_carrier, m_ubc, map, result.best_loc,m_eva,m_model);
+      initialize_particles(m_swam, m_first_time, m_carrier, m_ubc, map, result.best_loc,m_eva,m_model,m_dp_ctrl);
       m_first_time = false;
       for (int i=0;i<m_num_of_epoches;i++)
       {
         float weight = 0.95-(0.95-0.4)/static_cast<float>(m_num_of_epoches)*static_cast<float>(i);
-        iterate_particles(m_swam, weight, m_carrier, m_ubc, map, result.best_loc,m_eva,m_model);
+        iterate_particles(m_swam, weight, m_carrier, m_ubc, map, result.best_loc,m_eva,m_model,m_dp_ctrl);
         copy_best_values(m_swam,m_best_values);
 
         int best_idx = -1;
@@ -102,6 +102,7 @@ public:
   UniformBinCarrier m_ubc;
   SingleTargetEvaluator m_eva;
   UAVModel m_model;
+  UAVDPControl m_dp_ctrl;
 
 };
 
