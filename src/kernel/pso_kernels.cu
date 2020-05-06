@@ -6,10 +6,10 @@ namespace PSO
 //---
 template<class Model, class Evaluator>
 __host__ __device__
-float evaluate_trajectory(const State &s0, const Trace &tr, VoidPtrCarrier ptr_car,const UniformBinCarrier &ubc,
+float evaluate_trajectory(const Trace &tr, VoidPtrCarrier ptr_car,const UniformBinCarrier &ubc,
                           const EDTMap &map, const Trace &last_tr, const Evaluator &eva, Model &m)
 {
-  State s = s0;
+  State s = m.get_ini_state();
   float cost = 0;
   float dt = PSO_SIM_DT;
   //float3 goal_p = goal.s.p;
@@ -48,16 +48,16 @@ void setup_random_states_kernel(Particle *ptcls)
 template<class Model, class Evaluator>
 __global__
 void initialize_particles_kernel(Swarm sw, bool first_run,
-                                 State s0, VoidPtrCarrier ptr_car, UniformBinCarrier ubc,
+                                 VoidPtrCarrier ptr_car, UniformBinCarrier ubc,
                                  EDTMap map, Trace last_tr, Evaluator eva, Model m)
 {
   int idx = threadIdx.x+blockDim.x*blockIdx.x;
 
   if (first_run || idx != sw.ptcl_size-1)
   {
-    initialize_a_particle(s0, sw.ptcls[idx]);
+    initialize_a_particle(m.get_ini_state(), sw.ptcls[idx]);
   }
-  sw.ptcls[idx].best_cost = evaluate_trajectory(s0, sw.ptcls[idx].best_loc, ptr_car, ubc, map, last_tr,eva,m);
+  sw.ptcls[idx].best_cost = evaluate_trajectory(sw.ptcls[idx].best_loc, ptr_car, ubc, map, last_tr,eva,m);
 
 }
 
@@ -65,7 +65,7 @@ void initialize_particles_kernel(Swarm sw, bool first_run,
 template<class Model, class Evaluator>
 __global__
 void iterate_particles_kernel(Swarm sw, float weight,
-                              State s0, VoidPtrCarrier ptr_car,  UniformBinCarrier ubc,
+                              VoidPtrCarrier ptr_car,  UniformBinCarrier ubc,
                               EDTMap map, Trace last_tr, Evaluator eva, Model m)
 {
   int idx = threadIdx.x+blockDim.x*blockIdx.x;
@@ -84,9 +84,9 @@ void iterate_particles_kernel(Swarm sw, float weight,
   bound_ptcl_velocity(sw.ptcls[idx]);
 
   sw.ptcls[idx].curr_loc = sw.ptcls[idx].curr_loc + sw.ptcls[idx].ptcl_vel;
-  bound_ptcl_location(sw.ptcls[idx], s0);
+  bound_ptcl_location(sw.ptcls[idx], m.get_ini_state());
 
-  float cost = evaluate_trajectory(s0, sw.ptcls[idx].curr_loc, ptr_car, ubc, map, last_tr,eva,m);
+  float cost = evaluate_trajectory(sw.ptcls[idx].curr_loc, ptr_car, ubc, map, last_tr,eva,m);
 
   if (cost < sw.ptcls[idx].best_cost)
   {
@@ -112,19 +112,19 @@ void setup_random_states(const Swarm &sw)
 //---------
 template<class Model, class Evaluator>
 void initialize_particles(const Swarm &sw, bool first_run,
-                          const State &s, VoidPtrCarrier ptr_car, const  UniformBinCarrier &ubc,
+                          VoidPtrCarrier ptr_car, const  UniformBinCarrier &ubc,
                           const EDTMap &map, const Trace &last_tr, const Evaluator &eva, const Model &m)
 {
-  initialize_particles_kernel<<<1,sw.ptcl_size>>>(sw,first_run,s,ptr_car,ubc, map, last_tr,eva,m);
+  initialize_particles_kernel<<<1,sw.ptcl_size>>>(sw,first_run,ptr_car,ubc, map, last_tr,eva,m);
 }
 
 //---------
 template<class Model, class Evaluator>
 void iterate_particles(const Swarm &sw, float weight,
-                       const State &s, VoidPtrCarrier ptr_car, const  UniformBinCarrier &ubc,
+                       VoidPtrCarrier ptr_car, const  UniformBinCarrier &ubc,
                        const EDTMap &map, const Trace &last_tr, const Evaluator &eva, const Model &m)
 {
-  iterate_particles_kernel<<<1,sw.ptcl_size>>>(sw,weight,s,ptr_car,ubc,map,last_tr,eva,m);
+  iterate_particles_kernel<<<1,sw.ptcl_size>>>(sw,weight,ptr_car,ubc,map,last_tr,eva,m);
 }
 
 //---------
@@ -133,24 +133,24 @@ void copy_best_values(const Swarm &sw, float *best_values)
   copy_best_value_kernel<<<1,sw.ptcl_size>>>(sw.ptcls,best_values);
 }
 
-float evaluate_trajectory_wrapper(const State &s0, const Trace &tr, VoidPtrCarrier ptr_car,const UniformBinCarrier &ubc,
-               const EDTMap &map, const Trace &last_tr)
-{
-  return 0;
-//  return evaluate_trajectory(s0, goal, tr, ptr_car,ubc,
-//                             map, last_tr);
-}
+//float evaluate_trajectory_wrapper(const State &s0, const Trace &tr, VoidPtrCarrier ptr_car,const UniformBinCarrier &ubc,
+//               const EDTMap &map, const Trace &last_tr)
+//{
+//  return 0;
+////  return evaluate_trajectory(s0, goal, tr, ptr_car,ubc,
+////                             map, last_tr);
+//}
 
 }
 
 template void PSO::initialize_particles<PSO::UAVModel, PSO::SingleTargetEvaluator>(const Swarm &sw, bool first_run,
-                                                                       const State &s, VoidPtrCarrier ptr_car, const  UniformBinCarrier &ubc,
+                                                                       VoidPtrCarrier ptr_car, const  UniformBinCarrier &ubc,
                                                                        const EDTMap &map, const Trace &last_tr, const PSO::SingleTargetEvaluator &eva, const PSO::UAVModel &m);
 
 
 template void PSO::iterate_particles<PSO::UAVModel, PSO::SingleTargetEvaluator>(const Swarm &sw, float weight,
-                                                                    const State &s, VoidPtrCarrier ptr_car, const  UniformBinCarrier &ubc,
+                                                                    VoidPtrCarrier ptr_car, const  UniformBinCarrier &ubc,
                                                                     const EDTMap &map, const Trace &last_tr, const PSO::SingleTargetEvaluator &eva, const PSO::UAVModel &m);
 
-template float PSO::evaluate_trajectory<PSO::UAVModel, PSO::SingleTargetEvaluator>(const State &s0, const Trace &tr, VoidPtrCarrier ptr_car,const UniformBinCarrier &ubc,
+template float PSO::evaluate_trajectory<PSO::UAVModel, PSO::SingleTargetEvaluator>(const Trace &tr, VoidPtrCarrier ptr_car,const UniformBinCarrier &ubc,
                           const EDTMap &map, const Trace &last_tr, const PSO::SingleTargetEvaluator &eva, PSO::UAVModel &m);

@@ -18,6 +18,18 @@ UAVModel()
 }
 
 __host__ __device__
+void set_ini_state(const State &s)
+{
+  m_s_ini = s;
+}
+
+__host__ __device__
+State get_ini_state()
+{
+  return m_s_ini;
+}
+
+__host__ __device__
 void model_forward(State &s, const float3 &u, const float &dt)
 {
   // x
@@ -34,9 +46,9 @@ void model_forward(State &s, const float3 &u, const float &dt)
   s.p.z = s.p.z + s.v.z*dt + 0.5f*s.a.z*dt*dt + 1.0f/6.0f*u.z*dt*dt*dt;
   s.v.z = s.v.z + s.a.z*dt + 0.5f*u.z*dt*dt;
   s.a.z = s.a.z + u.z*dt;
-
-
 }
+
+State m_s_ini;
 
 };
 }

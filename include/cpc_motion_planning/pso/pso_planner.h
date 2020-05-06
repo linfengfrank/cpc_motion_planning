@@ -29,15 +29,16 @@ public:
     cublasStatus_t cbls_stt;
 
     m_eva.setTarget(goal);
+    m_model.set_ini_state(s);
 
     for (int ctt = 0; ctt <m_num_of_episodes; ctt ++)
     {
-      initialize_particles(m_swam, m_first_time, s, m_carrier, m_ubc, map, result.best_loc,m_eva,m_model);
+      initialize_particles(m_swam, m_first_time, m_carrier, m_ubc, map, result.best_loc,m_eva,m_model);
       m_first_time = false;
       for (int i=0;i<m_num_of_epoches;i++)
       {
         float weight = 0.95-(0.95-0.4)/static_cast<float>(m_num_of_epoches)*static_cast<float>(i);
-        iterate_particles(m_swam, weight, s, m_carrier, m_ubc, map, result.best_loc,m_eva,m_model);
+        iterate_particles(m_swam, weight, m_carrier, m_ubc, map, result.best_loc,m_eva,m_model);
         copy_best_values(m_swam,m_best_values);
 
         int best_idx = -1;
