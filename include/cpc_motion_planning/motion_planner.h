@@ -12,6 +12,9 @@
 #include <cpc_motion_planning/ref_data.h>
 #include <cpc_motion_planning/JLT.h>
 #include <cpc_motion_planning/pso/single_target_evluator.h>
+#include <cpc_motion_planning/pso/uav_dp_control.h>
+
+#define SIMPLE_UAV PSO::UAVModel,PSO::UAVDPControl,PSO::SingleTargetEvaluator
 class MotionPlanner
 {
   typedef pcl::PointCloud<pcl::PointXYZ> PointCloud;
@@ -27,7 +30,6 @@ private:
   void vehicle_pose_call_back(const geometry_msgs::PoseStamped::ConstPtr &msg);
 
 private:
-  CUDA_MAT::CudaMatrixFactory m_factory;
   ros::NodeHandle m_nh;
   ros::Subscriber m_map_sub;
   ros::Subscriber m_pose_sub;
@@ -43,8 +45,8 @@ private:
   bool m_pose_received;
   bool m_goal_received;
   EDTMap *m_edt_map;
-  PSO::Planner *m_pso_planner;
-  PSO::Planner *m_display_planner;
+  PSO::Planner<SIMPLE_UAV> *m_pso_planner;
+  PSO::Planner<SIMPLE_UAV> *m_display_planner;
   PointCloud::Ptr m_traj_pnt_cld, m_ctrl_pnt_cld;
   PSO::SingleTargetEvaluator::Target m_goal;
   PSO::UAVModel::State m_curr_ref;

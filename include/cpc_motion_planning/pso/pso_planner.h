@@ -7,13 +7,15 @@
 #include <cpc_motion_planning/pso/single_target_evluator.h>
 namespace PSO
 {
+template<class Model, class Controler, class Evaluator>
 class Planner
 {
 public:
   Planner(int num_of_ptcls=50, int num_of_epoches=20, int num_of_episodes=4):
     m_num_of_epoches(num_of_epoches),
     m_num_of_episodes(num_of_episodes),
-    m_first_time(true)
+    m_first_time(true),
+    m_on_host(false)
   {
     m_swam.ptcl_size = num_of_ptcls;
   }
@@ -33,12 +35,12 @@ public:
 
     for (int ctt = 0; ctt <m_num_of_episodes; ctt ++)
     {
-      initialize_particles(m_swam, m_first_time, map, result.best_loc,m_eva,m_model,m_dp_ctrl);
+      initialize_particles<Model, Controler, Evaluator>(m_swam, m_first_time, map, result.best_loc,m_eva,m_model,m_dp_ctrl);
       m_first_time = false;
       for (int i=0;i<m_num_of_epoches;i++)
       {
         float weight = 0.95-(0.95-0.4)/static_cast<float>(m_num_of_epoches)*static_cast<float>(i);
-        iterate_particles(m_swam, weight, map, result.best_loc,m_eva,m_model,m_dp_ctrl);
+        iterate_particles<Model, Controler, Evaluator>(m_swam, weight, map, result.best_loc,m_eva,m_model,m_dp_ctrl);
         copy_best_values(m_swam,m_best_values);
 
         int best_idx = -1;
@@ -53,6 +55,25 @@ public:
 
     CUDA_MEMCPY_D2H(&result, m_swam.ptcls+m_swam.ptcl_size-1,sizeof(Particle));
     cudaDeviceSynchronize();
+  }
+
+  void initialize(bool on_host = false)
+  {
+    m_on_host = on_host;
+    if (!m_on_host)
+    {
+      create_particles();
+    }
+    m_dp_ctrl.load_data(m_factory,m_on_host);
+  }
+
+  void release()
+  {
+    if (!m_on_host)
+    {
+      delete_particles();
+    }
+    m_dp_ctrl.release_data(m_factory,m_on_host);
   }
 
   void create_particles()
@@ -75,18 +96,17 @@ public:
   }
 
 public:
-
   Swarm m_swam;
-  //Particle *m_ptcls;
+  CUDA_MAT::CudaMatrixFactory m_factory;
   float *m_best_values; // A fix to use cublas
-  //int m_num_of_ptcls;
   int m_num_of_epoches, m_num_of_episodes;
   cublasHandle_t m_cbls_hdl;
   Particle result;
   bool m_first_time;
-  SingleTargetEvaluator m_eva;
-  UAVModel m_model;
-  UAVDPControl m_dp_ctrl;
+  Evaluator m_eva;
+  Model m_model;
+  Controler m_dp_ctrl;
+  bool m_on_host;
 
 };
 
