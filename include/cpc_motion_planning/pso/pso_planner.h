@@ -33,12 +33,12 @@ public:
 
     for (int ctt = 0; ctt <m_num_of_episodes; ctt ++)
     {
-      initialize_particles(m_swam, m_first_time, m_carrier, m_ubc, map, result.best_loc,m_eva,m_model,m_dp_ctrl);
+      initialize_particles(m_swam, m_first_time, map, result.best_loc,m_eva,m_model,m_dp_ctrl);
       m_first_time = false;
       for (int i=0;i<m_num_of_epoches;i++)
       {
         float weight = 0.95-(0.95-0.4)/static_cast<float>(m_num_of_epoches)*static_cast<float>(i);
-        iterate_particles(m_swam, weight, m_carrier, m_ubc, map, result.best_loc,m_eva,m_model,m_dp_ctrl);
+        iterate_particles(m_swam, weight, map, result.best_loc,m_eva,m_model,m_dp_ctrl);
         copy_best_values(m_swam,m_best_values);
 
         int best_idx = -1;
@@ -76,21 +76,20 @@ public:
 
   void load_data_matrix(bool load_to_host = false)
   {
-    m_carrier[0] = m_factory.load_cuda_matrix<3,dp_action>("/home/sp/cpc_ws/SA.dat",load_to_host);
+    m_dp_ctrl.S_A_horizontal = static_cast<CUDA_MAT::Mat3Act*>(m_factory.load_cuda_matrix<3,dp_action>("/home/sp/cpc_ws/SA.dat",load_to_host));
 
-    m_factory.load_uniform_bin("/home/sp/cpc_ws/pos_bin.dat",m_ubc.bins[0]);
-    m_factory.load_uniform_bin("/home/sp/cpc_ws/vel_bin.dat",m_ubc.bins[1]);
-    m_factory.load_uniform_bin("/home/sp/cpc_ws/acc_bin.dat",m_ubc.bins[2]);
+    m_factory.load_uniform_bin("/home/sp/cpc_ws/pos_bin.dat",m_dp_ctrl.ubc.bins[0]);
+    m_factory.load_uniform_bin("/home/sp/cpc_ws/vel_bin.dat",m_dp_ctrl.ubc.bins[1]);
+    m_factory.load_uniform_bin("/home/sp/cpc_ws/acc_bin.dat",m_dp_ctrl.ubc.bins[2]);
   }
 
   void free_data_matrix(bool load_from_host = false)
   {
-    m_factory.free_cuda_matrix<3,dp_action>(m_carrier[0], load_from_host);
+    m_factory.free_cuda_matrix<3,dp_action>(m_dp_ctrl.S_A_horizontal, load_from_host);
   }
 
 public:
   CUDA_MAT::CudaMatrixFactory m_factory;
-  VoidPtrCarrier m_carrier;
   Swarm m_swam;
   //Particle *m_ptcls;
   float *m_best_values; // A fix to use cublas
@@ -99,7 +98,6 @@ public:
   cublasHandle_t m_cbls_hdl;
   Particle result;
   bool m_first_time;
-  UniformBinCarrier m_ubc;
   SingleTargetEvaluator m_eva;
   UAVModel m_model;
   UAVDPControl m_dp_ctrl;

@@ -106,8 +106,8 @@ void MotionPlanner::plan_call_back(const ros::TimerEvent&)
     if (i > PSO::PSO_STEPS - 1)
       i = PSO::PSO_STEPS - 1;
 
-    float3 u = m_pso_planner->m_dp_ctrl.dp_control(s, m_pso_planner->result.best_loc[i], m_display_planner->m_carrier, m_display_planner->m_ubc);
-    m_pso_planner->m_model.model_forward(s,u,dt);
+    float3 u = m_display_planner->m_dp_ctrl.dp_control(s, m_pso_planner->result.best_loc[i]);
+    m_display_planner->m_model.model_forward(s,u,dt);
     JLT::State tmp_yaw_state = m_yaw_planner.TPBVPRefGen(yaw_param,t);
 
     pcl::PointXYZ clrP;
