@@ -1,8 +1,8 @@
-#ifndef SINGLE_TARGET_EVLUATOR_H
-#define SINGLE_TARGET_EVLUATOR_H
-#include <cpc_motion_planning/pso/uav_model.h>
+#ifndef UAV_SINGLE_TARGET_EVLUATOR_H
+#define UAV_SINGLE_TARGET_EVLUATOR_H
+#include <cpc_motion_planning/uav/uav_model.h>
 #include <cpc_motion_planning/dynamic_programming.cuh>
-namespace PSO
+namespace UAV
 {
 class SingleTargetEvaluator
 {
@@ -109,4 +109,4 @@ public:
 };
 }
 
-#endif // SINGLE_TARGET_EVLUATOR_H
+#endif // UAV_SINGLE_TARGET_EVLUATOR_H

@@ -1,6 +1,6 @@
 #include <cpc_motion_planning/pso/pso_kernels.cuh>
 #include <cuda_geometry/helper_math.h>
-#include <cpc_motion_planning/pso/single_target_evluator.h>
+#include <cpc_motion_planning/uav/uav_single_target_evluator.h>
 namespace PSO
 {
 //---
@@ -139,12 +139,12 @@ void copy_best_values(const Swarm &sw, float *best_values)
 
 }
 
-template void PSO::initialize_particles<PSO::UAVModel, PSO::UAVDPControl, PSO::SingleTargetEvaluator>(const Swarm &sw, bool first_run,
-                                                                       const EDTMap &map, const Trace &last_tr, const PSO::SingleTargetEvaluator &eva, const PSO::UAVModel &m, const PSO::UAVDPControl &ctrl );
+template void PSO::initialize_particles<UAV::UAVModel, UAV::UAVDPControl, UAV::SingleTargetEvaluator>(const Swarm &sw, bool first_run,
+                                                                       const EDTMap &map, const Trace &last_tr, const UAV::SingleTargetEvaluator &eva, const UAV::UAVModel &m, const UAV::UAVDPControl &ctrl );
 
 
-template void PSO::iterate_particles<PSO::UAVModel,  PSO::UAVDPControl, PSO::SingleTargetEvaluator>(const Swarm &sw, float weight,
-                                                                    const EDTMap &map, const Trace &last_tr, const PSO::SingleTargetEvaluator &eva, const PSO::UAVModel &m,const PSO::UAVDPControl &ctrl );
+template void PSO::iterate_particles<UAV::UAVModel,  UAV::UAVDPControl, UAV::SingleTargetEvaluator>(const Swarm &sw, float weight,
+                                                                    const EDTMap &map, const Trace &last_tr, const UAV::SingleTargetEvaluator &eva, const UAV::UAVModel &m,const UAV::UAVDPControl &ctrl );
 
-template float PSO::evaluate_trajectory<PSO::UAVModel,  PSO::UAVDPControl, PSO::SingleTargetEvaluator>(const Trace &tr,
-                          const EDTMap &map, const Trace &last_tr, const PSO::SingleTargetEvaluator &eva, PSO::UAVModel &m,const PSO::UAVDPControl &ctrl );
+template float PSO::evaluate_trajectory<UAV::UAVModel,  UAV::UAVDPControl, UAV::SingleTargetEvaluator>(const Trace &tr,
+                          const EDTMap &map, const Trace &last_tr, const UAV::SingleTargetEvaluator &eva, UAV::UAVModel &m,const UAV::UAVDPControl &ctrl );

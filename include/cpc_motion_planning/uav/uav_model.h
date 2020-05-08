@@ -2,7 +2,7 @@
 #define UAV_MODEL_H
 #include <curand_kernel.h>
 #include <cpc_motion_planning/pso/pso_utilities.cuh>
-namespace PSO
+namespace UAV
 {
 class UAVModel
 {
@@ -64,42 +64,42 @@ public:
 
   //---
   __host__ __device__
-  void bound_ptcl_velocity(Particle &p)
+  void bound_ptcl_velocity(PSO::Particle &p)
   {
-    for (int n = 0; n < PSO_STEPS; n++)
+    for (int n = 0; n < PSO::PSO_STEPS; n++)
     {
-      bound_between(p.ptcl_vel.site[n].x, -0.5f, 0.5f);
-      bound_between(p.ptcl_vel.site[n].y, -0.5f, 0.5f);
-      bound_between(p.ptcl_vel.site[n].z, -0.5f, 0.5f);
+      PSO::bound_between(p.ptcl_vel.site[n].x, -0.5f, 0.5f);
+      PSO::bound_between(p.ptcl_vel.site[n].y, -0.5f, 0.5f);
+      PSO::bound_between(p.ptcl_vel.site[n].z, -0.5f, 0.5f);
     }
   }
 
   //---
   __host__ __device__
-  void bound_ptcl_location(Particle &p)
+  void bound_ptcl_location(PSO::Particle &p)
   {
-    for (int n = 0; n < PSO_STEPS; n++)
+    for (int n = 0; n < PSO::PSO_STEPS; n++)
     {
-      bound_between(p.curr_loc.site[n].x,  m_s_ini.p.x-9.0f,  m_s_ini.p.x+9.0f);
-      bound_between(p.curr_loc.site[n].y,  m_s_ini.p.y-9.0f,  m_s_ini.p.y+9.0f);
-      bound_between(p.curr_loc.site[n].z,  m_s_ini.p.z-9.0f,  m_s_ini.p.z+9.0f);
+      PSO::bound_between(p.curr_loc.site[n].x,  m_s_ini.p.x-9.0f,  m_s_ini.p.x+9.0f);
+      PSO::bound_between(p.curr_loc.site[n].y,  m_s_ini.p.y-9.0f,  m_s_ini.p.y+9.0f);
+      PSO::bound_between(p.curr_loc.site[n].z,  m_s_ini.p.z-9.0f,  m_s_ini.p.z+9.0f);
       //bound_between(p.curr_loc.site[n].z,  1.6f,  1.65f);
     }
   }
 
   //---
   __host__ __device__
-  void initialize_a_particle(Particle &p)
+  void initialize_a_particle(PSO::Particle &p)
   {
-    for (int i=0; i< PSO_STEPS; i++)
+    for (int i=0; i< PSO::PSO_STEPS; i++)
     {
-      p.curr_loc.site[i].x = rand_float_gen(&(p.rs), m_s_ini.p.x-6, m_s_ini.p.x+6); // station target
-      p.curr_loc.site[i].y = rand_float_gen(&(p.rs), m_s_ini.p.y-6, m_s_ini.p.y+6); // station target
-      p.curr_loc.site[i].z = rand_float_gen(&(p.rs), m_s_ini.p.z-6, m_s_ini.p.z+6); // station target
+      p.curr_loc.site[i].x = PSO::rand_float_gen(&(p.rs), m_s_ini.p.x-6, m_s_ini.p.x+6); // station target
+      p.curr_loc.site[i].y = PSO::rand_float_gen(&(p.rs), m_s_ini.p.y-6, m_s_ini.p.y+6); // station target
+      p.curr_loc.site[i].z = PSO::rand_float_gen(&(p.rs), m_s_ini.p.z-6, m_s_ini.p.z+6); // station target
 
-      p.ptcl_vel.site[i].x = rand_float_gen(&(p.rs), -1.0f, 1.0f);
-      p.ptcl_vel.site[i].y = rand_float_gen(&(p.rs), -1.0f, 1.0f);
-      p.ptcl_vel.site[i].z = rand_float_gen(&(p.rs), -1.0f, 1.0f);
+      p.ptcl_vel.site[i].x = PSO::rand_float_gen(&(p.rs), -1.0f, 1.0f);
+      p.ptcl_vel.site[i].y = PSO::rand_float_gen(&(p.rs), -1.0f, 1.0f);
+      p.ptcl_vel.site[i].z = PSO::rand_float_gen(&(p.rs), -1.0f, 1.0f);
     }
     bound_ptcl_velocity(p);
     bound_ptcl_location(p);

@@ -4,7 +4,7 @@
 #include <cpc_motion_planning/cuda_matrix_factory.h>
 #include <cpc_motion_planning/pso/pso_utilities.cuh>
 #include <cpc_motion_planning/pso/pso_kernels.cuh>
-#include <cpc_motion_planning/pso/single_target_evluator.h>
+#include <cpc_motion_planning/uav/uav_single_target_evluator.h>
 namespace PSO
 {
 template<class Model, class Controler, class Evaluator>
@@ -25,7 +25,7 @@ public:
 
   }
 
-  void plan(const UAVModel::State &s, const SingleTargetEvaluator::Target &goal, const EDTMap &map)
+  void plan(const UAV::UAVModel::State &s, const UAV::SingleTargetEvaluator::Target &goal, const EDTMap &map)
   {
     //test_plan<N>(s,goal,m_ptcls, m_best_values, m_num_of_ptcls, &result, true,m_carrier,m_cbls_hdl);
     cublasStatus_t cbls_stt;

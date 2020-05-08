@@ -11,10 +11,10 @@
 #include <geometry_msgs/PoseStamped.h>
 #include <cpc_motion_planning/ref_data.h>
 #include <cpc_motion_planning/JLT.h>
-#include <cpc_motion_planning/pso/single_target_evluator.h>
-#include <cpc_motion_planning/pso/uav_dp_control.h>
+#include <cpc_motion_planning/uav/uav_single_target_evluator.h>
+#include <cpc_motion_planning/uav/uav_dp_control.h>
 
-#define SIMPLE_UAV PSO::UAVModel,PSO::UAVDPControl,PSO::SingleTargetEvaluator
+#define SIMPLE_UAV UAV::UAVModel,UAV::UAVDPControl,UAV::SingleTargetEvaluator
 class MotionPlanner
 {
   typedef pcl::PointCloud<pcl::PointXYZ> PointCloud;
@@ -48,8 +48,8 @@ private:
   PSO::Planner<SIMPLE_UAV> *m_pso_planner;
   PSO::Planner<SIMPLE_UAV> *m_display_planner;
   PointCloud::Ptr m_traj_pnt_cld, m_ctrl_pnt_cld;
-  PSO::SingleTargetEvaluator::Target m_goal;
-  PSO::UAVModel::State m_curr_ref;
+  UAV::SingleTargetEvaluator::Target m_goal;
+  UAV::UAVModel::State m_curr_ref;
   cpc_motion_planning::ref_data m_ref_msg;
   int m_plan_cycle;
   int m_ref_start_idx;
