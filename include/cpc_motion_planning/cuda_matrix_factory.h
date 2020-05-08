@@ -19,11 +19,11 @@ public:
   }
 
   template <int N, typename T>
-  void* make_cuda_matrix(size_t *dim_width, T* data_ptr = nullptr)
+  void* make_cuda_matrix(size_t *dim_width, T* data_ptr = NULL)
   {
     Matrix<N,T> mat(dim_width);
     mat.setup_device();
-    if (data_ptr != nullptr)
+    if (data_ptr != NULL)
     {
       mat.upload_data(data_ptr);
     }
@@ -46,7 +46,7 @@ public:
     {
       std::cout<<"File open failed."<<std::endl;
       file.close();
-      return nullptr;
+      return NULL;
     }
 
     int Dim;
@@ -56,7 +56,7 @@ public:
     {
       std::cout<<"Matrix dimension wrong."<<std::endl;
       file.close();
-      return nullptr;
+      return NULL;
     }
 
     // read the header to determine the size of the matrix

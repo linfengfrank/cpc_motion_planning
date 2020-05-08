@@ -27,6 +27,7 @@ private:
   void vehicle_pose_call_back(const geometry_msgs::PoseStamped::ConstPtr &msg);
 
 private:
+  CUDA_MAT::CudaMatrixFactory m_factory;
   ros::NodeHandle m_nh;
   ros::Subscriber m_map_sub;
   ros::Subscriber m_pose_sub;

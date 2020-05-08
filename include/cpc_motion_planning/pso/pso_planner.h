@@ -74,22 +74,8 @@ public:
     cublasDestroy(m_cbls_hdl);
   }
 
-  void load_data_matrix(bool load_to_host = false)
-  {
-    m_dp_ctrl.S_A_horizontal = static_cast<CUDA_MAT::Mat3Act*>(m_factory.load_cuda_matrix<3,dp_action>("/home/sp/cpc_ws/SA.dat",load_to_host));
-
-    m_factory.load_uniform_bin("/home/sp/cpc_ws/pos_bin.dat",m_dp_ctrl.ubc.bins[0]);
-    m_factory.load_uniform_bin("/home/sp/cpc_ws/vel_bin.dat",m_dp_ctrl.ubc.bins[1]);
-    m_factory.load_uniform_bin("/home/sp/cpc_ws/acc_bin.dat",m_dp_ctrl.ubc.bins[2]);
-  }
-
-  void free_data_matrix(bool load_from_host = false)
-  {
-    m_factory.free_cuda_matrix<3,dp_action>(m_dp_ctrl.S_A_horizontal, load_from_host);
-  }
-
 public:
-  CUDA_MAT::CudaMatrixFactory m_factory;
+
   Swarm m_swam;
   //Particle *m_ptcls;
   float *m_best_values; // A fix to use cublas
