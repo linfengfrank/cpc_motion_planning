@@ -1,6 +1,6 @@
 #ifndef SINGLE_TARGET_EVLUATOR_H
 #define SINGLE_TARGET_EVLUATOR_H
-#include <cpc_motion_planning/pso/pso_dynamics.cuh>
+#include <cpc_motion_planning/pso/uav_model.h>
 #include <cpc_motion_planning/dynamic_programming.cuh>
 namespace PSO
 {

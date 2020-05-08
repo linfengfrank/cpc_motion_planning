@@ -1,6 +1,5 @@
 #ifndef PSO_KERNELS_CUH
 #define PSO_KERNELS_CUH
-#include <cpc_motion_planning/pso/pso_dynamics.cuh>
 #include <cpc_motion_planning/pso/uav_model.h>
 #include <cpc_motion_planning/pso/uav_dp_control.h>
 #include <cuda_geometry/cuda_edtmap.cuh>
