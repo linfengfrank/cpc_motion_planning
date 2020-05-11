@@ -41,7 +41,7 @@ public:
       {
         float weight = 0.95-(0.95-0.4)/static_cast<float>(m_num_of_epoches)*static_cast<float>(i);
         iterate_particles<Model, Controler, Evaluator,TmpSwarm>(m_swam, weight, map, result.best_loc,m_eva,m_model,m_dp_ctrl,m_tmp_swarm);
-        copy_best_values(m_swam,m_best_values);
+        copy_best_values<TmpSwarm>(m_swam,m_best_values,m_tmp_swarm);
 
         int best_idx = -1;
         cbls_stt = cublasIsamin(m_cbls_hdl,m_swam.ptcl_size,m_best_values,1,&best_idx);
@@ -82,10 +82,24 @@ public:
     CUDA_ALLOC_DEV_MEM(&m_swam.ptcls,m_swam.ptcl_size*sizeof(Particle));
     CUDA_MEMCPY_H2D(m_swam.ptcls,data,m_swam.ptcl_size*sizeof(Particle));
     delete [] data;
-    setup_random_states(m_swam);
+    setup_random_states<TmpSwarm>(m_swam, m_tmp_swarm);
 
     CUDA_ALLOC_DEV_MEM(&m_best_values,m_swam.ptcl_size*sizeof(float));
     cublasCreate(&m_cbls_hdl);
+
+
+
+
+
+
+    typename TmpSwarm::Particle* tdata = new typename TmpSwarm::Particle[m_tmp_swarm.ptcl_size];
+    CUDA_ALLOC_DEV_MEM(&m_tmp_swarm.ptcls,m_tmp_swarm.ptcl_size*sizeof(typename TmpSwarm::Particle));
+    CUDA_MEMCPY_H2D(m_tmp_swarm.ptcls,tdata,m_tmp_swarm.ptcl_size*sizeof(typename TmpSwarm::Particle));
+    delete [] tdata;
+    //setup_random_states(m_swam);
+
+//    CUDA_ALLOC_DEV_MEM(&m_best_values,m_swam.ptcl_size*sizeof(float));
+//    cublasCreate(&m_cbls_hdl);
   }
 
   void delete_particles()
@@ -93,6 +107,8 @@ public:
     CUDA_FREE_DEV_MEM(m_swam.ptcls);
     CUDA_FREE_DEV_MEM(m_best_values);
     cublasDestroy(m_cbls_hdl);
+
+    CUDA_FREE_DEV_MEM(m_tmp_swarm.ptcls);
   }
 
 public:
