@@ -7,7 +7,7 @@
 #include <cpc_motion_planning/uav/uav_single_target_evluator.h>
 namespace PSO
 {
-template<class Model, class Controler, class Evaluator>
+template<class Model, class Controler, class Evaluator, class TmpSwarm>
 class Planner
 {
 public:
@@ -35,12 +35,12 @@ public:
 
     for (int ctt = 0; ctt <m_num_of_episodes; ctt ++)
     {
-      initialize_particles<Model, Controler, Evaluator>(m_swam, m_first_time, map, result.best_loc,m_eva,m_model,m_dp_ctrl);
+      initialize_particles<Model, Controler, Evaluator, TmpSwarm>(m_swam, m_first_time, map, result.best_loc,m_eva,m_model,m_dp_ctrl,m_tmp_swarm);
       m_first_time = false;
       for (int i=0;i<m_num_of_epoches;i++)
       {
         float weight = 0.95-(0.95-0.4)/static_cast<float>(m_num_of_epoches)*static_cast<float>(i);
-        iterate_particles<Model, Controler, Evaluator>(m_swam, weight, map, result.best_loc,m_eva,m_model,m_dp_ctrl);
+        iterate_particles<Model, Controler, Evaluator,TmpSwarm>(m_swam, weight, map, result.best_loc,m_eva,m_model,m_dp_ctrl,m_tmp_swarm);
         copy_best_values(m_swam,m_best_values);
 
         int best_idx = -1;
@@ -107,6 +107,7 @@ public:
   Model m_model;
   Controler m_dp_ctrl;
   bool m_on_host;
+  TmpSwarm m_tmp_swarm;
 
 };
 

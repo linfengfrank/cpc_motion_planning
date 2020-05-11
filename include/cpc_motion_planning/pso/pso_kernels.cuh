@@ -2,6 +2,7 @@
 #define PSO_KERNELS_CUH
 #include <cpc_motion_planning/uav/uav_model.h>
 #include <cpc_motion_planning/uav/uav_dp_control.h>
+#include <cpc_motion_planning/uav/uav_swarm.h>
 #include <cuda_geometry/cuda_edtmap.cuh>
 #include "cublas_v2.h"
 namespace PSO
@@ -9,14 +10,14 @@ namespace PSO
 void setup_random_states(const Swarm &sw);
 
 //---------
-template<class Model, class Controler, class Evaluator>
+template<class Model, class Controler, class Evaluator, class TmpSwarm>
 void initialize_particles(const Swarm &sw, bool first_run,
-                          const EDTMap &map, const Trace &last_tr, const Evaluator &eva, const Model &m, const Controler &ctrl);
+                          const EDTMap &map, const Trace &last_tr, const Evaluator &eva, const Model &m, const Controler &ctrl, const TmpSwarm &tsw);
 
 //---------
-template<class Model, class Controler, class Evaluator>
+template<class Model, class Controler, class Evaluator, class TmpSwarm>
 void iterate_particles(const Swarm &sw, float weight,
-                       const EDTMap &map, const Trace &last_tr, const Evaluator &eva, const Model &m, const Controler &ctrl);
+                       const EDTMap &map, const Trace &last_tr, const Evaluator &eva, const Model &m, const Controler &ctrl, const TmpSwarm &tsw);
 
 //---------
 void copy_best_values(const Swarm &sw, float *best_values);

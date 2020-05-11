@@ -108,17 +108,17 @@ void setup_random_states(const Swarm &sw)
 }
 
 //---------
-template<class Model, class Controler, class Evaluator>
+template<class Model, class Controler, class Evaluator, class TmpSwarm>
 void initialize_particles(const Swarm &sw, bool first_run,
-                          const EDTMap &map, const Trace &last_tr, const Evaluator &eva, const Model &m, const Controler &ctrl)
+                          const EDTMap &map, const Trace &last_tr, const Evaluator &eva, const Model &m, const Controler &ctrl, const TmpSwarm &tsw)
 {
   initialize_particles_kernel<<<1,sw.ptcl_size>>>(sw,first_run,map, last_tr,eva,m,ctrl);
 }
 
 //---------
-template<class Model, class Controler, class Evaluator>
+template<class Model, class Controler, class Evaluator, class TmpSwarm>
 void iterate_particles(const Swarm &sw, float weight,
-                       const EDTMap &map, const Trace &last_tr, const Evaluator &eva, const Model &m, const Controler &ctrl)
+                       const EDTMap &map, const Trace &last_tr, const Evaluator &eva, const Model &m, const Controler &ctrl, const TmpSwarm &tsw)
 {
   iterate_particles_kernel<<<1,sw.ptcl_size>>>(sw,weight,map,last_tr,eva,m,ctrl);
 }
@@ -139,12 +139,12 @@ void copy_best_values(const Swarm &sw, float *best_values)
 
 }
 
-template void PSO::initialize_particles<UAV::UAVModel, UAV::UAVDPControl, UAV::SingleTargetEvaluator>(const Swarm &sw, bool first_run,
-                                                                       const EDTMap &map, const Trace &last_tr, const UAV::SingleTargetEvaluator &eva, const UAV::UAVModel &m, const UAV::UAVDPControl &ctrl );
+template void PSO::initialize_particles<UAV::UAVModel, UAV::UAVDPControl, UAV::SingleTargetEvaluator, UAV::UAVSwarm<1> >(const Swarm &sw, bool first_run,
+                                                                       const EDTMap &map, const Trace &last_tr, const UAV::SingleTargetEvaluator &eva, const UAV::UAVModel &m, const UAV::UAVDPControl &ctrl , const  UAV::UAVSwarm<1> &tsw);
 
 
-template void PSO::iterate_particles<UAV::UAVModel,  UAV::UAVDPControl, UAV::SingleTargetEvaluator>(const Swarm &sw, float weight,
-                                                                    const EDTMap &map, const Trace &last_tr, const UAV::SingleTargetEvaluator &eva, const UAV::UAVModel &m,const UAV::UAVDPControl &ctrl );
+template void PSO::iterate_particles<UAV::UAVModel,  UAV::UAVDPControl, UAV::SingleTargetEvaluator, UAV::UAVSwarm<1> >(const Swarm &sw, float weight,
+                                                                    const EDTMap &map, const Trace &last_tr, const UAV::SingleTargetEvaluator &eva, const UAV::UAVModel &m,const UAV::UAVDPControl &ctrl , const  UAV::UAVSwarm<1> &tsw);
 
 template float PSO::evaluate_trajectory<UAV::UAVModel,  UAV::UAVDPControl, UAV::SingleTargetEvaluator>(const Trace &tr,
                           const EDTMap &map, const Trace &last_tr, const UAV::SingleTargetEvaluator &eva, UAV::UAVModel &m,const UAV::UAVDPControl &ctrl );
