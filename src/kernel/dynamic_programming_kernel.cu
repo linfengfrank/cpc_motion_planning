@@ -14,9 +14,9 @@ void test(VoidPtrCarrier data)
   CUDA_MAT::Vecf *bin_a = static_cast<CUDA_MAT::Vecf*>(data[5]);
 
   float s_curr[3];
-  s_curr[0] =  pos_gen_val(blockIdx.x);
-  s_curr[1] =  vel_gen_val(blockIdx.y);
-  s_curr[2] =  acc_gen_val(threadIdx.x);
+  s_curr[0] =  UAV::pos_gen_val(blockIdx.x);
+  s_curr[1] =  UAV::vel_gen_val(blockIdx.y);
+  s_curr[2] =  UAV::acc_gen_val(threadIdx.x);
 
 
   float val;

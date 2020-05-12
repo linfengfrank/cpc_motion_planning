@@ -45,7 +45,7 @@ public:
     s_relative[0] = s.p.x - site.x; // relative position
     s_relative[1] = s.v.x; // relative velocity
     s_relative[2] = s.a.x; // relative velocity
-    u[0] = CUDA_MAT::get_control_uniform_bin(s_relative, *S_A_horizontal, ubc);
+    u[0] = CUDA_MAT::get_control_uniform_bin_3(s_relative, *S_A_horizontal, ubc);
 
     //printf("%f \n",s_relative[0]);
 
@@ -53,13 +53,13 @@ public:
     s_relative[0] = s.p.y - site.y; // relative position
     s_relative[1] = s.v.y; // relative velocity
     s_relative[2] = s.a.y; // relative velocity
-    u[1] = CUDA_MAT::get_control_uniform_bin(s_relative, *S_A_horizontal, ubc);
+    u[1] = CUDA_MAT::get_control_uniform_bin_3(s_relative, *S_A_horizontal, ubc);
 
     // Z axis
     s_relative[0] = s.p.z - site.z; // relative position
     s_relative[1] = s.v.z; // relative velocity
     s_relative[2] = s.a.z; // relative velocity
-    u[2] = CUDA_MAT::get_control_uniform_bin(s_relative, *S_A_horizontal, ubc);
+    u[2] = CUDA_MAT::get_control_uniform_bin_3(s_relative, *S_A_horizontal, ubc);
 
     return make_float3(u[0].jerk, u[1].jerk, u[2].jerk);
   }

@@ -18,7 +18,7 @@ int main(int argc, char **argv)
   float *pos_bin_data = new float[M_pos];
   for (int i=0;i<M_pos;i++)
   {
-    pos_bin_data[i] = GPU_DP::pos_gen_val(i);
+    pos_bin_data[i] = UAV::pos_gen_val(i);
   }
 
   //------
@@ -26,7 +26,7 @@ int main(int argc, char **argv)
   float *vel_bin_data = new float[M_vel];
   for (int i=0;i<M_vel;i++)
   {
-    vel_bin_data[i] = GPU_DP::vel_gen_val(i);
+    vel_bin_data[i] = UAV::vel_gen_val(i);
   }
 
   //------
@@ -34,7 +34,7 @@ int main(int argc, char **argv)
   float *acc_bin_data = new float[M_acc];
   for (int i=0;i<M_acc;i++)
   {
-    acc_bin_data[i] = GPU_DP::acc_gen_val(i);
+    acc_bin_data[i] = UAV::acc_gen_val(i);
   }
 
   std::cout<<"Allocating device memory"<<std::endl;

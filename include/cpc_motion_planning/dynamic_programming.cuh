@@ -169,7 +169,7 @@ float get_value_3(float s[3], const Matrix<3,float> &S, const Vecf &bins_0, cons
 
 template<typename action>
 __host__ __device__ __forceinline__
-action get_control_uniform_bin(float s[3], const Matrix<3,action> &SA, const UniformBinCarrier &ubc)
+action get_control_uniform_bin_3(float s[3], const Matrix<3,action> &SA, const UniformBinCarrier &ubc)
 {
   int idx[3];
   float volume = 1.0f;
@@ -199,16 +199,16 @@ action get_control_uniform_bin(float s[3], const Matrix<3,action> &SA, const Uni
       for (loc[2] = 0;  loc[2]<= 1; loc[2]++)
       {
 
-          get_opposite_pnt(loc,opp,idx,3);
+        get_opposite_pnt(loc,opp,idx,3);
 
-          for (int i=0; i<3; i++)
-          {
-            s_opp[i] = ubc.bins[i].min + ubc.bins[i].grid*static_cast<float>(opp[i]);
-          }
+        for (int i=0; i<3; i++)
+        {
+          s_opp[i] = ubc.bins[i].min + ubc.bins[i].grid*static_cast<float>(opp[i]);
+        }
 
-          weight = fabs(s[0]-s_opp[0])*fabs(s[1]-s_opp[1])*fabs(s[2]-s_opp[2])/volume;
-          val = mat3_get_val_const<action>(loc[0]+idx[0],loc[1]+idx[1],loc[2]+idx[2],SA);
-          output.jerk += weight * val.jerk;
+        weight = fabs(s[0]-s_opp[0])*fabs(s[1]-s_opp[1])*fabs(s[2]-s_opp[2])/volume;
+        val = mat3_get_val_const<action>(loc[0]+idx[0],loc[1]+idx[1],loc[2]+idx[2],SA);
+        output.jerk += weight * val.jerk;
       }
     }
   }
@@ -216,7 +216,8 @@ action get_control_uniform_bin(float s[3], const Matrix<3,action> &SA, const Uni
 }
 
 }
-namespace GPU_DP
+
+namespace UAV
 {
 __host__ __device__ __forceinline__
 float pos_gen_val(int i)
@@ -235,7 +236,10 @@ float acc_gen_val(int i)
 {
   return -5.0f + 0.2f*static_cast<float>(i);
 }
+}
 
+namespace GPU_DP
+{
 template<typename action>
 void program(VoidPtrCarrier ptr_car, size_t* bin_size);
 }
