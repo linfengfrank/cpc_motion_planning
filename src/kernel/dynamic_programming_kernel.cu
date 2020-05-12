@@ -22,7 +22,7 @@ void test(VoidPtrCarrier data)
   float s_next[3];
   float val_min = 1e6;
   float jerk;
-  dp_action best_action;
+  action best_action;
   bool updated = false;
 
   for (float jerk=-5;jerk<5.1;jerk+=0.2)

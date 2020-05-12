@@ -48,7 +48,7 @@ int main(int argc, char **argv)
 
   void * S_1 = factory.make_cuda_matrix<3,float>(M_S);
   void * S_2 = factory.make_cuda_matrix<3,float>(M_S);
-  void * S_A = factory.make_cuda_matrix<3,dp_action>(M_S);
+  void * S_A = factory.make_cuda_matrix<3,action>(M_S);
 
   //------
   std::cout<<"Start dynamic programming"<<std::endl;
@@ -70,7 +70,7 @@ int main(int argc, char **argv)
   //------
   std::cout<<"Write data to files"<<std::endl;
 
-  factory.write_cuda_matrix<3,dp_action>(S_A,"/home/sp/cpc_ws/SA.dat");
+  factory.write_cuda_matrix<3,action>(S_A,"/home/sp/cpc_ws/SA.dat");
   factory.write_cuda_matrix<1,float>(pos_bins,"/home/sp/cpc_ws/pos_bin.dat");
   factory.write_cuda_matrix<1,float>(vel_bins,"/home/sp/cpc_ws/vel_bin.dat");
   factory.write_cuda_matrix<1,float>(acc_bins,"/home/sp/cpc_ws/acc_bin.dat");
@@ -81,7 +81,7 @@ int main(int argc, char **argv)
   factory.free_cuda_matrix<1,float>(acc_bins);
   factory.free_cuda_matrix<3,float>(S_1);
   factory.free_cuda_matrix<3,float>(S_2);
-  factory.free_cuda_matrix<3,dp_action>(S_A);
+  factory.free_cuda_matrix<3,action>(S_A);
 
   delete [] pos_bin_data;
   delete [] vel_bin_data;

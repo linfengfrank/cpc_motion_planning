@@ -2,11 +2,11 @@
 #define DYNAMIC_PROGRAMMING_H
 #include <cuda_math/cuda_matrix.cuh>
 
-struct dp_action
+struct action
 {
   float jerk;
   __host__ __device__
-  dp_action():jerk(0)
+  action():jerk(0)
   {}
 };
 
@@ -35,31 +35,31 @@ struct UniformBinCarrier
 
 namespace CUDA_MAT
 {
-typedef Matrix<3, dp_action> Mat3Act;
-typedef Matrix<4, dp_action> Mat4Act;
+typedef Matrix<3, action> Mat3Act;
+typedef Matrix<4, action> Mat4Act;
 __host__ __device__ __forceinline__
-dp_action& mat3act_get_val(int i, int j, int k, Mat3Act &mat)
+action& mat3act_get_val(int i, int j, int k, Mat3Act &mat)
 {
   int idx = i*mat.m_dim_width[1]*mat.m_dim_width[2] + j*mat.m_dim_width[2] + k;
   return mat.at(idx);
 }
 
 __host__ __device__ __forceinline__
-const dp_action& mat3act_get_val_const(int i, int j, int k, const Mat3Act &mat)
+const action& mat3act_get_val_const(int i, int j, int k, const Mat3Act &mat)
 {
   int idx = i*mat.m_dim_width[1]*mat.m_dim_width[2] + j*mat.m_dim_width[2] + k;
   return mat.const_at(idx);
 }
 
 __host__ __device__ __forceinline__
-dp_action& mat4act_get_val(int i, int j, int k, int n, Mat4Act &mat)
+action& mat4act_get_val(int i, int j, int k, int n, Mat4Act &mat)
 {
   int idx = i*mat.m_dim_width[1]*mat.m_dim_width[2]*mat.m_dim_width[3] + j*mat.m_dim_width[2]*mat.m_dim_width[3] + k*mat.m_dim_width[3] + n;
   return mat.at(idx);
 }
 
 __host__ __device__ __forceinline__
-const dp_action& mat4act_get_val_const(int i, int j, int k, int n, const Mat4Act &mat)
+const action& mat4act_get_val_const(int i, int j, int k, int n, const Mat4Act &mat)
 {
   int idx = i*mat.m_dim_width[1]*mat.m_dim_width[2]*mat.m_dim_width[3] + j*mat.m_dim_width[2]*mat.m_dim_width[3] + k*mat.m_dim_width[3] + n;
   return mat.const_at(idx);
@@ -173,7 +173,7 @@ float get_value_3(float s[3], const CUDA_MAT::Mat3f &S, const Vecf &bins_0, cons
 }
 
 __host__ __device__ __forceinline__
-dp_action get_control_uniform_bin(float s[3], const CUDA_MAT::Mat3Act &SA, const UniformBinCarrier &ubc)
+action get_control_uniform_bin(float s[3], const CUDA_MAT::Mat3Act &SA, const UniformBinCarrier &ubc)
 {
   int idx[3];
   float volume = 1.0f;
@@ -195,7 +195,7 @@ dp_action get_control_uniform_bin(float s[3], const CUDA_MAT::Mat3Act &SA, const
   int opp[3];
   float s_opp[3];
   float weight;
-  dp_action output,val;
+  action output,val;
   for (loc[0] = 0;  loc[0]<= 1; loc[0]++)
   {
     for (loc[1] = 0;  loc[1]<= 1; loc[1]++)
