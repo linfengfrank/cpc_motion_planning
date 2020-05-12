@@ -35,11 +35,6 @@ struct UniformBinCarrier
 
 namespace CUDA_MAT
 {
-typedef Matrix<3, action> Mat3Act;
-typedef Matrix<4, action> Mat4Act;
-typedef Matrix<3,float> Mat3f;
-typedef Matrix<4,float> Mat4f;
-
 template<typename T>
 __host__ __device__ __forceinline__
 T& mat3_get_val(int i, int j, int k,  Matrix<3, T> &mat)
@@ -138,7 +133,7 @@ void bound(float &val, float min, float max)
 }
 //---
 __host__ __device__ __forceinline__
-float get_value_3(float s[3], const CUDA_MAT::Mat3f &S, const Vecf &bins_0, const Vecf &bins_1, const Vecf &bins_2)
+float get_value_3(float s[3], const Matrix<3,float> &S, const Vecf &bins_0, const Vecf &bins_1, const Vecf &bins_2)
 {
   bound(s[0],bins_0.const_at(0), bins_0.const_at(static_cast<int>(bins_0.m_dim_width[0] - 1)));
   bound(s[1],bins_1.const_at(0), bins_1.const_at(static_cast<int>(bins_1.m_dim_width[0] - 1)));
@@ -180,7 +175,7 @@ float get_value_3(float s[3], const CUDA_MAT::Mat3f &S, const Vecf &bins_0, cons
 }
 
 __host__ __device__ __forceinline__
-action get_control_uniform_bin(float s[3], const CUDA_MAT::Mat3Act &SA, const UniformBinCarrier &ubc)
+action get_control_uniform_bin(float s[3], const Matrix<3,action> &SA, const UniformBinCarrier &ubc)
 {
   int idx[3];
   float volume = 1.0f;

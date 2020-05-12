@@ -5,9 +5,9 @@ namespace GPU_DP
 __global__
 void test(VoidPtrCarrier data)
 {
-  CUDA_MAT::Mat3Act *S_A = static_cast<CUDA_MAT::Mat3Act*>(data[0]);
-  CUDA_MAT::Mat3f *S_old = static_cast<CUDA_MAT::Mat3f*>(data[1]);
-  CUDA_MAT::Mat3f *S_new = static_cast<CUDA_MAT::Mat3f*>(data[2]);
+  CUDA_MAT::Matrix<3,action> *S_A = static_cast<CUDA_MAT::Matrix<3,action>*>(data[0]);
+  CUDA_MAT::Matrix<3,float> *S_old = static_cast<CUDA_MAT::Matrix<3,float>*>(data[1]);
+  CUDA_MAT::Matrix<3,float> *S_new = static_cast<CUDA_MAT::Matrix<3,float>*>(data[2]);
   CUDA_MAT::Vecf *bin_p = static_cast<CUDA_MAT::Vecf*>(data[3]);
   CUDA_MAT::Vecf *bin_v = static_cast<CUDA_MAT::Vecf*>(data[4]);
   CUDA_MAT::Vecf *bin_a = static_cast<CUDA_MAT::Vecf*>(data[5]);
