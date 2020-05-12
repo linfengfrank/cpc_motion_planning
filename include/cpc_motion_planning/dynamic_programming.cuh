@@ -37,29 +37,36 @@ namespace CUDA_MAT
 {
 typedef Matrix<3, action> Mat3Act;
 typedef Matrix<4, action> Mat4Act;
+typedef Matrix<3,float> Mat3f;
+typedef Matrix<4,float> Mat4f;
+
+template<typename T>
 __host__ __device__ __forceinline__
-action& mat3act_get_val(int i, int j, int k, Mat3Act &mat)
+T& mat3_get_val(int i, int j, int k,  Matrix<3, T> &mat)
 {
   int idx = i*mat.m_dim_width[1]*mat.m_dim_width[2] + j*mat.m_dim_width[2] + k;
   return mat.at(idx);
 }
 
+template<typename T>
 __host__ __device__ __forceinline__
-const action& mat3act_get_val_const(int i, int j, int k, const Mat3Act &mat)
+const T& mat3_get_val_const(int i, int j, int k, const Matrix<3, T> &mat)
 {
   int idx = i*mat.m_dim_width[1]*mat.m_dim_width[2] + j*mat.m_dim_width[2] + k;
   return mat.const_at(idx);
 }
 
+template<typename T>
 __host__ __device__ __forceinline__
-action& mat4act_get_val(int i, int j, int k, int n, Mat4Act &mat)
+T& mat4_get_val(int i, int j, int k, int n, Matrix<4,T> &mat)
 {
   int idx = i*mat.m_dim_width[1]*mat.m_dim_width[2]*mat.m_dim_width[3] + j*mat.m_dim_width[2]*mat.m_dim_width[3] + k*mat.m_dim_width[3] + n;
   return mat.at(idx);
 }
 
+template<typename T>
 __host__ __device__ __forceinline__
-const action& mat4act_get_val_const(int i, int j, int k, int n, const Mat4Act &mat)
+const T& mat4_get_val_const(int i, int j, int k, int n, const Matrix<4,T> &mat)
 {
   int idx = i*mat.m_dim_width[1]*mat.m_dim_width[2]*mat.m_dim_width[3] + j*mat.m_dim_width[2]*mat.m_dim_width[3] + k*mat.m_dim_width[3] + n;
   return mat.const_at(idx);
@@ -163,7 +170,7 @@ float get_value_3(float s[3], const CUDA_MAT::Mat3f &S, const Vecf &bins_0, cons
         s_opp[2] = bins_2.const_at(opp[2]);
 
         weight = fabs(s[0]-s_opp[0])*fabs(s[1]-s_opp[1])*fabs(s[2]-s_opp[2])/volume;
-        val = mat3f_get_val_const(loc[0]+idx[0],loc[1]+idx[1],loc[2]+idx[2],S);
+        val = mat3_get_val_const<float>(loc[0]+idx[0],loc[1]+idx[1],loc[2]+idx[2],S);
         output += weight * val;
 
       }
@@ -211,7 +218,7 @@ action get_control_uniform_bin(float s[3], const CUDA_MAT::Mat3Act &SA, const Un
           }
 
           weight = fabs(s[0]-s_opp[0])*fabs(s[1]-s_opp[1])*fabs(s[2]-s_opp[2])/volume;
-          val = mat3act_get_val_const(loc[0]+idx[0],loc[1]+idx[1],loc[2]+idx[2],SA);
+          val = mat3_get_val_const<action>(loc[0]+idx[0],loc[1]+idx[1],loc[2]+idx[2],SA);
           output.jerk += weight * val.jerk;
       }
     }

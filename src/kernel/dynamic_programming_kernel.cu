@@ -21,7 +21,7 @@ void test(VoidPtrCarrier data)
   float val;
   float s_next[3];
   float val_min = 1e6;
-  float jerk;
+  //float jerk;
   action best_action;
   bool updated = false;
 
@@ -61,10 +61,10 @@ void test(VoidPtrCarrier data)
       }
   }
 
-  CUDA_MAT::mat3f_get_val(blockIdx.x,blockIdx.y,threadIdx.x,*S_new) = val_min;
+  CUDA_MAT::mat3_get_val<float>(blockIdx.x,blockIdx.y,threadIdx.x,*S_new) = val_min;
 
   if (updated)
-    CUDA_MAT::mat3act_get_val(blockIdx.x,blockIdx.y,threadIdx.x,*S_A) = best_action;
+    CUDA_MAT::mat3_get_val<action>(blockIdx.x,blockIdx.y,threadIdx.x,*S_A) = best_action;
 
   //printf("%f\n",val);
 }

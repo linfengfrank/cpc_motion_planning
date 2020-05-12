@@ -132,35 +132,5 @@ public:
 };
 
 typedef Matrix<1,float> Vecf;
-typedef Matrix<3,float> Mat3f;
-typedef Matrix<4,float> Mat4f;
-
-__host__ __device__ __forceinline__
-float& mat3f_get_val(int i, int j, int k, Mat3f &mat)
-{
-  int idx = i*mat.m_dim_width[1]*mat.m_dim_width[2] + j*mat.m_dim_width[2] + k;
-  return mat.at(idx);
-}
-
-__host__ __device__ __forceinline__
-const float& mat3f_get_val_const(int i, int j, int k, const Mat3f &mat)
-{
-  int idx = i*mat.m_dim_width[1]*mat.m_dim_width[2] + j*mat.m_dim_width[2] + k;
-  return mat.const_at(idx);
-}
-
-__host__ __device__ __forceinline__
-float& mat4f_get_val(int i, int j, int k, int n, Mat4f &mat)
-{
-  int idx = i*mat.m_dim_width[1]*mat.m_dim_width[2]*mat.m_dim_width[3] + j*mat.m_dim_width[2]*mat.m_dim_width[3] + k*mat.m_dim_width[3] + n;
-  return mat.at(idx);
-}
-
-__host__ __device__ __forceinline__
-const float& mat4f_get_val_const(int i, int j, int k, int n, const Mat4f &mat)
-{
-  int idx = i*mat.m_dim_width[1]*mat.m_dim_width[2]*mat.m_dim_width[3] + j*mat.m_dim_width[2]*mat.m_dim_width[3] + k*mat.m_dim_width[3] + n;
-  return mat.const_at(idx);
-}
 }
 #endif
