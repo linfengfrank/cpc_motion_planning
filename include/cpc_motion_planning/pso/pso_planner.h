@@ -18,6 +18,7 @@ public:
     m_on_host(false)
   {
     m_swam.ptcl_size = num_of_ptcls;
+    m_tmp_swarm.ptcl_size = num_of_ptcls;
   }
 
   ~Planner()
@@ -49,11 +50,15 @@ public:
         if(best_idx != -1)
         {
           CUDA_MEMCPY_D2D(m_swam.ptcls+m_swam.ptcl_size-1,m_swam.ptcls+best_idx-1,sizeof(Particle));
+
+          CUDA_MEMCPY_D2D(m_tmp_swarm.ptcls+m_tmp_swarm.ptcl_size-1,m_tmp_swarm.ptcls+best_idx-1,sizeof(typename TmpSwarm::Particle));
         }
       }
     }
 
     CUDA_MEMCPY_D2H(&result, m_swam.ptcls+m_swam.ptcl_size-1,sizeof(Particle));
+
+    //CUDA_MEMCPY_D2H(&result, m_tmp_swarm.ptcls+m_tmp_swarm.ptcl_size-1,sizeof(Particle));
     cudaDeviceSynchronize();
   }
 
@@ -82,6 +87,19 @@ public:
     CUDA_ALLOC_DEV_MEM(&m_swam.ptcls,m_swam.ptcl_size*sizeof(Particle));
     CUDA_MEMCPY_H2D(m_swam.ptcls,data,m_swam.ptcl_size*sizeof(Particle));
     delete [] data;
+
+
+
+
+
+    typename TmpSwarm::Particle* tdata = new typename TmpSwarm::Particle[m_tmp_swarm.ptcl_size];
+    CUDA_ALLOC_DEV_MEM(&m_tmp_swarm.ptcls,m_tmp_swarm.ptcl_size*sizeof(typename TmpSwarm::Particle));
+    CUDA_MEMCPY_H2D(m_tmp_swarm.ptcls,tdata,m_tmp_swarm.ptcl_size*sizeof(typename TmpSwarm::Particle));
+    delete [] tdata;
+
+
+
+
     setup_random_states<TmpSwarm>(m_swam, m_tmp_swarm);
 
     CUDA_ALLOC_DEV_MEM(&m_best_values,m_swam.ptcl_size*sizeof(float));
@@ -92,10 +110,7 @@ public:
 
 
 
-    typename TmpSwarm::Particle* tdata = new typename TmpSwarm::Particle[m_tmp_swarm.ptcl_size];
-    CUDA_ALLOC_DEV_MEM(&m_tmp_swarm.ptcls,m_tmp_swarm.ptcl_size*sizeof(typename TmpSwarm::Particle));
-    CUDA_MEMCPY_H2D(m_tmp_swarm.ptcls,tdata,m_tmp_swarm.ptcl_size*sizeof(typename TmpSwarm::Particle));
-    delete [] tdata;
+
     //setup_random_states(m_swam);
 
 //    CUDA_ALLOC_DEV_MEM(&m_best_values,m_swam.ptcl_size*sizeof(float));
