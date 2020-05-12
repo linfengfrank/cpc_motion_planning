@@ -100,9 +100,9 @@ void MotionPlanner::plan_call_back(const ros::TimerEvent&)
   int next_ref_start_idx = (m_plan_cycle+1)*PSO::PSO_REPLAN_CYCLE+PSO::PSO_PLAN_CONSUME_CYCLE;
   for (float t=0.0f; t<PSO::PSO_TOTAL_T; t+=dt)
   {
-    int i = static_cast<int>(floor(t/PSO::PSO_STEP_DT));
-    if (i > PSO::PSO_STEPS - 1)
-      i = PSO::PSO_STEPS - 1;
+    int i = static_cast<int>(floor(t/m_display_planner->m_swarm.step_dt));
+    if (i > m_display_planner->m_swarm.steps - 1)
+      i = m_display_planner->m_swarm.steps - 1;
 
     float3 u = m_display_planner->m_dp_ctrl.dp_control(s, m_pso_planner->result.best_loc[i]);
     m_display_planner->m_model.model_forward(s,u,dt);

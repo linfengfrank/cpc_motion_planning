@@ -112,7 +112,8 @@ public:
 
   UAVSwarm()
   {
-
+    steps = STEP;
+    step_dt = PSO::PSO_TOTAL_T/static_cast<float>(steps);
   }
 
   ~UAVSwarm()
@@ -190,6 +191,8 @@ public:
 
   Particle *ptcls;
   int ptcl_size;
+  int steps;
+  float step_dt;
 };
 }
 #endif // UAV_SWARM_H

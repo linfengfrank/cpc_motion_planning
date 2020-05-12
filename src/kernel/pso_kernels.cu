@@ -6,7 +6,7 @@ namespace PSO
 //---
 template<class Model, class Controler, class Evaluator, class Swarm>
 __host__ __device__
-float evaluate_trajectory(const EDTMap &map, const Evaluator &eva, Model &m, const Controler &ctrl, const typename Swarm::Trace &ttr)
+float evaluate_trajectory(const EDTMap &map, const Evaluator &eva, Model &m, const Controler &ctrl, const Swarm &sw, const typename Swarm::Trace &ttr)
 {
   typename Model::State s = m.get_ini_state();
   float cost = 0;
@@ -14,9 +14,9 @@ float evaluate_trajectory(const EDTMap &map, const Evaluator &eva, Model &m, con
   //float3 goal_p = goal.s.p;
   for (float t=0.0f; t<PSO_TOTAL_T; t+=dt)
   {
-    int i = static_cast<int>(floor(t/PSO_STEP_DT));
-    if (i > PSO_STEPS - 1)
-      i = PSO_STEPS - 1;
+    int i = static_cast<int>(floor(t/sw.step_dt));
+    if (i > sw.steps - 1)
+      i = sw.steps - 1;
 
     float3 u = ctrl.dp_control(s, ttr[i]);
     m.model_forward(s,u,dt);
@@ -56,7 +56,7 @@ void initialize_particles_kernel(bool first_run,
   {
     sw.initialize_a_particle(m.get_ini_state(),sw.ptcls[idx]);
   }
-  sw.ptcls[idx].best_cost = evaluate_trajectory<Model,Controler,Evaluator,Swarm>(map,eva,m, ctrl, sw.ptcls[idx].best_loc);
+  sw.ptcls[idx].best_cost = evaluate_trajectory<Model,Controler,Evaluator,Swarm>(map,eva,m, ctrl, sw, sw.ptcls[idx].best_loc);
 }
 
 //---
@@ -84,7 +84,7 @@ void iterate_particles_kernel(float weight,
 
   sw.bound_ptcl_location(m.get_ini_state(), sw.ptcls[idx]);
 
-  float cost = evaluate_trajectory<Model,Controler,Evaluator,Swarm>(map,eva,m,ctrl,sw.ptcls[idx].curr_loc);
+  float cost = evaluate_trajectory<Model,Controler,Evaluator,Swarm>(map,eva,m,ctrl,sw,sw.ptcls[idx].curr_loc);
 
   if (cost < sw.ptcls[idx].best_cost)
   {
@@ -150,7 +150,7 @@ template void PSO::iterate_particles<UAV::UAVModel,  UAV::UAVDPControl, UAV::Sin
                                                                     const EDTMap &map,const UAV::SingleTargetEvaluator &eva, const UAV::UAVModel &m,const UAV::UAVDPControl &ctrl , const  UAV::UAVSwarm<1> &sw);
 
 template float PSO::evaluate_trajectory<UAV::UAVModel,  UAV::UAVDPControl, UAV::SingleTargetEvaluator, UAV::UAVSwarm<1> >(
-                          const EDTMap &map, const UAV::SingleTargetEvaluator &eva, UAV::UAVModel &m,const UAV::UAVDPControl &ctrl, const UAV::UAVSwarm<1>::Trace &ttr);
+                          const EDTMap &map, const UAV::SingleTargetEvaluator &eva, UAV::UAVModel &m,const UAV::UAVDPControl &ctrl, const UAV::UAVSwarm<1> &sw, const UAV::UAVSwarm<1>::Trace &ttr);
 
 template void PSO::setup_random_states< UAV::UAVSwarm<1> >(const UAV::UAVSwarm<1> &sw);
 
