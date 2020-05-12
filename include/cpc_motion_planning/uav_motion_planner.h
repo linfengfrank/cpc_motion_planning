@@ -47,7 +47,7 @@ private:
   bool m_goal_received;
   EDTMap *m_edt_map;
   PSO::Planner<SIMPLE_UAV> *m_pso_planner;
-  PSO::Planner<SIMPLE_UAV> *m_display_planner;
+  PSO::Planner<SIMPLE_UAV> *m_ref_gen_planner;
   PointCloud::Ptr m_traj_pnt_cld, m_ctrl_pnt_cld;
   UAV::SingleTargetEvaluator::Target m_goal;
   UAV::UAVModel::State m_curr_ref;

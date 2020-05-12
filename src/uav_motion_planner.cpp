@@ -27,8 +27,8 @@ MotionPlanner::MotionPlanner():
   m_pso_planner = new PSO::Planner<SIMPLE_UAV>(150,30,1);
   m_pso_planner->initialize(false);
 
-  m_display_planner = new PSO::Planner<SIMPLE_UAV>(1,1,1);
-  m_display_planner->initialize(true);
+  m_ref_gen_planner = new PSO::Planner<SIMPLE_UAV>(1,1,1);
+  m_ref_gen_planner->initialize(true);
   m_traj_pnt_cld = PointCloud::Ptr(new PointCloud);
   m_traj_pnt_cld->header.frame_id = "/world";
 
@@ -61,8 +61,8 @@ MotionPlanner::~MotionPlanner()
   m_pso_planner->release();
   delete m_pso_planner;
 
-  m_display_planner->release();
-  delete m_display_planner;
+  m_ref_gen_planner->release();
+  delete m_ref_gen_planner;
 }
 
 void MotionPlanner::plan_call_back(const ros::TimerEvent&)
@@ -100,12 +100,12 @@ void MotionPlanner::plan_call_back(const ros::TimerEvent&)
   int next_ref_start_idx = (m_plan_cycle+1)*PSO::PSO_REPLAN_CYCLE+PSO::PSO_PLAN_CONSUME_CYCLE;
   for (float t=0.0f; t<PSO::PSO_TOTAL_T; t+=dt)
   {
-    int i = static_cast<int>(floor(t/m_display_planner->m_swarm.step_dt));
-    if (i > m_display_planner->m_swarm.steps - 1)
-      i = m_display_planner->m_swarm.steps - 1;
+    int i = static_cast<int>(floor(t/m_ref_gen_planner->m_swarm.step_dt));
+    if (i > m_ref_gen_planner->m_swarm.steps - 1)
+      i = m_ref_gen_planner->m_swarm.steps - 1;
 
-    float3 u = m_display_planner->m_dp_ctrl.dp_control(s, m_pso_planner->result.best_loc[i]);
-    m_display_planner->m_model.model_forward(s,u,dt);
+    float3 u = m_ref_gen_planner->m_dp_ctrl.dp_control(s, m_pso_planner->result.best_loc[i]);
+    m_ref_gen_planner->m_model.model_forward(s,u,dt);
     JLT::State tmp_yaw_state = m_yaw_planner.TPBVPRefGen(yaw_param,t);
 
     pcl::PointXYZ clrP;

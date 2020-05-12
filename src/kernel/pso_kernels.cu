@@ -4,9 +4,9 @@
 namespace PSO
 {
 //---
-template<class Model, class Controler, class Evaluator, class Swarm>
+template<class Model, class Controller, class Evaluator, class Swarm>
 __host__ __device__
-float evaluate_trajectory(const EDTMap &map, const Evaluator &eva, Model &m, const Controler &ctrl, const Swarm &sw, const typename Swarm::Trace &ttr)
+float evaluate_trajectory(const EDTMap &map, const Evaluator &eva, Model &m, const Controller &ctrl, const Swarm &sw, const typename Swarm::Trace &ttr)
 {
   typename Model::State s = m.get_ini_state();
   float cost = 0;
@@ -45,10 +45,10 @@ void setup_random_states_kernel(typename Swarm::Particle* tptcls)
 }
 
 //---
-template<class Model, class Controler, class Evaluator, class Swarm>
+template<class Model, class Controller, class Evaluator, class Swarm>
 __global__
 void initialize_particles_kernel(bool first_run,
-                                 EDTMap map, Evaluator eva, Model m, Controler ctrl, Swarm sw)
+                                 EDTMap map, Evaluator eva, Model m, Controller ctrl, Swarm sw)
 {
   int idx = threadIdx.x+blockDim.x*blockIdx.x;
 
@@ -56,14 +56,14 @@ void initialize_particles_kernel(bool first_run,
   {
     sw.initialize_a_particle(m.get_ini_state(),sw.ptcls[idx]);
   }
-  sw.ptcls[idx].best_cost = evaluate_trajectory<Model,Controler,Evaluator,Swarm>(map,eva,m, ctrl, sw, sw.ptcls[idx].best_loc);
+  sw.ptcls[idx].best_cost = evaluate_trajectory<Model,Controller,Evaluator,Swarm>(map,eva,m, ctrl, sw, sw.ptcls[idx].best_loc);
 }
 
 //---
-template<class Model, class Controler, class Evaluator, class Swarm>
+template<class Model, class Controller, class Evaluator, class Swarm>
 __global__
 void iterate_particles_kernel(float weight,
-                              EDTMap map, Evaluator eva, Model m, Controler ctrl, Swarm sw)
+                              EDTMap map, Evaluator eva, Model m, Controller ctrl, Swarm sw)
 {
   int idx = threadIdx.x+blockDim.x*blockIdx.x;
 
@@ -84,7 +84,7 @@ void iterate_particles_kernel(float weight,
 
   sw.bound_ptcl_location(m.get_ini_state(), sw.ptcls[idx]);
 
-  float cost = evaluate_trajectory<Model,Controler,Evaluator,Swarm>(map,eva,m,ctrl,sw,sw.ptcls[idx].curr_loc);
+  float cost = evaluate_trajectory<Model,Controller,Evaluator,Swarm>(map,eva,m,ctrl,sw,sw.ptcls[idx].curr_loc);
 
   if (cost < sw.ptcls[idx].best_cost)
   {
@@ -110,19 +110,19 @@ void setup_random_states(const Swarm &sw)
 }
 
 //---------
-template<class Model, class Controler, class Evaluator, class Swarm>
+template<class Model, class Controller, class Evaluator, class Swarm>
 void initialize_particles(bool first_run,
-                          const EDTMap &map,const Evaluator &eva, const Model &m, const Controler &ctrl, const Swarm &sw)
+                          const EDTMap &map,const Evaluator &eva, const Model &m, const Controller &ctrl, const Swarm &sw)
 {
-  initialize_particles_kernel<Model,Controler,Evaluator,Swarm><<<1,sw.ptcl_size>>>(first_run,map,eva,m,ctrl,sw);
+  initialize_particles_kernel<Model,Controller,Evaluator,Swarm><<<1,sw.ptcl_size>>>(first_run,map,eva,m,ctrl,sw);
 }
 
 //---------
-template<class Model, class Controler, class Evaluator, class Swarm>
+template<class Model, class Controller, class Evaluator, class Swarm>
 void iterate_particles(float weight,
-                       const EDTMap &map, const Evaluator &eva, const Model &m, const Controler &ctrl, const Swarm &sw)
+                       const EDTMap &map, const Evaluator &eva, const Model &m, const Controller &ctrl, const Swarm &sw)
 {
-  iterate_particles_kernel<Model,Controler,Evaluator,Swarm><<<1,sw.ptcl_size>>>(weight,map,eva,m,ctrl,sw);
+  iterate_particles_kernel<Model,Controller,Evaluator,Swarm><<<1,sw.ptcl_size>>>(weight,map,eva,m,ctrl,sw);
 }
 
 //---------

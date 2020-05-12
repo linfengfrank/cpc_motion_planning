@@ -11,14 +11,14 @@ template<class Swarm>
 void setup_random_states(const Swarm &sw);
 
 //---------
-template<class Model, class Controler, class Evaluator, class Swarm>
+template<class Model, class Controller, class Evaluator, class Swarm>
 void initialize_particles(bool first_run,
-                          const EDTMap &map, const Evaluator &eva, const Model &m, const Controler &ctrl, const Swarm &sw);
+                          const EDTMap &map, const Evaluator &eva, const Model &m, const Controller &ctrl, const Swarm &sw);
 
 //---------
-template<class Model, class Controler, class Evaluator, class Swarm>
+template<class Model, class Controller, class Evaluator, class Swarm>
 void iterate_particles(float weight,
-                       const EDTMap &map, const Evaluator &eva, const Model &m, const Controler &ctrl, const Swarm &sw);
+                       const EDTMap &map, const Evaluator &eva, const Model &m, const Controller &ctrl, const Swarm &sw);
 
 //---------
 template<class Swarm>
