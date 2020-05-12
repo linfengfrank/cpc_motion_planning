@@ -17,7 +17,6 @@ public:
     m_first_time(true),
     m_on_host(false)
   {
-    m_swam.ptcl_size = num_of_ptcls;
     m_tmp_swarm.ptcl_size = num_of_ptcls;
   }
 
@@ -36,29 +35,25 @@ public:
 
     for (int ctt = 0; ctt <m_num_of_episodes; ctt ++)
     {
-      initialize_particles<Model, Controler, Evaluator, TmpSwarm>(m_swam, m_first_time, map, result.best_loc,m_eva,m_model,m_dp_ctrl,m_tmp_swarm);
+      initialize_particles<Model, Controler, Evaluator, TmpSwarm>(m_first_time, map, m_eva,m_model,m_dp_ctrl,m_tmp_swarm);
       m_first_time = false;
       for (int i=0;i<m_num_of_epoches;i++)
       {
         float weight = 0.95-(0.95-0.4)/static_cast<float>(m_num_of_epoches)*static_cast<float>(i);
-        iterate_particles<Model, Controler, Evaluator,TmpSwarm>(m_swam, weight, map, result.best_loc,m_eva,m_model,m_dp_ctrl,m_tmp_swarm);
-        copy_best_values<TmpSwarm>(m_swam,m_best_values,m_tmp_swarm);
+        iterate_particles<Model, Controler, Evaluator,TmpSwarm>(weight, map, m_eva,m_model,m_dp_ctrl,m_tmp_swarm);
+        copy_best_values<TmpSwarm>(m_best_values,m_tmp_swarm);
 
         int best_idx = -1;
-        cbls_stt = cublasIsamin(m_cbls_hdl,m_swam.ptcl_size,m_best_values,1,&best_idx);
+        cbls_stt = cublasIsamin(m_cbls_hdl,m_tmp_swarm.ptcl_size,m_best_values,1,&best_idx);
 
         if(best_idx != -1)
         {
-          CUDA_MEMCPY_D2D(m_swam.ptcls+m_swam.ptcl_size-1,m_swam.ptcls+best_idx-1,sizeof(Particle));
-
           CUDA_MEMCPY_D2D(m_tmp_swarm.ptcls+m_tmp_swarm.ptcl_size-1,m_tmp_swarm.ptcls+best_idx-1,sizeof(typename TmpSwarm::Particle));
         }
       }
     }
 
-    CUDA_MEMCPY_D2H(&result, m_swam.ptcls+m_swam.ptcl_size-1,sizeof(Particle));
-
-    //CUDA_MEMCPY_D2H(&result, m_tmp_swarm.ptcls+m_tmp_swarm.ptcl_size-1,sizeof(Particle));
+    CUDA_MEMCPY_D2H(&result, m_tmp_swarm.ptcls+m_tmp_swarm.ptcl_size-1,sizeof(typename TmpSwarm::Particle));
     cudaDeviceSynchronize();
   }
 
@@ -83,10 +78,7 @@ public:
 
   void create_particles()
   {
-    Particle* data = new Particle[m_swam.ptcl_size];
-    CUDA_ALLOC_DEV_MEM(&m_swam.ptcls,m_swam.ptcl_size*sizeof(Particle));
-    CUDA_MEMCPY_H2D(m_swam.ptcls,data,m_swam.ptcl_size*sizeof(Particle));
-    delete [] data;
+
 
 
 
@@ -100,9 +92,9 @@ public:
 
 
 
-    setup_random_states<TmpSwarm>(m_swam, m_tmp_swarm);
+    setup_random_states<TmpSwarm>(m_tmp_swarm);
 
-    CUDA_ALLOC_DEV_MEM(&m_best_values,m_swam.ptcl_size*sizeof(float));
+    CUDA_ALLOC_DEV_MEM(&m_best_values,m_tmp_swarm.ptcl_size*sizeof(float));
     cublasCreate(&m_cbls_hdl);
 
 
@@ -119,20 +111,20 @@ public:
 
   void delete_particles()
   {
-    CUDA_FREE_DEV_MEM(m_swam.ptcls);
+
+    CUDA_FREE_DEV_MEM(m_tmp_swarm.ptcls);
     CUDA_FREE_DEV_MEM(m_best_values);
     cublasDestroy(m_cbls_hdl);
 
-    CUDA_FREE_DEV_MEM(m_tmp_swarm.ptcls);
+
   }
 
 public:
-  Swarm m_swam;
   CUDA_MAT::CudaMatrixFactory m_factory;
   float *m_best_values; // A fix to use cublas
   int m_num_of_epoches, m_num_of_episodes;
   cublasHandle_t m_cbls_hdl;
-  Particle result;
+  typename TmpSwarm::Particle result;
   bool m_first_time;
   Evaluator m_eva;
   Model m_model;

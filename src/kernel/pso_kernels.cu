@@ -6,8 +6,7 @@ namespace PSO
 //---
 template<class Model, class Controler, class Evaluator, class TmpSwarm>
 __host__ __device__
-float evaluate_trajectory(const Trace &tr,
-                          const EDTMap &map, const Trace &last_tr, const Evaluator &eva, Model &m, const Controler &ctrl, const typename TmpSwarm::Trace &ttr)
+float evaluate_trajectory(const EDTMap &map, const Evaluator &eva, Model &m, const Controler &ctrl, const typename TmpSwarm::Trace &ttr)
 {
   typename Model::State s = m.get_ini_state();
   float cost = 0;
@@ -19,7 +18,7 @@ float evaluate_trajectory(const Trace &tr,
     if (i > PSO_STEPS - 1)
       i = PSO_STEPS - 1;
 
-    float3 u = ctrl.dp_control(s, tr[i]);
+    float3 u = ctrl.dp_control(s, ttr[i]);
     m.model_forward(s,u,dt);
 
     cost += 0.1*sqrt(u.x*u.x + u.y*u.y + u.z*u.z);
@@ -39,73 +38,53 @@ float evaluate_trajectory(const Trace &tr,
 //---
 template<class TmpSwarm>
 __global__
-void setup_random_states_kernel(Particle *ptcls, typename TmpSwarm::Particle* tptcls)
+void setup_random_states_kernel(typename TmpSwarm::Particle* tptcls)
 {
   int idx = threadIdx.x+blockDim.x*blockIdx.x;
-  curand_init(9876, idx, 0, &(ptcls[idx].rs));
   curand_init(9876, idx, 0, &(tptcls[idx].rs));
 }
 
 //---
 template<class Model, class Controler, class Evaluator, class TmpSwarm>
 __global__
-void initialize_particles_kernel(Swarm sw, bool first_run,
-                                 EDTMap map, Trace last_tr, Evaluator eva, Model m, Controler ctrl, TmpSwarm tsw)
+void initialize_particles_kernel(bool first_run,
+                                 EDTMap map, Evaluator eva, Model m, Controler ctrl, TmpSwarm tsw)
 {
   int idx = threadIdx.x+blockDim.x*blockIdx.x;
 
-  if (first_run || idx != sw.ptcl_size-1)
+  if (first_run || idx != tsw.ptcl_size-1)
   {
-    m.initialize_a_particle(sw.ptcls[idx]);
     tsw.initialize_a_particle(m.get_ini_state(),tsw.ptcls[idx]);
   }
-  sw.ptcls[idx].best_cost = evaluate_trajectory<Model,Controler,Evaluator,TmpSwarm>(sw.ptcls[idx].best_loc, map, last_tr,eva,m, ctrl, tsw.ptcls[idx].best_loc);
-  tsw.ptcls[idx].best_cost = evaluate_trajectory<Model,Controler,Evaluator,TmpSwarm>(sw.ptcls[idx].best_loc, map, last_tr,eva,m, ctrl, tsw.ptcls[idx].best_loc);
+  tsw.ptcls[idx].best_cost = evaluate_trajectory<Model,Controler,Evaluator,TmpSwarm>(map,eva,m, ctrl, tsw.ptcls[idx].best_loc);
 }
 
 //---
 template<class Model, class Controler, class Evaluator, class TmpSwarm>
 __global__
-void iterate_particles_kernel(Swarm sw, float weight,
-                              EDTMap map, Trace last_tr, Evaluator eva, Model m, Controler ctrl, TmpSwarm tsw)
+void iterate_particles_kernel(float weight,
+                              EDTMap map, Evaluator eva, Model m, Controler ctrl, TmpSwarm tsw)
 {
   int idx = threadIdx.x+blockDim.x*blockIdx.x;
 
-  if (idx == sw.ptcl_size-1)
+  if (idx == tsw.ptcl_size-1)
     return;
 
-  float r1 = rand_float_gen(&(sw.ptcls[idx].rs),0,1);
-  float r2 = rand_float_gen(&(sw.ptcls[idx].rs),0,1);
-
-  sw.ptcls[idx].ptcl_vel =
-      sw.ptcls[idx].ptcl_vel*weight -
-      (sw.ptcls[idx].curr_loc - sw.ptcls[idx].best_loc)*r1 -
-      (sw.ptcls[idx].curr_loc - sw.ptcls[sw.ptcl_size-1].curr_loc)*r2;
+  float r1 = tsw.rand_float_gen(&(tsw.ptcls[idx].rs),0,1);
+  float r2 = tsw.rand_float_gen(&(tsw.ptcls[idx].rs),0,1);
 
   tsw.ptcls[idx].ptcl_vel =
       tsw.ptcls[idx].ptcl_vel*weight -
       (tsw.ptcls[idx].curr_loc - tsw.ptcls[idx].best_loc)*r1 -
       (tsw.ptcls[idx].curr_loc - tsw.ptcls[tsw.ptcl_size-1].curr_loc)*r2;
 
-  m.bound_ptcl_velocity(sw.ptcls[idx]);
-
   tsw.bound_ptcl_velocity(tsw.ptcls[idx]);
-
-  sw.ptcls[idx].curr_loc = sw.ptcls[idx].curr_loc + sw.ptcls[idx].ptcl_vel;
 
   tsw.ptcls[idx].curr_loc = tsw.ptcls[idx].curr_loc + tsw.ptcls[idx].ptcl_vel;
 
-  m.bound_ptcl_location(sw.ptcls[idx]);
-
   tsw.bound_ptcl_location(m.get_ini_state(), tsw.ptcls[idx]);
 
-  float cost = evaluate_trajectory<Model,Controler,Evaluator,TmpSwarm>(sw.ptcls[idx].curr_loc, map, last_tr,eva,m,ctrl,tsw.ptcls[idx].curr_loc);
-
-  if (cost < sw.ptcls[idx].best_cost)
-  {
-    sw.ptcls[idx].best_cost = cost;
-    sw.ptcls[idx].best_loc = sw.ptcls[idx].curr_loc;
-  }
+  float cost = evaluate_trajectory<Model,Controler,Evaluator,TmpSwarm>(map,eva,m,ctrl,tsw.ptcls[idx].curr_loc);
 
   if (cost < tsw.ptcls[idx].best_cost)
   {
@@ -117,40 +96,40 @@ void iterate_particles_kernel(Swarm sw, float weight,
 //---------
 template<class TmpSwarm>
 __global__
-void copy_best_value_kernel(Particle *ptcls, float* best_values, TmpSwarm tsw)
+void copy_best_value_kernel(float* best_values, TmpSwarm tsw)
 {
   int idx = threadIdx.x+blockDim.x*blockIdx.x;
-  best_values[idx] = ptcls[idx].best_cost;
+  best_values[idx] = tsw.ptcls[idx].best_cost;
 }
 
 //---------
 template<class TmpSwarm>
-void setup_random_states(const Swarm &sw, const TmpSwarm &tsw)
+void setup_random_states(const TmpSwarm &tsw)
 {
-  setup_random_states_kernel<TmpSwarm><<<1,sw.ptcl_size>>>(sw.ptcls, tsw.ptcls);
+  setup_random_states_kernel<TmpSwarm><<<1,tsw.ptcl_size>>>(tsw.ptcls);
 }
 
 //---------
 template<class Model, class Controler, class Evaluator, class TmpSwarm>
-void initialize_particles(const Swarm &sw, bool first_run,
-                          const EDTMap &map, const Trace &last_tr, const Evaluator &eva, const Model &m, const Controler &ctrl, const TmpSwarm &tsw)
+void initialize_particles(bool first_run,
+                          const EDTMap &map,const Evaluator &eva, const Model &m, const Controler &ctrl, const TmpSwarm &tsw)
 {
-  initialize_particles_kernel<Model,Controler,Evaluator,TmpSwarm><<<1,sw.ptcl_size>>>(sw,first_run,map, last_tr,eva,m,ctrl,tsw);
+  initialize_particles_kernel<Model,Controler,Evaluator,TmpSwarm><<<1,tsw.ptcl_size>>>(first_run,map,eva,m,ctrl,tsw);
 }
 
 //---------
 template<class Model, class Controler, class Evaluator, class TmpSwarm>
-void iterate_particles(const Swarm &sw, float weight,
-                       const EDTMap &map, const Trace &last_tr, const Evaluator &eva, const Model &m, const Controler &ctrl, const TmpSwarm &tsw)
+void iterate_particles(float weight,
+                       const EDTMap &map, const Evaluator &eva, const Model &m, const Controler &ctrl, const TmpSwarm &tsw)
 {
-  iterate_particles_kernel<Model,Controler,Evaluator,TmpSwarm><<<1,sw.ptcl_size>>>(sw,weight,map,last_tr,eva,m,ctrl,tsw);
+  iterate_particles_kernel<Model,Controler,Evaluator,TmpSwarm><<<1,tsw.ptcl_size>>>(weight,map,eva,m,ctrl,tsw);
 }
 
 //---------
 template<class TmpSwarm>
-void copy_best_values(const Swarm &sw, float *best_values, const TmpSwarm &tsw)
+void copy_best_values(float *best_values, const TmpSwarm &tsw)
 {
-  copy_best_value_kernel<TmpSwarm><<<1,sw.ptcl_size>>>(sw.ptcls,best_values,tsw);
+  copy_best_value_kernel<TmpSwarm><<<1,tsw.ptcl_size>>>(best_values,tsw);
 }
 
 //float evaluate_trajectory_wrapper(const UAVModel::State &s0, const Trace &tr, VoidPtrCarrier ptr_car,const UniformBinCarrier &ubc,
@@ -163,16 +142,16 @@ void copy_best_values(const Swarm &sw, float *best_values, const TmpSwarm &tsw)
 
 }
 
-template void PSO::initialize_particles<UAV::UAVModel, UAV::UAVDPControl, UAV::SingleTargetEvaluator, UAV::UAVSwarm<1> >(const Swarm &sw, bool first_run,
-                                                                       const EDTMap &map, const Trace &last_tr, const UAV::SingleTargetEvaluator &eva, const UAV::UAVModel &m, const UAV::UAVDPControl &ctrl , const  UAV::UAVSwarm<1> &tsw);
+template void PSO::initialize_particles<UAV::UAVModel, UAV::UAVDPControl, UAV::SingleTargetEvaluator, UAV::UAVSwarm<1> >(bool first_run,
+                                                                       const EDTMap &map, const UAV::SingleTargetEvaluator &eva, const UAV::UAVModel &m, const UAV::UAVDPControl &ctrl , const  UAV::UAVSwarm<1> &tsw);
 
 
-template void PSO::iterate_particles<UAV::UAVModel,  UAV::UAVDPControl, UAV::SingleTargetEvaluator, UAV::UAVSwarm<1> >(const Swarm &sw, float weight,
-                                                                    const EDTMap &map, const Trace &last_tr, const UAV::SingleTargetEvaluator &eva, const UAV::UAVModel &m,const UAV::UAVDPControl &ctrl , const  UAV::UAVSwarm<1> &tsw);
+template void PSO::iterate_particles<UAV::UAVModel,  UAV::UAVDPControl, UAV::SingleTargetEvaluator, UAV::UAVSwarm<1> >(float weight,
+                                                                    const EDTMap &map,const UAV::SingleTargetEvaluator &eva, const UAV::UAVModel &m,const UAV::UAVDPControl &ctrl , const  UAV::UAVSwarm<1> &tsw);
 
-template float PSO::evaluate_trajectory<UAV::UAVModel,  UAV::UAVDPControl, UAV::SingleTargetEvaluator, UAV::UAVSwarm<1> >(const Trace &tr,
-                          const EDTMap &map, const Trace &last_tr, const UAV::SingleTargetEvaluator &eva, UAV::UAVModel &m,const UAV::UAVDPControl &ctrl, const UAV::UAVSwarm<1>::Trace &ttr);
+template float PSO::evaluate_trajectory<UAV::UAVModel,  UAV::UAVDPControl, UAV::SingleTargetEvaluator, UAV::UAVSwarm<1> >(
+                          const EDTMap &map, const UAV::SingleTargetEvaluator &eva, UAV::UAVModel &m,const UAV::UAVDPControl &ctrl, const UAV::UAVSwarm<1>::Trace &ttr);
 
-template void PSO::setup_random_states< UAV::UAVSwarm<1> >(const Swarm &sw, const UAV::UAVSwarm<1> &tsw);
+template void PSO::setup_random_states< UAV::UAVSwarm<1> >(const UAV::UAVSwarm<1> &tsw);
 
-template void PSO::copy_best_values< UAV::UAVSwarm<1> >(const Swarm &sw, float *best_values, const UAV::UAVSwarm<1> &tsw);
+template void PSO::copy_best_values< UAV::UAVSwarm<1> >(float *best_values, const UAV::UAVSwarm<1> &tsw);

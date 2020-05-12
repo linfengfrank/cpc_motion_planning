@@ -8,21 +8,21 @@
 namespace PSO
 {
 template<class TmpSwarm>
-void setup_random_states(const Swarm &sw, const TmpSwarm &tsw);
+void setup_random_states(const TmpSwarm &tsw);
 
 //---------
 template<class Model, class Controler, class Evaluator, class TmpSwarm>
-void initialize_particles(const Swarm &sw, bool first_run,
-                          const EDTMap &map, const Trace &last_tr, const Evaluator &eva, const Model &m, const Controler &ctrl, const TmpSwarm &tsw);
+void initialize_particles(bool first_run,
+                          const EDTMap &map, const Evaluator &eva, const Model &m, const Controler &ctrl, const TmpSwarm &tsw);
 
 //---------
 template<class Model, class Controler, class Evaluator, class TmpSwarm>
-void iterate_particles(const Swarm &sw, float weight,
-                       const EDTMap &map, const Trace &last_tr, const Evaluator &eva, const Model &m, const Controler &ctrl, const TmpSwarm &tsw);
+void iterate_particles(float weight,
+                       const EDTMap &map, const Evaluator &eva, const Model &m, const Controler &ctrl, const TmpSwarm &tsw);
 
 //---------
 template<class TmpSwarm>
-void copy_best_values(const Swarm &sw, float *best_values, const TmpSwarm &tsw);
+void copy_best_values(float *best_values, const TmpSwarm &tsw);
 
 ////---------
 //float evaluate_trajectory_wrapper(const State &s0, const Trace &tr, VoidPtrCarrier ptr_car,const UniformBinCarrier &ubc,
