@@ -70,8 +70,8 @@ void iterate_particles_kernel(float weight,
   if (idx == sw.ptcl_size-1)
     return;
 
-  float r1 = sw.rand_float_gen(&(sw.ptcls[idx].rs),0,1);
-  float r2 = sw.rand_float_gen(&(sw.ptcls[idx].rs),0,1);
+  float r1 = PSO::rand_float_gen(&(sw.ptcls[idx].rs),0,1);
+  float r2 = PSO::rand_float_gen(&(sw.ptcls[idx].rs),0,1);
 
   sw.ptcls[idx].ptcl_vel =
       sw.ptcls[idx].ptcl_vel*weight -

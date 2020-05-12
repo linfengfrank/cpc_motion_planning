@@ -13,5 +13,27 @@ const float PSO_CTRL_DT = 0.05f;
 const int PSO_REPLAN_CYCLE = 4;
 const float PSO_REPLAN_DT = PSO_REPLAN_CYCLE * PSO_CTRL_DT;
 const int PSO_PLAN_CONSUME_CYCLE = 2;
+
+__host__ __device__ __forceinline__
+float rand_float_gen(curandState *rs, float min, float max)
+{
+#ifdef  __CUDA_ARCH__
+  float myrandf = curand_uniform(rs);
+#else
+  float myrandf = 0.0;
+#endif
+  myrandf *= (max - min + 0.999999f);
+  myrandf += min;
+  return myrandf;
+}
+
+__host__ __device__ __forceinline__
+void bound_between(float &val, float min, float max)
+{
+    if (val < min)
+        val = min;
+    else if (val > max)
+        val = max;
+}
 }
 #endif // PSO_CUH

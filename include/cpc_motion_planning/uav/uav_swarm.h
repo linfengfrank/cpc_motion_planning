@@ -121,37 +121,15 @@ public:
 
   }
 
-  __host__ __device__
-  float rand_float_gen(curandState *rs, float min, float max)
-  {
-  #ifdef  __CUDA_ARCH__
-    float myrandf = curand_uniform(rs);
-  #else
-    float myrandf = 0.0;
-  #endif
-    myrandf *= (max - min + 0.999999f);
-    myrandf += min;
-    return myrandf;
-  }
-
-  __host__ __device__
-  void bound_between(float &val, float min, float max)
-  {
-      if (val < min)
-          val = min;
-      else if (val > max)
-          val = max;
-  }
-
   //---
   __host__ __device__
   void bound_ptcl_velocity(Particle &p)
   {
     for (int n = 0; n < STEP; n++)
     {
-      bound_between(p.ptcl_vel.site[n].x, -0.5f, 0.5f);
-      bound_between(p.ptcl_vel.site[n].y, -0.5f, 0.5f);
-      bound_between(p.ptcl_vel.site[n].z, -0.5f, 0.5f);
+      PSO::bound_between(p.ptcl_vel.site[n].x, -0.5f, 0.5f);
+      PSO::bound_between(p.ptcl_vel.site[n].y, -0.5f, 0.5f);
+      PSO::bound_between(p.ptcl_vel.site[n].z, -0.5f, 0.5f);
     }
   }
 
@@ -161,9 +139,9 @@ public:
   {
     for (int n = 0; n < STEP; n++)
     {
-      bound_between(p.curr_loc.site[n].x,  s_ini.p.x-9.0f,  s_ini.p.x+9.0f);
-      bound_between(p.curr_loc.site[n].y,  s_ini.p.y-9.0f,  s_ini.p.y+9.0f);
-      bound_between(p.curr_loc.site[n].z,  s_ini.p.z-9.0f,  s_ini.p.z+9.0f);
+      PSO::bound_between(p.curr_loc.site[n].x,  s_ini.p.x-9.0f,  s_ini.p.x+9.0f);
+      PSO::bound_between(p.curr_loc.site[n].y,  s_ini.p.y-9.0f,  s_ini.p.y+9.0f);
+      PSO::bound_between(p.curr_loc.site[n].z,  s_ini.p.z-9.0f,  s_ini.p.z+9.0f);
       //bound_between(p.curr_loc.site[n].z,  1.6f,  1.65f);
     }
   }
@@ -174,13 +152,13 @@ public:
   {
     for (int i=0; i< STEP; i++)
     {
-      p.curr_loc.site[i].x = rand_float_gen(&(p.rs), s_ini.p.x-6, s_ini.p.x+6); // station target
-      p.curr_loc.site[i].y = rand_float_gen(&(p.rs), s_ini.p.y-6, s_ini.p.y+6); // station target
-      p.curr_loc.site[i].z = rand_float_gen(&(p.rs), s_ini.p.z-6, s_ini.p.z+6); // station target
+      p.curr_loc.site[i].x = PSO::rand_float_gen(&(p.rs), s_ini.p.x-6, s_ini.p.x+6); // station target
+      p.curr_loc.site[i].y = PSO::rand_float_gen(&(p.rs), s_ini.p.y-6, s_ini.p.y+6); // station target
+      p.curr_loc.site[i].z = PSO::rand_float_gen(&(p.rs), s_ini.p.z-6, s_ini.p.z+6); // station target
 
-      p.ptcl_vel.site[i].x = rand_float_gen(&(p.rs), -1.0f, 1.0f);
-      p.ptcl_vel.site[i].y = rand_float_gen(&(p.rs), -1.0f, 1.0f);
-      p.ptcl_vel.site[i].z = rand_float_gen(&(p.rs), -1.0f, 1.0f);
+      p.ptcl_vel.site[i].x = PSO::rand_float_gen(&(p.rs), -1.0f, 1.0f);
+      p.ptcl_vel.site[i].y = PSO::rand_float_gen(&(p.rs), -1.0f, 1.0f);
+      p.ptcl_vel.site[i].z = PSO::rand_float_gen(&(p.rs), -1.0f, 1.0f);
     }
     bound_ptcl_velocity(p);
     bound_ptcl_location(s_ini,p);

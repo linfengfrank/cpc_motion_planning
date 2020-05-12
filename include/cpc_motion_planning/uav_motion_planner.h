@@ -1,5 +1,5 @@
-#ifndef MOTION_PLANNER_H
-#define MOTION_PLANNER_H
+#ifndef UAV_MOTION_PLANNER_H
+#define UAV_MOTION_PLANNER_H
 #include <ros/ros.h>
 #include <cpc_motion_planning/pso/pso_planner.h>
 #include <cpc_aux_mapping/grid_map.h>
@@ -60,4 +60,4 @@ private:
   double m_yaw_target;
 };
 
-#endif // MOTION_PLANNER_H
+#endif // UAV_MOTION_PLANNER_H
