@@ -8,21 +8,21 @@ template <typename T> int sgn(T val)
     return (T(0) < val) - (val < T(0));
 }
 
-MotionPlanner::MotionPlanner():
+UAVMotionPlanner::UAVMotionPlanner():
   m_received_map(false),
   m_pose_received(false),
   m_goal_received(false),
   m_edt_map(nullptr)
 {
-  m_map_sub = m_nh.subscribe("/edt_map", 1, &MotionPlanner::map_call_back, this);
-  m_pose_sub = m_nh.subscribe("/mavros/position/local", 1, &MotionPlanner::vehicle_pose_call_back, this);
-  m_goal_sub = m_nh.subscribe("/move_base_simple/goal",1,&MotionPlanner::goal_call_back, this);
+  m_map_sub = m_nh.subscribe("/edt_map", 1, &UAVMotionPlanner::map_call_back, this);
+  m_pose_sub = m_nh.subscribe("/mavros/position/local", 1, &UAVMotionPlanner::vehicle_pose_call_back, this);
+  m_goal_sub = m_nh.subscribe("/move_base_simple/goal",1,&UAVMotionPlanner::goal_call_back, this);
 
   m_traj_pub = m_nh.advertise<PointCloud> ("pred_traj", 1);
   m_ctrl_pub = m_nh.advertise<PointCloud> ("ctrl_pnt", 1);
   m_ref_pub = m_nh.advertise<cpc_motion_planning::ref_data>("ref_traj",1);
 
-  m_planning_timer = m_nh.createTimer(ros::Duration(PSO::PSO_REPLAN_DT), &MotionPlanner::plan_call_back, this);
+  m_planning_timer = m_nh.createTimer(ros::Duration(PSO::PSO_REPLAN_DT), &UAVMotionPlanner::plan_call_back, this);
 
   m_pso_planner = new PSO::Planner<SIMPLE_UAV>(150,30,1);
   m_pso_planner->initialize(false);
@@ -50,7 +50,7 @@ MotionPlanner::MotionPlanner():
   m_yaw_limit.jMin = -10;
 }
 
-MotionPlanner::~MotionPlanner()
+UAVMotionPlanner::~UAVMotionPlanner()
 {
   if (m_edt_map)
   {
@@ -65,7 +65,7 @@ MotionPlanner::~MotionPlanner()
   delete m_ref_gen_planner;
 }
 
-void MotionPlanner::plan_call_back(const ros::TimerEvent&)
+void UAVMotionPlanner::plan_call_back(const ros::TimerEvent&)
 {
   if (!m_pose_received || !m_received_map || !m_goal_received)
     return;
@@ -164,7 +164,7 @@ void MotionPlanner::plan_call_back(const ros::TimerEvent&)
   m_plan_cycle++;
 }
 
-void MotionPlanner::map_call_back(const cpc_aux_mapping::grid_map::ConstPtr &msg)
+void UAVMotionPlanner::map_call_back(const cpc_aux_mapping::grid_map::ConstPtr &msg)
 {
   m_received_map = true;
   if (m_edt_map == nullptr)
@@ -182,13 +182,13 @@ void MotionPlanner::map_call_back(const cpc_aux_mapping::grid_map::ConstPtr &msg
   CUDA_MEMCPY_H2D(m_edt_map->m_sd_map,msg->payload8.data(),static_cast<size_t>(m_edt_map->m_byte_size));
 }
 
-void MotionPlanner::vehicle_pose_call_back(const geometry_msgs::PoseStamped::ConstPtr &msg)
+void UAVMotionPlanner::vehicle_pose_call_back(const geometry_msgs::PoseStamped::ConstPtr &msg)
 {
   m_pose_received = true;
   m_pose = *msg;
 }
 
-void MotionPlanner::goal_call_back(const geometry_msgs::PoseStamped::ConstPtr &msg)
+void UAVMotionPlanner::goal_call_back(const geometry_msgs::PoseStamped::ConstPtr &msg)
 {
 
   m_goal.s.p.x = msg->pose.position.x;

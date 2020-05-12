@@ -16,13 +16,13 @@
 #include <cpc_motion_planning/uav/uav_swarm.h>
 
 #define SIMPLE_UAV UAV::UAVModel,UAV::UAVDPControl,UAV::SingleTargetEvaluator,UAV::UAVSwarm<1>
-class MotionPlanner
+class UAVMotionPlanner
 {
   typedef pcl::PointCloud<pcl::PointXYZ> PointCloud;
 
 public:
-  MotionPlanner();
-  ~MotionPlanner();
+  UAVMotionPlanner();
+  ~UAVMotionPlanner();
 
 private:
   void plan_call_back(const ros::TimerEvent&);
