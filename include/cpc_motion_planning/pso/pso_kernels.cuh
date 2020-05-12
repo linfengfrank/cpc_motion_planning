@@ -7,22 +7,22 @@
 #include "cublas_v2.h"
 namespace PSO
 {
-template<class TmpSwarm>
-void setup_random_states(const TmpSwarm &tsw);
+template<class Swarm>
+void setup_random_states(const Swarm &sw);
 
 //---------
-template<class Model, class Controler, class Evaluator, class TmpSwarm>
+template<class Model, class Controler, class Evaluator, class Swarm>
 void initialize_particles(bool first_run,
-                          const EDTMap &map, const Evaluator &eva, const Model &m, const Controler &ctrl, const TmpSwarm &tsw);
+                          const EDTMap &map, const Evaluator &eva, const Model &m, const Controler &ctrl, const Swarm &sw);
 
 //---------
-template<class Model, class Controler, class Evaluator, class TmpSwarm>
+template<class Model, class Controler, class Evaluator, class Swarm>
 void iterate_particles(float weight,
-                       const EDTMap &map, const Evaluator &eva, const Model &m, const Controler &ctrl, const TmpSwarm &tsw);
+                       const EDTMap &map, const Evaluator &eva, const Model &m, const Controler &ctrl, const Swarm &sw);
 
 //---------
-template<class TmpSwarm>
-void copy_best_values(float *best_values, const TmpSwarm &tsw);
+template<class Swarm>
+void copy_best_values(float *best_values, const Swarm &sw);
 
 ////---------
 //float evaluate_trajectory_wrapper(const State &s0, const Trace &tr, VoidPtrCarrier ptr_car,const UniformBinCarrier &ubc,
