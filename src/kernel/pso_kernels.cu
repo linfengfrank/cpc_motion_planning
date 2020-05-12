@@ -142,16 +142,23 @@ void copy_best_values(float *best_values, const Swarm &sw)
 
 }
 
-template void PSO::initialize_particles<UAV::UAVModel, UAV::UAVDPControl, UAV::SingleTargetEvaluator, UAV::UAVSwarm<1> >(bool first_run,
-                                                                       const EDTMap &map, const UAV::SingleTargetEvaluator &eva, const UAV::UAVModel &m, const UAV::UAVDPControl &ctrl , const  UAV::UAVSwarm<1> &sw);
+#define INST_initialize_particles(M,C,E,S) template void PSO::initialize_particles< M,C,E,S > \
+(bool, const EDTMap&, const E&, const M&, const C& , const S&);
 
+#define INST_iterate_particles(M,C,E,S) template void PSO::iterate_particles< M,C,E,S > \
+(float, const EDTMap&, const E&, const M&, const C& , const S&);
 
-template void PSO::iterate_particles<UAV::UAVModel,  UAV::UAVDPControl, UAV::SingleTargetEvaluator, UAV::UAVSwarm<1> >(float weight,
-                                                                    const EDTMap &map,const UAV::SingleTargetEvaluator &eva, const UAV::UAVModel &m,const UAV::UAVDPControl &ctrl , const  UAV::UAVSwarm<1> &sw);
+#define INST_setup_random_states(S) template void PSO::setup_random_states< S > \
+(const S&);
 
-template float PSO::evaluate_trajectory<UAV::UAVModel,  UAV::UAVDPControl, UAV::SingleTargetEvaluator, UAV::UAVSwarm<1> >(
-                          const EDTMap &map, const UAV::SingleTargetEvaluator &eva, UAV::UAVModel &m,const UAV::UAVDPControl &ctrl, const UAV::UAVSwarm<1> &sw, const UAV::UAVSwarm<1>::Trace &ttr);
+#define INST_copy_best_values(S) template void PSO::copy_best_values< S > \
+(float *best_values, const S&);
 
-template void PSO::setup_random_states< UAV::UAVSwarm<1> >(const UAV::UAVSwarm<1> &sw);
+#define INST_group(M,C,E,S) INST_initialize_particles(M,C,E,S) \
+  INST_iterate_particles(M,C,E,S) \
+  INST_setup_random_states(S) \
+  INST_copy_best_values(S)
 
-template void PSO::copy_best_values< UAV::UAVSwarm<1> >(float *best_values, const UAV::UAVSwarm<1> &sw);
+INST_group(UAV::UAVModel, UAV::UAVDPControl, UAV::SingleTargetEvaluator, UAV::UAVSwarm<1>);
+INST_group(UAV::UAVModel, UAV::UAVDPControl, UAV::SingleTargetEvaluator, UAV::UAVSwarm<2>);
+
