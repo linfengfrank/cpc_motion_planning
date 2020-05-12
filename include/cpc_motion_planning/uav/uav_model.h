@@ -21,6 +21,14 @@ public:
     }
   };
 
+  struct Input
+  {
+    float jerk;
+    __host__ __device__
+    Input():jerk(0)
+    {}
+  };
+
   UAVModel()
   {
 

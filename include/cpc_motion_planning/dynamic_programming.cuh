@@ -1,14 +1,7 @@
 #ifndef DYNAMIC_PROGRAMMING_H
 #define DYNAMIC_PROGRAMMING_H
 #include <cuda_math/cuda_matrix.cuh>
-
-struct action
-{
-  float jerk;
-  __host__ __device__
-  action():jerk(0)
-  {}
-};
+#include <cpc_motion_planning/uav/uav_model.h>
 
 struct VoidPtrCarrier
 {
@@ -174,6 +167,7 @@ float get_value_3(float s[3], const Matrix<3,float> &S, const Vecf &bins_0, cons
   return output;
 }
 
+template<typename action>
 __host__ __device__ __forceinline__
 action get_control_uniform_bin(float s[3], const Matrix<3,action> &SA, const UniformBinCarrier &ubc)
 {
@@ -242,6 +236,7 @@ float acc_gen_val(int i)
   return -5.0f + 0.2f*static_cast<float>(i);
 }
 
+template<typename action>
 void program(VoidPtrCarrier ptr_car, size_t* bin_size);
 }
 #endif

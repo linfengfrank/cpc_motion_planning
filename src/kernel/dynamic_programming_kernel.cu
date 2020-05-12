@@ -2,6 +2,7 @@
 #define DT 0.05
 namespace GPU_DP
 {
+template<typename action>
 __global__
 void test(VoidPtrCarrier data)
 {
@@ -69,6 +70,7 @@ void test(VoidPtrCarrier data)
   //printf("%f\n",val);
 }
 
+template<typename action>
 void program(VoidPtrCarrier ptr_car, size_t *bin_size)
 {
   dim3 grid_size;
@@ -91,19 +93,21 @@ void program(VoidPtrCarrier ptr_car, size_t *bin_size)
       void* tmp = ptr_car[2];
       ptr_car[2] = ptr_car[1];
       ptr_car[1] = tmp;
-      test<<<grid_size,block_size>>>(ptr_car);
+      test<action><<<grid_size,block_size>>>(ptr_car);
     }
     else
     {
       void* tmp = ptr_car[2];
       ptr_car[2] = ptr_car[1];
       ptr_car[1] = tmp;
-      test<<<grid_size,block_size>>>(ptr_car);
+      test<action><<<grid_size,block_size>>>(ptr_car);
     }
 
     cudaDeviceSynchronize();
   }
 }
 }
-//template void GPU_DP::program<7>(VoidPtrCarrier<7> ptr_car, size_t *bin_size);
+template void GPU_DP::program< UAV::UAVModel::Input > \
+(VoidPtrCarrier, size_t*);
+
 

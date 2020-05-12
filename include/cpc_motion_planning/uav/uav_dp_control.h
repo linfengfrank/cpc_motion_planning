@@ -22,8 +22,8 @@ public:
 
   void load_data(CUDA_MAT::CudaMatrixFactory &factory, bool load_to_host)
   {
-    S_A_horizontal = static_cast<CUDA_MAT::Matrix<3,action>*>(factory.load_cuda_matrix<3,action>("/home/sp/cpc_ws/SA.dat",load_to_host));
-    S_A_vertical = static_cast<CUDA_MAT::Matrix<3,action>*>(factory.load_cuda_matrix<3,action>("/home/sp/cpc_ws/SA.dat",load_to_host));
+    S_A_horizontal = static_cast<CUDA_MAT::Matrix<3,UAVModel::Input>*>(factory.load_cuda_matrix<3,UAVModel::Input>("/home/sp/cpc_ws/SA.dat",load_to_host));
+    S_A_vertical = static_cast<CUDA_MAT::Matrix<3,UAVModel::Input>*>(factory.load_cuda_matrix<3,UAVModel::Input>("/home/sp/cpc_ws/SA.dat",load_to_host));
     factory.load_uniform_bin("/home/sp/cpc_ws/pos_bin.dat",ubc.bins[0]);
     factory.load_uniform_bin("/home/sp/cpc_ws/vel_bin.dat",ubc.bins[1]);
     factory.load_uniform_bin("/home/sp/cpc_ws/acc_bin.dat",ubc.bins[2]);
@@ -31,14 +31,14 @@ public:
 
   void release_data(CUDA_MAT::CudaMatrixFactory &factory, bool load_from_host)
   {
-    factory.free_cuda_matrix<3,action>(S_A_horizontal, load_from_host);
-    factory.free_cuda_matrix<3,action>(S_A_vertical, load_from_host);
+    factory.free_cuda_matrix<3,UAVModel::Input>(S_A_horizontal, load_from_host);
+    factory.free_cuda_matrix<3,UAVModel::Input>(S_A_vertical, load_from_host);
   }
 
   __host__ __device__
   float3 dp_control(const UAVModel::State &s, const float3 &site) const
   {
-    action u[3];
+    UAVModel::Input u[3];
     float s_relative[3];
 
     // X axis
@@ -63,8 +63,8 @@ public:
 
     return make_float3(u[0].jerk, u[1].jerk, u[2].jerk);
   }
-  CUDA_MAT::Matrix<3,action> *S_A_horizontal;
-  CUDA_MAT::Matrix<3,action> *S_A_vertical;
+  CUDA_MAT::Matrix<3,UAVModel::Input> *S_A_horizontal;
+  CUDA_MAT::Matrix<3,UAVModel::Input> *S_A_vertical;
   UniformBinCarrier ubc;
 };
 }
