@@ -45,6 +45,7 @@ public:
     s_relative[3] = s.w; //relative angular speed
 
     UGVModel::Input u = CUDA_MAT::get_control_uniform_bin_4(s_relative, *S_A, ubc);
+    return make_float3(u.acc,u.alpha,0.0f);
   }
   CUDA_MAT::Matrix<4,UGVModel::Input> *S_A;
 
