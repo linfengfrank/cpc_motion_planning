@@ -1,10 +1,9 @@
 #ifndef PSO_PLANNER_H
 #define PSO_PLANNER_H
-#include <cpc_motion_planning/dynamic_programming.cuh>
+
 #include <cpc_motion_planning/cuda_matrix_factory.h>
-#include <cpc_motion_planning/pso/pso_utilities.cuh>
 #include <cpc_motion_planning/pso/pso_kernels.cuh>
-#include <cpc_motion_planning/uav/uav_single_target_evluator.h>
+
 namespace PSO
 {
 template<class Model, class Controller, class Evaluator, class Swarm>
@@ -25,7 +24,7 @@ public:
 
   }
 
-  void plan(const UAV::UAVModel::State &s, const UAV::SingleTargetEvaluator::Target &goal, const EDTMap &map)
+  void plan(const typename Model::State &s, const typename Evaluator::Target &goal, const EDTMap &map)
   {
     //test_plan<N>(s,goal,m_ptcls, m_best_values, m_num_of_ptcls, &result, true,m_carrier,m_cbls_hdl);
     cublasStatus_t cbls_stt;
@@ -78,45 +77,21 @@ public:
 
   void create_particles()
   {
-
-
-
-
-
-
     typename Swarm::Particle* tdata = new typename Swarm::Particle[m_swarm.ptcl_size];
     CUDA_ALLOC_DEV_MEM(&m_swarm.ptcls,m_swarm.ptcl_size*sizeof(typename Swarm::Particle));
     CUDA_MEMCPY_H2D(m_swarm.ptcls,tdata,m_swarm.ptcl_size*sizeof(typename Swarm::Particle));
     delete [] tdata;
 
-
-
-
     setup_random_states<Swarm>(m_swarm);
-
     CUDA_ALLOC_DEV_MEM(&m_best_values,m_swarm.ptcl_size*sizeof(float));
     cublasCreate(&m_cbls_hdl);
-
-
-
-
-
-
-
-    //setup_random_states(m_swam);
-
-//    CUDA_ALLOC_DEV_MEM(&m_best_values,m_swam.ptcl_size*sizeof(float));
-//    cublasCreate(&m_cbls_hdl);
   }
 
   void delete_particles()
   {
-
     CUDA_FREE_DEV_MEM(m_swarm.ptcls);
     CUDA_FREE_DEV_MEM(m_best_values);
     cublasDestroy(m_cbls_hdl);
-
-
   }
 
 public:
