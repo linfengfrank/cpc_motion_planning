@@ -7,15 +7,15 @@
 #include <cpc_motion_planning/cuda_matrix_factory.h>
 namespace UGV
 {
-class UAVDPControl
+class UGVDPControl
 {
 public:
-  UAVDPControl()
+  UGVDPControl()
   {
 
   }
 
-  ~UAVDPControl()
+  ~UGVDPControl()
   {
 
   }
@@ -23,10 +23,10 @@ public:
   void load_data(CUDA_MAT::CudaMatrixFactory &factory, bool load_to_host)
   {
     S_A = static_cast<CUDA_MAT::Matrix<4,UGVModel::Input>*>(factory.load_cuda_matrix<4,UGVModel::Input>("/home/sp/cpc_ws/slow/SA.dat",load_to_host));
-    factory.load_uniform_bin("/home/sp/cpc_ws/slow/pos_bin.dat",bins[0]);
-    factory.load_uniform_bin("/home/sp/cpc_ws/slow/vel_bin.dat",bins[1]);
-    factory.load_uniform_bin("/home/sp/cpc_ws/slow/theta_bin.dat",bins[2]);
-    factory.load_uniform_bin("/home/sp/cpc_ws/slow/w_bin.dat",bins[3]);
+    factory.load_uniform_bin("/home/sp/cpc_ws/slow/pos_bin.dat",ubc.bins[0]);
+    factory.load_uniform_bin("/home/sp/cpc_ws/slow/vel_bin.dat",ubc.bins[1]);
+    factory.load_uniform_bin("/home/sp/cpc_ws/slow/theta_bin.dat",ubc.bins[2]);
+    factory.load_uniform_bin("/home/sp/cpc_ws/slow/w_bin.dat",ubc.bins[3]);
   }
 
   void release_data(CUDA_MAT::CudaMatrixFactory &factory, bool load_from_host)
@@ -44,7 +44,7 @@ public:
     s_relative[2] = s.theta - site.y; // relative velocity
     s_relative[3] = s.w; //relative angular speed
 
-    UGVModel::Input u = CUDA_MAT::get_control_uniform_bin(s_relative, *S_A, ubc);
+    UGVModel::Input u = CUDA_MAT::get_control_uniform_bin_4(s_relative, *S_A, ubc);
   }
   CUDA_MAT::Matrix<4,UGVModel::Input> *S_A;
 

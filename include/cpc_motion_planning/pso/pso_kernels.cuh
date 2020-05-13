@@ -3,6 +3,12 @@
 #include <cpc_motion_planning/uav/uav_model.h>
 #include <cpc_motion_planning/uav/uav_dp_control.h>
 #include <cpc_motion_planning/uav/uav_swarm.h>
+#include <cpc_motion_planning/uav/uav_single_target_evluator.h>
+
+#include <cpc_motion_planning/ugv/ugv_model.h>
+#include <cpc_motion_planning/ugv/ugv_dp_control.h>
+#include <cpc_motion_planning/ugv/ugv_swarm.h>
+#include <cpc_motion_planning/ugv/ugv_single_target_evaluator.h>
 #include <cuda_geometry/cuda_edtmap.cuh>
 #include "cublas_v2.h"
 namespace PSO

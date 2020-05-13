@@ -169,5 +169,5 @@ public:
   int steps;
   float step_dt;
 };
-
+}
 #endif // UGV_SWARM_H

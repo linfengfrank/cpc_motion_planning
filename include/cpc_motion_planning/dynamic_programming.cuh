@@ -167,6 +167,106 @@ float get_value_3(float s[3], const Matrix<3,float> &S, const Vecf &bins_0, cons
   return output;
 }
 
+//---
+__host__ __device__ __forceinline__
+float get_value_4(float s[4], const Matrix<4,float> &S, const Vecf &bins_0, const Vecf &bins_1, const Vecf &bins_2, const Vecf &bins_3)
+{
+  bound(s[0],bins_0.const_at(0), bins_0.const_at(static_cast<int>(bins_0.m_dim_width[0] - 1)));
+  bound(s[1],bins_1.const_at(0), bins_1.const_at(static_cast<int>(bins_1.m_dim_width[0] - 1)));
+  bound(s[2],bins_2.const_at(0), bins_2.const_at(static_cast<int>(bins_2.m_dim_width[0] - 1)));
+  bound(s[3],bins_3.const_at(0), bins_3.const_at(static_cast<int>(bins_3.m_dim_width[0] - 1)));
+
+  int idx[4];
+  idx[0] = search_idx(s[0], bins_0);
+  idx[1] = search_idx(s[1], bins_1);
+  idx[2] = search_idx(s[2], bins_2);
+  idx[3] = search_idx(s[3], bins_3);
+
+  float volume = (bins_0.const_at(idx[0]+1)-bins_0.const_at(idx[0]))*
+      (bins_1.const_at(idx[1]+1)-bins_1.const_at(idx[1]))*
+      (bins_2.const_at(idx[2]+1)-bins_2.const_at(idx[2]))*
+      (bins_3.const_at(idx[3]+1)-bins_3.const_at(idx[3]));
+
+  int loc[4];
+  int opp[4];
+  float s_opp[4];
+  float weight,val;
+  float output = 0;
+  for (loc[0] = 0;  loc[0]<= 1; loc[0]++)
+  {
+    for (loc[1] = 0;  loc[1]<= 1; loc[1]++)
+    {
+      for (loc[2] = 0;  loc[2]<= 1; loc[2]++)
+      {
+        for (loc[3] = 0;  loc[3]<= 1; loc[3]++)
+        {
+          get_opposite_pnt(loc,opp,idx,4);
+          s_opp[0] = bins_0.const_at(opp[0]);
+          s_opp[1] = bins_1.const_at(opp[1]);
+          s_opp[2] = bins_2.const_at(opp[2]);
+          s_opp[3] = bins_3.const_at(opp[3]);
+
+          weight = fabs(s[0]-s_opp[0])*fabs(s[1]-s_opp[1])*fabs(s[2]-s_opp[2])*fabs(s[3]-s_opp[3])/volume;
+          val = mat4_get_val_const<float>(loc[0]+idx[0],loc[1]+idx[1],loc[2]+idx[2],loc[3]+idx[3],S);
+          output += weight * val;
+        }
+      }
+    }
+  }
+  return output;
+}
+//---
+template<typename action>
+__host__ __device__ __forceinline__
+action get_control_uniform_bin_4(float s[4], const Matrix<4,action> &SA, const UniformBinCarrier &ubc)
+{
+  int idx[4];
+  float volume = 1.0f;
+  for (int i=0; i<4; i++)
+  {
+    bound(s[i],ubc.bins[i].min, ubc.bins[i].max);
+    idx[i] = floor((s[i] - ubc.bins[i].min) / ubc.bins[i].grid);
+
+    if (idx[i] < 0)
+      idx[i] = 0;
+
+    if (idx[i] > ubc.bins[i].size -2)
+      idx[i] = ubc.bins[i].size -2;
+
+    volume *= ubc.bins[i].grid;
+  }
+
+  int loc[4];
+  int opp[4];
+  float s_opp[4];
+  float weight;
+  action output,val;
+  for (loc[0] = 0;  loc[0]<= 1; loc[0]++)
+  {
+    for (loc[1] = 0;  loc[1]<= 1; loc[1]++)
+    {
+      for (loc[2] = 0;  loc[2]<= 1; loc[2]++)
+      {
+        for (loc[3] = 0;  loc[3]<= 1; loc[3]++)
+        {
+          get_opposite_pnt(loc,opp,idx,4);
+
+          for (int i=0; i<4; i++)
+          {
+            s_opp[i] = ubc.bins[i].min + ubc.bins[i].grid*static_cast<float>(opp[i]);
+          }
+
+          weight = fabs(s[0]-s_opp[0])*fabs(s[1]-s_opp[1])*fabs(s[2]-s_opp[2])*fabs(s[3]-s_opp[3])/volume;
+          val = mat4_get_val_const<action>(loc[0]+idx[0],loc[1]+idx[1],loc[2]+idx[2],loc[3]+idx[3],SA);
+          output.acc += weight * val.acc;
+          output.alpha += weight * val.alpha;
+        }
+      }
+    }
+  }
+  return output;
+}
+//---
 template<typename action>
 __host__ __device__ __forceinline__
 action get_control_uniform_bin_3(float s[3], const Matrix<3,action> &SA, const UniformBinCarrier &ubc)

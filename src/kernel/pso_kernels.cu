@@ -1,6 +1,6 @@
 #include <cpc_motion_planning/pso/pso_kernels.cuh>
 #include <cuda_geometry/helper_math.h>
-#include <cpc_motion_planning/uav/uav_single_target_evluator.h>
+
 namespace PSO
 {
 //---
@@ -162,3 +162,5 @@ void copy_best_values(float *best_values, const Swarm &sw)
 INST_group(UAV::UAVModel, UAV::UAVDPControl, UAV::SingleTargetEvaluator, UAV::UAVSwarm<1>);
 INST_group(UAV::UAVModel, UAV::UAVDPControl, UAV::SingleTargetEvaluator, UAV::UAVSwarm<2>);
 
+INST_group(UGV::UGVModel, UGV::UGVDPControl, UGV::SingleTargetEvaluator, UGV::UGVSwarm<1>);
+INST_group(UGV::UGVModel, UGV::UGVDPControl, UGV::SingleTargetEvaluator, UGV::UGVSwarm<2>);
