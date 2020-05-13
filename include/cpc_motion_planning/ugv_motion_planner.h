@@ -15,7 +15,7 @@
 #include <cpc_motion_planning/ugv/ugv_dp_control.h>
 #include <cpc_motion_planning/ugv/ugv_swarm.h>
 
-#define SIMPLE_UGV UGV::UGVModel,UGV::UGVDPControl,UGV::SingleTargetEvaluator,UGV::UGVSwarm<1>
+#define SIMPLE_UGV UGV::UGVModel,UGV::UGVDPControl,UGV::SingleTargetEvaluator,UGV::UGVSwarm<2>
 class UGVMotionPlanner
 {
   typedef pcl::PointCloud<pcl::PointXYZ> PointCloud;
@@ -30,7 +30,6 @@ private:
   void raw_odo_call_back(const nav_msgs::Odometry::ConstPtr &msg);
   void slam_odo_call_back(const nav_msgs::Odometry::ConstPtr &msg);
   void goal_call_back(const geometry_msgs::PoseStamped::ConstPtr &msg);
-  void curr_ref_call_back(const cpc_motion_planning::ref_data::ConstPtr &msg);
 
 private:
   ros::NodeHandle m_nh;
@@ -38,7 +37,6 @@ private:
   ros::Subscriber m_raw_odom_sub;
   ros::Subscriber m_slam_odom_sub;
   ros::Subscriber m_goal_sub;
-  ros::Subscriber m_curr_ref_sub;
   ros::Timer m_planning_timer;
   nav_msgs::Odometry m_raw_odo, m_slam_odo;
 
@@ -57,6 +55,8 @@ private:
   float m_ref_v, m_ref_w;
   cpc_motion_planning::ref_data m_ref_msg;
   int m_v_err_reset_ctt, m_w_err_reset_ctt;
+  int m_plan_cycle;
+  int m_ref_start_idx;
 
 };
 

@@ -18,14 +18,13 @@ UGVMotionPlanner::UGVMotionPlanner():
   m_raw_odom_sub = m_nh.subscribe("/raw_odom", 1, &UGVMotionPlanner::raw_odo_call_back, this);
   m_slam_odom_sub = m_nh.subscribe("/slam_odom", 1, &UGVMotionPlanner::slam_odo_call_back, this);
   m_goal_sub = m_nh.subscribe("/move_base_simple/goal",1,&UGVMotionPlanner::goal_call_back, this);
-  m_curr_ref_sub = m_nh.subscribe("/current_ref",1,&UGVMotionPlanner::curr_ref_call_back, this);
 
   m_traj_pub = m_nh.advertise<PointCloud> ("pred_traj", 1);
   m_ref_pub = m_nh.advertise<cpc_motion_planning::ref_data>("ref_traj",1);
 
   m_planning_timer = m_nh.createTimer(ros::Duration(PSO::PSO_REPLAN_DT), &UGVMotionPlanner::plan_call_back, this);
 
-  m_pso_planner = new PSO::Planner<SIMPLE_UGV>(150,30,1);
+  m_pso_planner = new PSO::Planner<SIMPLE_UGV>(150,40,1);
   m_pso_planner->initialize(false);
 
   m_display_planner = new PSO::Planner<SIMPLE_UGV>(1,1,1);
@@ -40,6 +39,8 @@ UGVMotionPlanner::UGVMotionPlanner():
   m_w_err_reset_ctt = 0;
   //Initialize the control message
   m_ref_msg.rows = 2;
+  m_plan_cycle = 0;
+  m_ref_start_idx = 0;
 }
 
 UGVMotionPlanner::~UGVMotionPlanner()
@@ -55,12 +56,6 @@ UGVMotionPlanner::~UGVMotionPlanner()
 
   m_display_planner->release();
   delete m_display_planner;
-}
-
-void UGVMotionPlanner::curr_ref_call_back(const cpc_motion_planning::ref_data::ConstPtr &msg)
-{
-  m_ref_v = msg->data[0];
-  m_ref_w = msg->data[1];
 }
 
 void UGVMotionPlanner::plan_call_back(const ros::TimerEvent&)
@@ -138,6 +133,8 @@ void UGVMotionPlanner::plan_call_back(const ros::TimerEvent&)
   //PSO::State cmd_state;
   float dt = PSO::PSO_CTRL_DT;
   int cols = 0;
+  int ref_counter = m_ref_start_idx;
+  int next_ref_start_idx = (m_plan_cycle+1)*PSO::PSO_REPLAN_CYCLE+PSO::PSO_PLAN_CONSUME_CYCLE;
   for (float t=0.0f; t<PSO::PSO_TOTAL_T; t+=dt)
   {
     int i = static_cast<int>(floor(t/m_display_planner->m_swarm.step_dt));
@@ -153,17 +150,31 @@ void UGVMotionPlanner::plan_call_back(const ros::TimerEvent&)
     clrP.z = 0.2f;
     m_traj_pnt_cld->points.push_back(clrP);
 
+    ref_counter++;
+    m_ref_msg.ids.push_back(ref_counter);
     m_ref_msg.data.push_back(s.v);
     m_ref_msg.data.push_back(s.w);
+
+    if (ref_counter == next_ref_start_idx)
+    {
+      m_ref_v = s.v;
+      m_ref_w = s.w;
+    }
+
     cols++;
   }
+
+  m_ref_start_idx = next_ref_start_idx;
 
   m_ref_msg.cols = cols;
   m_ref_pub.publish(m_ref_msg);
   m_ref_msg.data.clear();
+  m_ref_msg.ids.clear();
 
   m_traj_pub.publish(m_traj_pnt_cld);
   m_traj_pnt_cld->clear();
+
+  m_plan_cycle++;
 }
 
 void UGVMotionPlanner::map_call_back(const cpc_aux_mapping::grid_map::ConstPtr &msg)
