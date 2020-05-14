@@ -2,7 +2,7 @@
 #define DYNAMIC_PROGRAMMING_H
 #include <cuda_math/cuda_matrix.cuh>
 #include <cpc_motion_planning/uav/uav_model.h>
-
+#include <cpc_motion_planning/ugv/ugv_model.h>
 struct VoidPtrCarrier
 {
   void * m_ptr[8];
@@ -335,6 +335,33 @@ __host__ __device__ __forceinline__
 float acc_gen_val(int i)
 {
   return -5.0f + 0.2f*static_cast<float>(i);
+}
+}
+
+namespace UGV
+{
+__host__ __device__ __forceinline__
+float pos_gen_val(int i)
+{
+  return -10.0f + 0.2f*static_cast<float>(i);
+}
+
+__host__ __device__ __forceinline__
+float vel_gen_val(int i)
+{
+   return -5.0f + 0.2f*static_cast<float>(i);
+}
+
+__host__ __device__ __forceinline__
+float theta_gen_val(int i)
+{
+   return -3.14f + 0.13f*static_cast<float>(i);
+}
+
+__host__ __device__ __forceinline__
+float w_gen_val(int i)
+{
+   return -2.5f + 0.1f*static_cast<float>(i);
 }
 }
 
