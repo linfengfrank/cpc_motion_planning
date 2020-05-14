@@ -163,7 +163,6 @@ target_link_libraries(dynamic_programming
 cuda_add_executable(${PROJECT_NAME}_node
     src/motion_planning_node.cpp
     src/ugv_motion_planner.cpp
-    src/JLT.cpp
     src/kernel/pso_kernels.cu)
 
 target_link_libraries(${PROJECT_NAME}_node
