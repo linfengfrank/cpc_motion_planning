@@ -1,7 +1,6 @@
 #ifndef DYNAMIC_PROGRAMMING_H
 #define DYNAMIC_PROGRAMMING_H
 #include <cuda_math/cuda_matrix.cuh>
-#include <cpc_motion_planning/uav/uav_model.h>
 #include <cpc_motion_planning/ugv/ugv_model.h>
 struct VoidPtrCarrier
 {
@@ -315,27 +314,6 @@ action get_control_uniform_bin_3(float s[3], const Matrix<3,action> &SA, const U
   return output;
 }
 
-}
-
-namespace UAV
-{
-__host__ __device__ __forceinline__
-float pos_gen_val(int i)
-{
-  return -10.0f + 0.2f*static_cast<float>(i);
-}
-
-__host__ __device__ __forceinline__
-float vel_gen_val(int i)
-{
-  return -5.0f + 0.2f*static_cast<float>(i);
-}
-
-__host__ __device__ __forceinline__
-float acc_gen_val(int i)
-{
-  return -5.0f + 0.2f*static_cast<float>(i);
-}
 }
 
 namespace UGV

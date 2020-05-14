@@ -1,10 +1,5 @@
 #ifndef PSO_KERNELS_CUH
 #define PSO_KERNELS_CUH
-#include <cpc_motion_planning/uav/uav_model.h>
-#include <cpc_motion_planning/uav/uav_dp_control.h>
-#include <cpc_motion_planning/uav/uav_swarm.h>
-#include <cpc_motion_planning/uav/uav_single_target_evluator.h>
-
 #include <cpc_motion_planning/ugv/ugv_model.h>
 #include <cpc_motion_planning/ugv/ugv_dp_control.h>
 #include <cpc_motion_planning/ugv/ugv_swarm.h>
