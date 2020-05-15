@@ -321,13 +321,13 @@ namespace UGV
 __host__ __device__ __forceinline__
 float pos_gen_val(int i)
 {
-  return -10.0f + 0.2f*static_cast<float>(i);
+  return -5.0f + 0.1f*static_cast<float>(i);
 }
 
 __host__ __device__ __forceinline__
 float vel_gen_val(int i)
 {
-   return -5.0f + 0.2f*static_cast<float>(i);
+   return -2.5f + 0.1f*static_cast<float>(i);
 }
 
 __host__ __device__ __forceinline__
@@ -339,7 +339,7 @@ float theta_gen_val(int i)
 __host__ __device__ __forceinline__
 float w_gen_val(int i)
 {
-   return -2.5f + 0.1f*static_cast<float>(i);
+   return -1.25f + 0.05f*static_cast<float>(i);
 }
 }
 

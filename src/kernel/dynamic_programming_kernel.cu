@@ -40,17 +40,17 @@ void test(VoidPtrCarrier data)
       val = CUDA_MAT::get_value_4(s_next,*S_old, *bin_p, *bin_v, *bin_theta, *bin_w);
       val += 10*acc*acc + 10*alpha*alpha;
       val += 1*s_curr[0]*s_curr[0] + 0.2*s_curr[1]*s_curr[1] +s_curr[2]*s_curr[2] + 0.2*s_curr[3]*s_curr[3];
-      if (s_curr[1] - 4.0 > 0)
-        val += 80*(s_curr[1] - 4.0);
+      if (s_curr[1] - 1.2 > 0)
+        val += 80*(s_curr[1] - 1.2);
 
-      if (s_curr[1] < -4.0)
-        val += 80*(-s_curr[1] - 4.0);
+      if (s_curr[1] < -1.2)
+        val += 80*(-s_curr[1] - 1.2);
 
-      if (s_curr[3] - 2 > 0)
-        val += 80*(s_curr[3] - 2);
+      if (s_curr[3] - 1.5 > 0)
+        val += 80*(s_curr[3] - 1.5);
 
-      if (s_curr[3] < -2)
-        val += 80*(-s_curr[3] - 2);
+      if (s_curr[3] < -1.5)
+        val += 80*(-s_curr[3] - 1.5);
 
       acc_lat = s_curr[1]*s_curr[3];
       acc_tot = sqrt(acc_lat*acc_lat + acc*acc);
@@ -58,8 +58,8 @@ void test(VoidPtrCarrier data)
 //      if (fabs(acc_lat) > 2)
 //        val += 80*(fabs(acc_lat) - 2);
 
-      if (acc_tot - 1.5 > 0)
-        val += 80*(acc_tot - 1.5);
+      if (acc_tot - 1.8 > 0)
+        val += 80*(acc_tot - 1.8);
 
 //      val+= 0.5*acc_tot*acc_tot;
 

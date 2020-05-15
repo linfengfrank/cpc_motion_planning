@@ -51,13 +51,13 @@ public:
 
   #ifdef  __CUDA_ARCH__
     float rd = map.edt_const_at(ix,iy,iz).d*0.2;
-    cost += exp(-6*rd)*400;
+    cost += exp(-4.5f*rd)*400;
 
     if (rd < 1.0)
       cost += 100;
   #endif
 
-    if (sqrt(dist_err.x*dist_err.x + dist_err.y*dist_err.y) > 4)
+    if (sqrt(dist_err.x*dist_err.x + dist_err.y*dist_err.y) > 1)
     {
       cost += 0.5f*M_PI;
     }
@@ -92,13 +92,13 @@ public:
 
    #ifdef  __CUDA_ARCH__
      float rd = map.edt_const_at(ix,iy,iz).d*0.2;
-     cost += exp(-6*rd)*400;
+     cost += exp(-4.5f*rd)*400;
 
      if (rd < 1.0)
        cost += 100;
    #endif
 
-     if (sqrt(dist_err.x*dist_err.x + dist_err.y*dist_err.y) > 4)
+     if (sqrt(dist_err.x*dist_err.x + dist_err.y*dist_err.y) > 1)
      {
        cost += 4*M_PI;
      }

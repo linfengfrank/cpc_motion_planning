@@ -24,7 +24,7 @@ UGVMotionPlanner::UGVMotionPlanner():
 
   m_planning_timer = m_nh.createTimer(ros::Duration(PSO::PSO_REPLAN_DT), &UGVMotionPlanner::plan_call_back, this);
 
-  m_pso_planner = new PSO::Planner<SIMPLE_UGV>(150,40,1);
+  m_pso_planner = new PSO::Planner<SIMPLE_UGV>(120,30,1);
   m_pso_planner->initialize(false);
 
   m_display_planner = new PSO::Planner<SIMPLE_UGV>(1,1,1);

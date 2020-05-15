@@ -15,7 +15,7 @@
 #include <cpc_motion_planning/ugv/ugv_dp_control.h>
 #include <cpc_motion_planning/ugv/ugv_swarm.h>
 
-#define SIMPLE_UGV UGV::UGVModel,UGV::UGVDPControl,UGV::SingleTargetEvaluator,UGV::UGVSwarm<2>
+#define SIMPLE_UGV UGV::UGVModel,UGV::UGVDPControl,UGV::SingleTargetEvaluator,UGV::UGVSwarm<1>
 class UGVMotionPlanner
 {
   typedef pcl::PointCloud<pcl::PointXYZ> PointCloud;

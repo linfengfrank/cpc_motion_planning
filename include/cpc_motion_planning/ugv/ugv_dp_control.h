@@ -23,11 +23,11 @@ public:
 
   void load_data(CUDA_MAT::CudaMatrixFactory &factory, bool load_to_host)
   {
-    S_A = static_cast<CUDA_MAT::Matrix<4,UGVModel::Input>*>(factory.load_cuda_matrix<4,UGVModel::Input>("/home/sp/cpc_ws/fast/SA.dat",load_to_host));
-    factory.load_uniform_bin("/home/sp/cpc_ws/fast/pos_bin.dat",ubc.bins[0]);
-    factory.load_uniform_bin("/home/sp/cpc_ws/fast/vel_bin.dat",ubc.bins[1]);
-    factory.load_uniform_bin("/home/sp/cpc_ws/fast/theta_bin.dat",ubc.bins[2]);
-    factory.load_uniform_bin("/home/sp/cpc_ws/fast/w_bin.dat",ubc.bins[3]);
+    S_A = static_cast<CUDA_MAT::Matrix<4,UGVModel::Input>*>(factory.load_cuda_matrix<4,UGVModel::Input>("/home/sp/cpc_ws/slow/SA.dat",load_to_host));
+    factory.load_uniform_bin("/home/sp/cpc_ws/slow/pos_bin.dat",ubc.bins[0]);
+    factory.load_uniform_bin("/home/sp/cpc_ws/slow/vel_bin.dat",ubc.bins[1]);
+    factory.load_uniform_bin("/home/sp/cpc_ws/slow/theta_bin.dat",ubc.bins[2]);
+    factory.load_uniform_bin("/home/sp/cpc_ws/slow/w_bin.dat",ubc.bins[3]);
   }
 
   void release_data(CUDA_MAT::CudaMatrixFactory &factory, bool load_from_host)
