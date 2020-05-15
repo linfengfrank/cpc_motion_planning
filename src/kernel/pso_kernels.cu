@@ -4,38 +4,6 @@
 namespace PSO
 {
 //---
-template<class Model, class Controller, class Evaluator, class Swarm>
-__host__ __device__
-float evaluate_trajectory(const EDTMap &map, const Evaluator &eva, Model &m, const Controller &ctrl, const Swarm &sw, const typename Swarm::Trace &ttr)
-{
-  typename Model::State s = m.get_ini_state();
-  float cost = 0;
-  float dt = PSO_SIM_DT;
-  //float3 goal_p = goal.s.p;
-  for (float t=0.0f; t<PSO_TOTAL_T; t+=dt)
-  {
-    int i = static_cast<int>(floor(t/sw.step_dt));
-    if (i > sw.steps - 1)
-      i = sw.steps - 1;
-
-    float3 u = ctrl.dp_control(s, ttr[i]);
-    m.model_forward(s,u,dt);
-
-    cost += 0.1*sqrt(u.x*u.x + u.y*u.y + u.z*u.z);
-    cost += eva.process_cost(s,map);
-
-//    float3 ctr_pnt = tr[i];
-//    float3 diff_tr = ctr_pnt - goal_p;
-
-//    cost+= 0.05*sqrt(diff_tr.x*diff_tr.x + diff_tr.y*diff_tr.y + diff_tr.z*diff_tr.z);
-  }
-  cost += eva.final_cost(s,map);
-//  Trace diff = tr - last_tr;
-//  cost += sqrt(diff.square())/static_cast<float>(PSO_STEPS);
-  return cost;
-}
-
-//---
 template<class Swarm>
 __global__
 void setup_random_states_kernel(typename Swarm::Particle* tptcls)
@@ -56,7 +24,7 @@ void initialize_particles_kernel(bool first_run,
   {
     sw.initialize_a_particle(m.get_ini_state(),sw.ptcls[idx]);
   }
-  sw.ptcls[idx].best_cost = evaluate_trajectory<Model,Controller,Evaluator,Swarm>(map,eva,m, ctrl, sw, sw.ptcls[idx].best_loc);
+  sw.ptcls[idx].best_cost = ctrl.template simulate_evaluate<Model,Evaluator,Swarm>(map,eva,m,sw,sw.ptcls[idx].best_loc);
 }
 
 //---
@@ -84,7 +52,7 @@ void iterate_particles_kernel(float weight,
 
   sw.bound_ptcl_location(m.get_ini_state(), sw.ptcls[idx]);
 
-  float cost = evaluate_trajectory<Model,Controller,Evaluator,Swarm>(map,eva,m,ctrl,sw,sw.ptcls[idx].curr_loc);
+  float cost = ctrl.template simulate_evaluate<Model,Evaluator,Swarm>(map,eva,m,sw,sw.ptcls[idx].curr_loc);
 
   if (cost < sw.ptcls[idx].best_cost)
   {
