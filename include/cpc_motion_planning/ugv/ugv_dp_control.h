@@ -20,6 +20,7 @@ public:
 
   }
 
+
   void load_data(CUDA_MAT::CudaMatrixFactory &factory, bool load_to_host)
   {
     S_A = static_cast<CUDA_MAT::Matrix<4,UGVModel::Input>*>(factory.load_cuda_matrix<4,UGVModel::Input>("/home/sp/cpc_ws/fast/SA.dat",load_to_host));
@@ -47,6 +48,33 @@ public:
     UGVModel::Input u = CUDA_MAT::get_control_uniform_bin_4(s_relative, *S_A, ubc);
     return make_float3(u.acc,u.alpha,0.0f);
   }
+
+  template<class Model, class Evaluator, class Swarm>
+  __host__ __device__
+  float simulate_evaluate(const EDTMap &map, const Evaluator &eva, Model &m, const Swarm &sw, const typename Swarm::Trace &ttr)
+  {
+    typename Model::State s = m.get_ini_state();
+    float cost = 0;
+    float dt = PSO::PSO_SIM_DT;
+
+    for (float t=0.0f; t<PSO::PSO_TOTAL_T; t+=dt)
+    {
+      int i = static_cast<int>(floor(t/sw.step_dt));
+      if (i > sw.steps - 1)
+        i = sw.steps - 1;
+
+      float3 u = dp_control(s, ttr[i]);
+      m.model_forward(s,u,dt);
+
+      cost += 0.1*sqrt(u.x*u.x + u.y*u.y + u.z*u.z);
+      cost += eva.process_cost(s,map);
+
+    }
+    cost += eva.final_cost(s,map);
+
+    return cost;
+  }
+
   CUDA_MAT::Matrix<4,UGVModel::Input> *S_A;
 
   UniformBinCarrier ubc;
