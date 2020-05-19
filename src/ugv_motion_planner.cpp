@@ -24,7 +24,7 @@ UGVMotionPlanner::UGVMotionPlanner():
 
   m_planning_timer = m_nh.createTimer(ros::Duration(PSO::PSO_REPLAN_DT), &UGVMotionPlanner::plan_call_back, this);
 
-  m_pso_planner = new PSO::Planner<SIMPLE_UGV>(120,30,1);
+  m_pso_planner = new PSO::Planner<SIMPLE_UGV>(120,40,1);
   m_pso_planner->initialize(false);
 
   m_display_planner = new PSO::Planner<SIMPLE_UGV>(1,1,1);
@@ -119,8 +119,10 @@ void UGVMotionPlanner::plan_call_back(const ros::TimerEvent&)
   //  yaw_diff = yaw_diff - floor((yaw_diff + M_PI) / (2 * M_PI)) * 2 * M_PI;
 
 
+  m_pso_planner->set_problem(s,m_goal);
+  m_display_planner->set_problem(s,m_goal);
   auto start = std::chrono::steady_clock::now();
-  m_pso_planner->plan(s,m_goal,*m_edt_map);
+  m_pso_planner->plan(*m_edt_map);
   auto end = std::chrono::steady_clock::now();
   std::cout << "Consumed: "
             << std::chrono::duration_cast<std::chrono::milliseconds>(end - start).count()
@@ -130,35 +132,30 @@ void UGVMotionPlanner::plan_call_back(const ros::TimerEvent&)
   std::cout<<"v,w err: "<<v_err<<", "<<w_err<<std::endl;
   std::cout<<"--------------"<<std::endl;
 
-  //PSO::State cmd_state;
-  float dt = PSO::PSO_CTRL_DT;
+  std::vector<UGV::UGVModel::State> traj = m_display_planner->generate_trajectory(m_pso_planner->result.best_loc);
+
   int cols = 0;
   int ref_counter = m_ref_start_idx;
   int next_ref_start_idx = (m_plan_cycle+1)*PSO::PSO_REPLAN_CYCLE+PSO::PSO_PLAN_CONSUME_CYCLE;
-  for (float t=0.0f; t<PSO::PSO_TOTAL_T; t+=dt)
+
+
+  for (UGV::UGVModel::State traj_s : traj)
   {
-    int i = static_cast<int>(floor(t/m_display_planner->m_swarm.step_dt));
-    if (i > m_display_planner->m_swarm.steps - 1)
-      i = m_display_planner->m_swarm.steps - 1;
-
-    float3 u = m_display_planner->m_dp_ctrl.dp_control(s, m_pso_planner->result.best_loc[i]);
-    m_display_planner->m_model.model_forward(s,u,dt);
-
     pcl::PointXYZ clrP;
-    clrP.x = s.p.x;
-    clrP.y = s.p.y;
+    clrP.x = traj_s.p.x;
+    clrP.y = traj_s.p.y;
     clrP.z = 0.2f;
     m_traj_pnt_cld->points.push_back(clrP);
 
     ref_counter++;
     m_ref_msg.ids.push_back(ref_counter);
-    m_ref_msg.data.push_back(s.v);
-    m_ref_msg.data.push_back(s.w);
+    m_ref_msg.data.push_back(traj_s.v);
+    m_ref_msg.data.push_back(traj_s.w);
 
     if (ref_counter == next_ref_start_idx)
     {
-      m_ref_v = s.v;
-      m_ref_w = s.w;
+      m_ref_v = traj_s.v;
+      m_ref_w = traj_s.w;
     }
 
     cols++;

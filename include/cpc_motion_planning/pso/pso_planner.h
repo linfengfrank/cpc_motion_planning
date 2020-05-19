@@ -24,13 +24,21 @@ public:
 
   }
 
-  void plan(const typename Model::State &s, const typename Evaluator::Target &goal, const EDTMap &map)
+  void set_problem(const typename Model::State &s, const typename Evaluator::Target &goal)
+  {
+    m_eva.setTarget(goal);
+    m_model.set_ini_state(s);
+  }
+
+  std::vector<typename Model::State> generate_trajectory(const typename Swarm::Trace &ttr)
+  {
+    return m_dp_ctrl.template generate_trajectory<Model,Swarm>(m_model,m_swarm,ttr);
+  }
+
+  void plan(const EDTMap &map)
   {
     //test_plan<N>(s,goal,m_ptcls, m_best_values, m_num_of_ptcls, &result, true,m_carrier,m_cbls_hdl);
     cublasStatus_t cbls_stt;
-
-    m_eva.setTarget(goal);
-    m_model.set_ini_state(s);
 
     for (int ctt = 0; ctt <m_num_of_episodes; ctt ++)
     {
