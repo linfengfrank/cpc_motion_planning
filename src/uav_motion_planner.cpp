@@ -83,10 +83,13 @@ void UAVMotionPlanner::plan_call_back(const ros::TimerEvent&)
       m_yaw_target = m_yaw_target + m_yaw_state.p;
   }
 
+  m_pso_planner->set_problem(s,m_goal);
+  m_ref_gen_planner->set_problem(s,m_goal);
+
   auto start = std::chrono::steady_clock::now();
   JLT::TPBVPParam yaw_param;
   m_yaw_planner.solveTPBVP(m_yaw_target,0,m_yaw_state,m_yaw_limit,yaw_param);
-  m_pso_planner->plan(s,m_goal,*m_edt_map);
+  m_pso_planner->plan(*m_edt_map);
 
   auto end = std::chrono::steady_clock::now();
   std::cout << "Consumed: "
@@ -94,46 +97,42 @@ void UAVMotionPlanner::plan_call_back(const ros::TimerEvent&)
             << "ms, cost: " << m_pso_planner->result.best_cost<<std::endl;
 
   //PSO::State cmd_state;
-  float dt = PSO::PSO_CTRL_DT;
+  std::vector<UAV::UAVModel::State> traj = m_ref_gen_planner->generate_trajectory(m_pso_planner->result.best_loc);
   int cols = 0;
   int ref_counter = m_ref_start_idx;
   int next_ref_start_idx = (m_plan_cycle+1)*PSO::PSO_REPLAN_CYCLE+PSO::PSO_PLAN_CONSUME_CYCLE;
-  for (float t=0.0f; t<PSO::PSO_TOTAL_T; t+=dt)
+  float t = 0.0f;
+  for (UAV::UAVModel::State traj_s : traj)
   {
-    int i = static_cast<int>(floor(t/m_ref_gen_planner->m_swarm.step_dt));
-    if (i > m_ref_gen_planner->m_swarm.steps - 1)
-      i = m_ref_gen_planner->m_swarm.steps - 1;
-
-    float3 u = m_ref_gen_planner->m_dp_ctrl.dp_control(s, m_pso_planner->result.best_loc[i]);
-    m_ref_gen_planner->m_model.model_forward(s,u,dt);
+    t += PSO::PSO_CTRL_DT;
     JLT::State tmp_yaw_state = m_yaw_planner.TPBVPRefGen(yaw_param,t);
 
     pcl::PointXYZ clrP;
-    clrP.x = s.p.x;
-    clrP.y = s.p.y;
-    clrP.z = s.p.z;
+    clrP.x = traj_s.p.x;
+    clrP.y = traj_s.p.y;
+    clrP.z = traj_s.p.z;
     m_traj_pnt_cld->points.push_back(clrP);
 
 
-    clrP.x = m_pso_planner->result.best_loc[i].x;
-    clrP.y = m_pso_planner->result.best_loc[i].y;
-    clrP.z = m_pso_planner->result.best_loc[i].z;
-    m_ctrl_pnt_cld->points.push_back(clrP);
+//    clrP.x = m_pso_planner->result.best_loc[i].x;
+//    clrP.y = m_pso_planner->result.best_loc[i].y;
+//    clrP.z = m_pso_planner->result.best_loc[i].z;
+//    m_ctrl_pnt_cld->points.push_back(clrP);
 
     ref_counter++;
     //std::cout<<"b: "<<ref_counter<<std::endl;
     m_ref_msg.ids.push_back(ref_counter);
-    m_ref_msg.data.push_back(s.p.x);
-    m_ref_msg.data.push_back(s.p.y);
-    m_ref_msg.data.push_back(s.p.z);
+    m_ref_msg.data.push_back(traj_s.p.x);
+    m_ref_msg.data.push_back(traj_s.p.y);
+    m_ref_msg.data.push_back(traj_s.p.z);
 
-    m_ref_msg.data.push_back(s.v.x);
-    m_ref_msg.data.push_back(s.v.y);
-    m_ref_msg.data.push_back(s.v.z);
+    m_ref_msg.data.push_back(traj_s.v.x);
+    m_ref_msg.data.push_back(traj_s.v.y);
+    m_ref_msg.data.push_back(traj_s.v.z);
 
-    m_ref_msg.data.push_back(s.a.x);
-    m_ref_msg.data.push_back(s.a.y);
-    m_ref_msg.data.push_back(s.a.z);
+    m_ref_msg.data.push_back(traj_s.a.x);
+    m_ref_msg.data.push_back(traj_s.a.y);
+    m_ref_msg.data.push_back(traj_s.a.z);
 
     m_ref_msg.data.push_back(tmp_yaw_state.p);
     m_ref_msg.data.push_back(tmp_yaw_state.v);
@@ -141,7 +140,7 @@ void UAVMotionPlanner::plan_call_back(const ros::TimerEvent&)
 
     if (ref_counter == next_ref_start_idx)
     {
-      m_curr_ref = s;
+      m_curr_ref = traj_s;
       m_yaw_state = tmp_yaw_state;
     }
 

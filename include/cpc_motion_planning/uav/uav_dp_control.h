@@ -5,6 +5,8 @@
 #include <cpc_motion_planning/dynamic_programming.cuh>
 #include <cuda_geometry/cuda_edtmap.cuh>
 #include <cpc_motion_planning/cuda_matrix_factory.h>
+#include <vector>
+
 namespace UAV
 {
 class UAVDPControl
@@ -86,6 +88,26 @@ public:
     }
     cost += eva.final_cost(s,map);
     return cost;
+  }
+
+  template<class Model, class Swarm>
+  __host__ __device__
+  std::vector<typename Model::State> generate_trajectory(Model &m, const Swarm &sw, const typename Swarm::Trace &ttr)
+  {
+    std::vector<typename Model::State> traj;
+    typename Model::State s = m.get_ini_state();
+    float dt = PSO::PSO_CTRL_DT;
+    for (float t=0.0f; t<PSO::PSO_TOTAL_T; t+=dt)
+    {
+      int i = static_cast<int>(floor(t/sw.step_dt));
+      if (i > sw.steps - 1)
+        i = sw.steps - 1;
+
+      float3 u = dp_control(s, ttr[i]);
+      m.model_forward(s,u,dt);
+      traj.push_back(s);
+    }
+    return traj;
   }
   CUDA_MAT::Matrix<3,UAVModel::Input> *S_A_horizontal;
   CUDA_MAT::Matrix<3,UAVModel::Input> *S_A_vertical;
