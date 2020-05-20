@@ -1,14 +1,17 @@
 #ifndef CLASSJLT
 #define CLASSJLT
-#define DEBUGJLT
+//#define DEBUGJLT
 #include <sstream>
 #include <string>
 #include <fstream>
 #include <assert.h>
 #include <cmath>
+#include <cuda.h>
+#include <cuda_runtime.h>
+#include <cuda_runtime_api.h>
 
-#define JLT_signEpsilon 1e-9
-#define JLT_reachEpsilon 1e-3
+#define JLT_signEpsilon 1e-5
+#define JLT_reachEpsilon 1e-2
 class JLT
 {
 public:
@@ -20,28 +23,34 @@ public:
 
   struct State
   {
-    double p;
-    double v;
-    double a;
+    float p;
+    float v;
+    float a;
+    __host__ __device__
     State() :p(0), v(0), a(0){}
+
+    __host__ __device__
+    ~State(){}
   };
 
   struct Limit
   {
-    double vMax,vMin;
-    double aMax,aMin;
-    double jMax,jMin;
+    float vMax,vMin;
+    float aMax,aMin;
+    float jMax,jMin;
+    __host__ __device__
     Limit() :vMax(1.0),vMin(-1.0),aMax(1.0),aMin(-1.0),jMax(1.0),jMin(-1.0)
     {}
   };
 
   struct StageParam
   {
-    double t[3];
-    double p[4];
-    double v[4];
-    double a[4];
-    double j[3];
+    float t[3];
+    float p[4];
+    float v[4];
+    float a[4];
+    float j[3];
+    __host__ __device__
     StageParam()
     {
       for (int i = 0; i < 3; i++)
@@ -57,6 +66,7 @@ public:
       a[3] = 0;
     }
 
+    __host__ __device__
     StageParam& operator=(StageParam const& rhs)
     {
       for (int i = 0; i < 3; i++)
@@ -77,14 +87,15 @@ public:
   struct TPBVPParam
   {
     StageParam p1, p2;
-    double T[3];
+    float T[3];
   };
 
   struct Param3d
   {
     TPBVPParam val[3];
-    double T_longest;
+    float T_longest;
     bool ok;
+    __host__ __device__
     Param3d()
     {
       T_longest = 0;
@@ -94,23 +105,26 @@ public:
 
   //---
 public:
+  __host__ __device__
   JLT()
   {
 
   }
 
+  __host__ __device__
   ~JLT()
   {
 
   }
   //---
-  int solveTPBVP(double pr, double vr, State ini, Limit lim, TPBVPParam & P)
+  __host__ __device__
+  int solveTPBVP(float pr, float vr, State ini, Limit lim, TPBVPParam & P)
   {
     int ok = 0;
-    double pf = calculateEndPosition(vr, ini, lim);
-    double dist_err = pr - pf;
+    float pf = calculateEndPosition(vr, ini, lim);
+    float dist_err = pr - pf;
     int cruise_sign = sign(dist_err);
-    double cruise_velocity;
+    float cruise_velocity;
     if (cruise_sign == 1)
       cruise_velocity = lim.vMax;
     else if (cruise_sign == -1)
@@ -149,11 +163,11 @@ public:
     }
     else
     {
-      double tgtDiff = (pf - pr) * static_cast<double>(cruise_sign);
+      float tgtDiff = (pf - pr) * static_cast<float>(cruise_sign);
       //Case 2: Undershoot the target, fill up the missing distance with max speed cruise phase
       if (tgtDiff <= -JLT_reachEpsilon)
       {
-        double cruise_time = 0;
+        float cruise_time = 0;
         ok = 1;
         StageParam ZCP_D; //ZCP for zero cruise profile (Down stage: from max speed to vr)
         mid.p = mid.p + pr - pf;
@@ -172,17 +186,17 @@ public:
       //Case 3: Over shoot the target, run the bisection search for the reachable max speed
       else if(tgtDiff >= JLT_reachEpsilon)
       {
-        double tHigh = ZCP_U.t[2];
-        double tLow = 0;
-        double tProbe = 0;
-        double tDiff = 0;
+        float tHigh = ZCP_U.t[2];
+        float tLow = 0;
+        float tProbe = 0;
+        float tDiff = 0;
         for (int i = 0; i < 64; i++)
         {
           tProbe = (tHigh + tLow)*0.5;
           mid = stageRefGen(ZCP_U, tProbe);
           pf = calculateEndPosition(vr, mid, lim);
 
-          tDiff = (pf - pr)* static_cast<double>(cruise_sign);
+          tDiff = (pf - pr)* static_cast<float>(cruise_sign);
 
           if(tDiff <= -JLT_reachEpsilon)
           {
@@ -222,32 +236,34 @@ public:
     return ok;
   }
   //---
-  State TPBVPRefGen(const TPBVPParam &P, double t)
+  __host__ __device__
+  State TPBVPRefGen(const TPBVPParam &P, float t, float &u)
   {
     State out;
     if (t <= P.T[0])
     {
-      out = stageRefGen(P.p1, t);
+      out = stageRefGen(P.p1, t, u);
     }
     else if (t > P.T[0] && t < P.T[1])
     {
       out.p = calcP(t - P.T[0], P.p1.p[3], P.p1.v[3], P.p1.a[3], 0);
       out.v = calcV(t - P.T[0], P.p1.v[3], P.p1.a[3], 0);
       out.a = calcA(t - P.T[0], P.p1.a[3], 0);
+      u = 0;
     }
     else
     {
-      out = stageRefGen(P.p2, t - P.T[1]);
+      out = stageRefGen(P.p2, t - P.T[1], u);
     }
     return out;
   }
 
-private:
   //---
-  void solveVelocityTaret(double vr, State ini, Limit lim, StageParam& tP)
+  __host__ __device__
+  void solveVelocityTaret(float vr, State ini, Limit lim, StageParam& tP)
   {
     //find the end velocity, when acceleration immediately goes to zero
-    double vE;
+    float vE;
     if (ini.a >=0)
       vE = ini.v + ini.a*fabs(ini.a/lim.jMin)/2.0;
     else
@@ -257,7 +273,7 @@ private:
     int d = sign(vr - vE);
 
     //determine the cruise acceleration
-    double ac;
+    float ac;
     if (d == 1)
       ac = lim.aMax;
     else if(d == -1)
@@ -266,7 +282,7 @@ private:
       ac = 0.0;
 
     //determine t1, j1, v1
-    double t1;
+    float t1;
     if (ac - ini.a >= 0)
     {   //increase
       t1 = (ac - ini.a)/lim.jMax;
@@ -277,10 +293,10 @@ private:
       t1 = (ac - ini.a)/lim.jMin;
       tP.j[0] = lim.jMin;
     }
-    double v1 = ini.v + ini.a*t1 + 0.5*tP.j[0]*t1*t1;
+    float v1 = ini.v + ini.a*t1 + 0.5*tP.j[0]*t1*t1;
 
     //determine t3, j3, v3bar, v2bar
-    double t3;
+    float t3;
     if (-ac >= 0)
     {
       //increase
@@ -293,10 +309,10 @@ private:
       t3 = -ac/lim.jMin;
       tP.j[2] = lim.jMin;
     }
-    double v3bar = ac*t3 + 0.5*tP.j[2]*t3*t3;
-    double v2bar = vr - v1 - v3bar;
+    float v3bar = ac*t3 + 0.5*tP.j[2]*t3*t3;
+    float v2bar = vr - v1 - v3bar;
 
-    double t2;
+    float t2;
     if (d == 0)
       t2 = 0;
     else
@@ -312,7 +328,7 @@ private:
     {
       if (d==1)
       {
-        double a_norm = sqrt((2.0*(vr-ini.v)+ini.a*ini.a/lim.jMax)/(1.0/lim.jMax-1.0/lim.jMin));
+        float a_norm = sqrt((2.0*(vr-ini.v)+ini.a*ini.a/lim.jMax)/(1.0/lim.jMax-1.0/lim.jMin));
 #ifdef DEBUGJLT
         if (std::isnan(a_norm))
           assert(0 && "a_norm is nan");
@@ -323,7 +339,7 @@ private:
       }
       else if (d == -1)
       {
-        double a_norm = -sqrt((2*(vr-ini.v)+ini.a*ini.a/lim.jMin)/(1/lim.jMin-1/lim.jMax));
+        float a_norm = -sqrt((2*(vr-ini.v)+ini.a*ini.a/lim.jMin)/(1/lim.jMin-1/lim.jMax));
 #ifdef DEBUGJLT
         if (std::isnan(a_norm))
           assert(0 && "a_norm is nan");
@@ -343,13 +359,15 @@ private:
     completeParam(tP, ini);
   }
   //---
-  double calculateEndPosition(double vr, State ini, Limit lim)
+  __host__ __device__
+  float calculateEndPosition(float vr, State ini, Limit lim)
   {
     StageParam tmP;
     solveVelocityTaret(vr, ini, lim, tmP);
     return tmP.p[3];
   }
   //---
+  __host__ __device__
   void completeParam(StageParam& tP, const State& ini)
   {
     //--------------
@@ -377,7 +395,8 @@ private:
     tP.t[2] = tP.t[2] + tP.t[1];
   }
   //---
-  State stageRefGen(StageParam tP, double t)
+  __host__ __device__
+  State stageRefGen(StageParam tP, float t)
   {
     State out;
     if (t < tP.t[0])
@@ -406,8 +425,43 @@ private:
     }
     return out;
   }
+  __host__ __device__
+  State stageRefGen(StageParam tP, float t,float &u)
+  {
+    State out;
+    if (t < tP.t[0])
+    {
+      out.p = calcP(t, tP.p[0], tP.v[0], tP.a[0], tP.j[0]);
+      out.v = calcV(t, tP.v[0], tP.a[0], tP.j[0]);
+      out.a = calcA(t, tP.a[0], tP.j[0]);
+      u = tP.j[0];
+    }
+    else if (t >= tP.t[0] && t < tP.t[1])
+    {
+      out.a = calcA(t - tP.t[0], tP.a[1], tP.j[1]);
+      out.v = calcV(t - tP.t[0], tP.v[1], tP.a[1], tP.j[1]);
+      out.p = calcP(t - tP.t[0], tP.p[1], tP.v[1], tP.a[1], tP.j[1]);
+      u = tP.j[1];
+    }
+    else if (t >= tP.t[1] && t < tP.t[2])
+    {
+      out.a = calcA(t - tP.t[1], tP.a[2], tP.j[2]);
+      out.v = calcV(t - tP.t[1], tP.v[2], tP.a[2], tP.j[2]);
+      out.p = calcP(t - tP.t[1], tP.p[2], tP.v[2], tP.a[2], tP.j[2]);
+      u = tP.j[2];
+    }
+    else
+    {
+      out.a = calcA(t - tP.t[2], tP.a[3], 0.0);
+      out.v = calcV(t - tP.t[2], tP.v[3], tP.a[3], 0.0);
+      out.p = calcP(t - tP.t[2], tP.p[3], tP.v[3], tP.a[3], 0.0);
+      u = 0;
+    }
+    return out;
+  }
   //---
-  int sign(double in)
+  __host__ __device__
+  int sign(float in)
   {
     if (in > JLT_signEpsilon)
       return 1;
@@ -417,17 +471,20 @@ private:
       return 0;
   }
   //---
-  inline double calcA(double t, double a0, double j)
+  __host__ __device__
+  inline float calcA(float t, float a0, float j)
   {
     return a0 + j*t;
   }
   //---
-  inline double calcV(double t, double v0, double a0, double j)
+  __host__ __device__
+  inline float calcV(float t, float v0, float a0, float j)
   {
     return v0 + a0*t + 0.5*j*t*t;
   }
   //---
-  inline double calcP(double t, double x0, double v0, double a0, double j)
+  __host__ __device__
+  inline float calcP(float t, float x0, float v0, float a0, float j)
   {
     return x0 + v0*t + 0.5*a0*t *t + 1 / 6.0 * j*t*t*t;
   }
@@ -435,3 +492,4 @@ private:
 
 };
 #endif
+

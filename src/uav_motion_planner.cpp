@@ -102,10 +102,11 @@ void UAVMotionPlanner::plan_call_back(const ros::TimerEvent&)
   int ref_counter = m_ref_start_idx;
   int next_ref_start_idx = (m_plan_cycle+1)*PSO::PSO_REPLAN_CYCLE+PSO::PSO_PLAN_CONSUME_CYCLE;
   float t = 0.0f;
+  float u_yaw = 0;
   for (UAV::UAVModel::State traj_s : traj)
   {
     t += PSO::PSO_CTRL_DT;
-    JLT::State tmp_yaw_state = m_yaw_planner.TPBVPRefGen(yaw_param,t);
+    JLT::State tmp_yaw_state = m_yaw_planner.TPBVPRefGen(yaw_param,t,u_yaw);
 
     pcl::PointXYZ clrP;
     clrP.x = traj_s.p.x;
