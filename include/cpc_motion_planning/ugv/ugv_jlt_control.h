@@ -85,16 +85,27 @@ public:
     typename Model::State s = m.get_ini_state();
     float cost = 0;
     float dt = PSO::PSO_SIM_DT;
-    set_ini_state(s);
-    jlt_generate(ttr[0]);
+    int curr_site_idx = -1;
+    float start_time = 0.0f;
     float2 u;
     for (float t=dt; t<PSO::PSO_TOTAL_T; t+=dt)
     {
-      get_trajectory(s,t,u);
+      int i = static_cast<int>(floor(t/sw.step_dt));
+      if (i > sw.steps - 1)
+        i = sw.steps - 1;
+
+      if (i > curr_site_idx)
+      {
+        curr_site_idx = i;
+        start_time = t;
+        set_ini_state(s);
+        jlt_generate(ttr[curr_site_idx]);
+      }
+      get_trajectory(s,t+dt-start_time,u);
       s.p.x = s.p.x + (s.v*dt )*cos(s.theta);
       s.p.y = s.p.y + (s.v*dt )*sin(s.theta);
       cost += 0.1f*s.v*s.v + 0.2f*s.w*s.w;
-      cost += 0.1f*u.x*u.x + 0.2f*u.y*u.y;
+      cost += 0.1f*u.x*u.x + 0.4f*u.y*u.y;
       cost += eva.process_cost(s,map);
 
     }
@@ -109,13 +120,26 @@ public:
   {
     std::vector<typename Model::State> traj;
     typename Model::State s = m.get_ini_state();
-    set_ini_state(s);
-    jlt_generate(ttr[0]);
+
+    int curr_site_idx = -1;
+    float start_time = 0.0f;
     float dt = PSO::PSO_CTRL_DT;
     float2 u;
-    for (float t=dt; t<PSO::PSO_TOTAL_T; t+=dt)
+    for (float t=0.0f; t<PSO::PSO_TOTAL_T; t+=dt)
     {
-      get_trajectory(s,t,u);
+      int i = static_cast<int>(floor(t/sw.step_dt));
+      if (i > sw.steps - 1)
+        i = sw.steps - 1;
+
+      if (i > curr_site_idx)
+      {
+        curr_site_idx = i;
+        start_time = t;
+        set_ini_state(s);
+        jlt_generate(ttr[curr_site_idx]);
+      }
+
+      get_trajectory(s,t+dt-start_time,u);
       s.p.x = s.p.x + (s.v*dt )*cos(s.theta);
       s.p.y = s.p.y + (s.v*dt )*sin(s.theta);
       traj.push_back(s);
