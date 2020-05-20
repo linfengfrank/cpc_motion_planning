@@ -1,11 +1,14 @@
 #ifndef CLASSJLT
 #define CLASSJLT
-#define DEBUGJLT
+//#define DEBUGJLT
 #include <sstream>
 #include <string>
 #include <fstream>
 #include <assert.h>
 #include <cmath>
+#include <cuda.h>
+#include <cuda_runtime.h>
+#include <cuda_runtime_api.h>
 
 #define JLT_signEpsilon 1e-9
 #define JLT_reachEpsilon 1e-3
@@ -23,7 +26,11 @@ public:
     double p;
     double v;
     double a;
+    __host__ __device__
     State() :p(0), v(0), a(0){}
+
+    __host__ __device__
+    ~State(){}
   };
 
   struct Limit
@@ -31,6 +38,7 @@ public:
     double vMax,vMin;
     double aMax,aMin;
     double jMax,jMin;
+    __host__ __device__
     Limit() :vMax(1.0),vMin(-1.0),aMax(1.0),aMin(-1.0),jMax(1.0),jMin(-1.0)
     {}
   };
@@ -42,6 +50,7 @@ public:
     double v[4];
     double a[4];
     double j[3];
+    __host__ __device__
     StageParam()
     {
       for (int i = 0; i < 3; i++)
@@ -57,6 +66,7 @@ public:
       a[3] = 0;
     }
 
+    __host__ __device__
     StageParam& operator=(StageParam const& rhs)
     {
       for (int i = 0; i < 3; i++)
@@ -85,6 +95,7 @@ public:
     TPBVPParam val[3];
     double T_longest;
     bool ok;
+    __host__ __device__
     Param3d()
     {
       T_longest = 0;
@@ -94,16 +105,19 @@ public:
 
   //---
 public:
+  __host__ __device__
   JLT()
   {
 
   }
 
+  __host__ __device__
   ~JLT()
   {
 
   }
   //---
+  __host__ __device__
   int solveTPBVP(double pr, double vr, State ini, Limit lim, TPBVPParam & P)
   {
     int ok = 0;
@@ -222,6 +236,7 @@ public:
     return ok;
   }
   //---
+  __host__ __device__
   State TPBVPRefGen(const TPBVPParam &P, double t)
   {
     State out;
@@ -242,8 +257,8 @@ public:
     return out;
   }
 
-private:
   //---
+  __host__ __device__
   void solveVelocityTaret(double vr, State ini, Limit lim, StageParam& tP)
   {
     //find the end velocity, when acceleration immediately goes to zero
@@ -343,6 +358,7 @@ private:
     completeParam(tP, ini);
   }
   //---
+  __host__ __device__
   double calculateEndPosition(double vr, State ini, Limit lim)
   {
     StageParam tmP;
@@ -350,6 +366,7 @@ private:
     return tmP.p[3];
   }
   //---
+  __host__ __device__
   void completeParam(StageParam& tP, const State& ini)
   {
     //--------------
@@ -377,6 +394,7 @@ private:
     tP.t[2] = tP.t[2] + tP.t[1];
   }
   //---
+  __host__ __device__
   State stageRefGen(StageParam tP, double t)
   {
     State out;
@@ -406,7 +424,42 @@ private:
     }
     return out;
   }
+  __host__ __device__
+  State stageRefGen(StageParam tP, double t,float &u)
+  {
+    State out;
+    if (t < tP.t[0])
+    {
+      out.p = calcP(t, tP.p[0], tP.v[0], tP.a[0], tP.j[0]);
+      out.v = calcV(t, tP.v[0], tP.a[0], tP.j[0]);
+      out.a = calcA(t, tP.a[0], tP.j[0]);
+      u = tP.j[0];
+    }
+    else if (t >= tP.t[0] && t < tP.t[1])
+    {
+      out.a = calcA(t - tP.t[0], tP.a[1], tP.j[1]);
+      out.v = calcV(t - tP.t[0], tP.v[1], tP.a[1], tP.j[1]);
+      out.p = calcP(t - tP.t[0], tP.p[1], tP.v[1], tP.a[1], tP.j[1]);
+      u = tP.j[1];
+    }
+    else if (t >= tP.t[1] && t < tP.t[2])
+    {
+      out.a = calcA(t - tP.t[1], tP.a[2], tP.j[2]);
+      out.v = calcV(t - tP.t[1], tP.v[2], tP.a[2], tP.j[2]);
+      out.p = calcP(t - tP.t[1], tP.p[2], tP.v[2], tP.a[2], tP.j[2]);
+      u = tP.j[2];
+    }
+    else
+    {
+      out.a = calcA(t - tP.t[2], tP.a[3], 0.0);
+      out.v = calcV(t - tP.t[2], tP.v[3], tP.a[3], 0.0);
+      out.p = calcP(t - tP.t[2], tP.p[3], tP.v[3], tP.a[3], 0.0);
+      u = 0;
+    }
+    return out;
+  }
   //---
+  __host__ __device__
   int sign(double in)
   {
     if (in > JLT_signEpsilon)
@@ -417,16 +470,19 @@ private:
       return 0;
   }
   //---
+  __host__ __device__
   inline double calcA(double t, double a0, double j)
   {
     return a0 + j*t;
   }
   //---
+  __host__ __device__
   inline double calcV(double t, double v0, double a0, double j)
   {
     return v0 + a0*t + 0.5*j*t*t;
   }
   //---
+  __host__ __device__
   inline double calcP(double t, double x0, double v0, double a0, double j)
   {
     return x0 + v0*t + 0.5*a0*t *t + 1 / 6.0 * j*t*t*t;

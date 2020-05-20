@@ -23,7 +23,14 @@ public:
 
   void load_data(CUDA_MAT::CudaMatrixFactory &factory, bool load_to_host)
   {
+    m_limit[1].aMax = 0.5;
+    m_limit[1].aMin = -0.5;
 
+    m_limit[1].jMax = 0.5;
+    m_limit[1].jMin = -0.5;
+
+//    m_limit[1].jMax = 0.5;
+//    m_limit[1].jMin = -0.5;
   }
 
   void release_data(CUDA_MAT::CudaMatrixFactory &factory, bool load_from_host)
@@ -32,12 +39,94 @@ public:
   }
 
   __host__ __device__
-  float3 dp_control(const UGVModel::State &s, const float3 &site) const
+  void set_ini_state(const UGV::UGVModel::State &s)
   {
-    return make_float3(0,0,0);
+    //translation
+    m_state[0].p = 0;
+    m_state[0].v = s.s;
+    m_state[0].a = s.v;
+
+    //rotation
+    m_state[1].p = 0;
+    m_state[1].v = s.theta;
+    m_state[1].a = s.w;
+  }
+
+  __host__ __device__
+  void jlt_generate(const float3 &site)
+  {
+    //translation
+    m_jlt_planner.solveVelocityTaret(site.x,m_state[0],m_limit[0],m_param[0]);
+
+    //rotation
+    m_jlt_planner.solveVelocityTaret(site.y,m_state[1],m_limit[1],m_param[1]);
+  }
+
+  __host__ __device__
+  void get_trajectory(UGV::UGVModel::State &s, const float &t, float2 &u)
+  {
+    //translation
+    JLT::State tmp;
+    tmp = m_jlt_planner.stageRefGen(m_param[0],t,u.x);
+    s.s = tmp.v;
+    s.v = tmp.a;
+
+    //rotation
+    tmp = m_jlt_planner.stageRefGen(m_param[1],t,u.y);
+    s.theta = tmp.v;
+    s.w = tmp.a;
+  }
+
+
+  template<class Model, class Evaluator, class Swarm>
+  __host__ __device__
+  float simulate_evaluate(const EDTMap &map, const Evaluator &eva, Model &m, const Swarm &sw, const typename Swarm::Trace &ttr)
+  {
+    typename Model::State s = m.get_ini_state();
+    float cost = 0;
+    float dt = PSO::PSO_SIM_DT;
+    set_ini_state(s);
+    jlt_generate(ttr[0]);
+    float2 u;
+    for (float t=dt; t<PSO::PSO_TOTAL_T; t+=dt)
+    {
+      get_trajectory(s,t,u);
+      s.p.x = s.p.x + (s.v*dt )*cos(s.theta);
+      s.p.y = s.p.y + (s.v*dt )*sin(s.theta);
+      cost += 0.1f*s.v*s.v + 0.2f*s.w*s.w;
+      cost += 0.1f*u.x*u.x + 0.2f*u.y*u.y;
+      cost += eva.process_cost(s,map);
+
+    }
+    cost += eva.final_cost(s,map);
+
+    return cost;
+  }
+
+  template<class Model, class Swarm>
+  __host__ __device__
+  std::vector<typename Model::State> generate_trajectory(Model &m, const Swarm &sw, const typename Swarm::Trace &ttr)
+  {
+    std::vector<typename Model::State> traj;
+    typename Model::State s = m.get_ini_state();
+    set_ini_state(s);
+    jlt_generate(ttr[0]);
+    float dt = PSO::PSO_CTRL_DT;
+    float2 u;
+    for (float t=dt; t<PSO::PSO_TOTAL_T; t+=dt)
+    {
+      get_trajectory(s,t,u);
+      s.p.x = s.p.x + (s.v*dt )*cos(s.theta);
+      s.p.y = s.p.y + (s.v*dt )*sin(s.theta);
+      traj.push_back(s);
+    }
+   return traj;
   }
 
   JLT m_jlt_planner;
+  JLT::Limit m_limit[2];
+  JLT::StageParam m_param[2];
+  JLT::State m_state[2];
 };
 }
 #endif // UGV_JLT_CONTROL_H
