@@ -11,7 +11,7 @@ namespace UAV
 class UAVJLTControl
 {
 public:
-  UAVJLTControl()
+  UAVJLTControl():m_theta(0)
   {
 
   }
@@ -163,7 +163,7 @@ public:
   float simulate_evaluate(const EDTMap &map, const Evaluator &eva, Model &m, const Swarm &sw, const typename Swarm::Trace &ttr)
   {
     typename Model::State s = m.get_ini_state();
-    float3 trans = make_float3(s.p.x,s.p.y,s.yaw);
+    float3 trans = make_float3(s.p.x,s.p.y,m_theta);
     float cost = 0;
     float dt = PSO::PSO_SIM_DT;
     int curr_site_idx = -1;
@@ -199,7 +199,7 @@ public:
   {
     std::vector<typename Model::State> traj;
     typename Model::State s = m.get_ini_state();
-    float3 trans = make_float3(s.p.x,s.p.y,s.yaw);
+    float3 trans = make_float3(s.p.x,s.p.y,m_theta);
     int curr_site_idx = -1;
     float start_time = 0.0f;
     float dt = PSO::PSO_CTRL_DT;
@@ -228,6 +228,7 @@ public:
   JLT::Limit m_limit[2];
   JLT::TPBVPParam m_param[3];
   JLT::State m_state[3];
+  float m_theta;
 };
 }
 #endif // UAV_JLT_CONTROL_H

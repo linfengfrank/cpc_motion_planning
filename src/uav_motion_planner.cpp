@@ -71,7 +71,6 @@ void UAVMotionPlanner::plan_call_back(const ros::TimerEvent&)
     return;
 
   UAV::UAVModel::State s = m_curr_ref;
-  s.yaw = m_yaw_state.p;
 
   float3 diff = m_goal.s.p - s.p;
   diff.z = 0;
@@ -203,6 +202,18 @@ void UAVMotionPlanner::goal_call_back(const geometry_msgs::PoseStamped::ConstPtr
     ros::service::call("engage", eReq, eRes);
   }
   m_goal_received = true;
+
+  UAV::UAVModel::State s = m_curr_ref;
+
+  float3 diff = m_goal.s.p - s.p;
+  diff.z = 0;
+  double dist = sqrt(dot(diff,diff));
+  if (dist > 0.5)
+  {
+      float theta = atan2(diff.y,diff.x);
+      m_pso_planner->m_dp_ctrl.m_theta = theta;
+      m_ref_gen_planner->m_dp_ctrl.m_theta = theta;
+  }
 
   //  double phi,theta,psi;
 

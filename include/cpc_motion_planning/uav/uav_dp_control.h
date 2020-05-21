@@ -12,7 +12,7 @@ namespace UAV
 class UAVDPControl
 {
 public:
-  UAVDPControl()
+  UAVDPControl():m_theta(0)
   {
 
   }
@@ -112,6 +112,7 @@ public:
   CUDA_MAT::Matrix<3,UAVModel::Input> *S_A_horizontal;
   CUDA_MAT::Matrix<3,UAVModel::Input> *S_A_vertical;
   UniformBinCarrier ubc;
+  float m_theta;
 };
 }
 #endif // UAV_DP_CONTROL_H
