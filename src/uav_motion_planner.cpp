@@ -71,6 +71,7 @@ void UAVMotionPlanner::plan_call_back(const ros::TimerEvent&)
     return;
 
   UAV::UAVModel::State s = m_curr_ref;
+  s.yaw = m_yaw_state.p;
 
   float3 diff = m_goal.s.p - s.p;
   diff.z = 0;

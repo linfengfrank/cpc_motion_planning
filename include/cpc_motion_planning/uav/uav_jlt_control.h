@@ -39,6 +39,71 @@ public:
   }
 
   __host__ __device__
+  UAV::UAVModel::State transform(const UAV::UAVModel::State &in, const float3 &cnt)
+  {
+    UAV::UAVModel::State out;
+
+    float cos_t = cosf(cnt.z);
+    float sin_t = sinf(cnt.z);
+    float dx = in.p.x - cnt.x;
+    float dy = in.p.y - cnt.y;
+
+    out.p.x = dx*cos_t + dy*sin_t;
+    out.p.y = -dx*sin_t + dy*cos_t;
+    out.p.z = in.p.z;
+
+    out.v.x = in.v.x*cos_t + in.v.y*sin_t;
+    out.v.y = -in.v.x*sin_t + in.v.y*cos_t;
+    out.v.z = in.v.z;
+
+    out.a.x = in.a.x*cos_t + in.a.y*sin_t;
+    out.a.y = -in.a.x*sin_t + in.a.y*cos_t;
+    out.a.z = in.a.z;
+
+    return out;
+  }
+
+  __host__ __device__
+  float3 transform(const float3 &in, const float3 &cnt)
+  {
+    float3 out;
+
+    float cos_t = cosf(cnt.z);
+    float sin_t = sinf(cnt.z);
+    float dx = in.x - cnt.x;
+    float dy = in.y - cnt.y;
+
+    out.x = dx*cos_t + dy*sin_t;
+    out.y = -dx*sin_t + dy*cos_t;
+    out.z = in.z;
+
+    return out;
+  }
+
+  __host__ __device__
+  UAV::UAVModel::State transform_back(const UAV::UAVModel::State &in, const float3 &cnt)
+  {
+    UAV::UAVModel::State out;
+
+    float cos_t = cosf(cnt.z);
+    float sin_t = sinf(cnt.z);
+
+    out.p.x = in.p.x*cos_t - in.p.y*sin_t + cnt.x;
+    out.p.y = in.p.x*sin_t + in.p.y*cos_t + cnt.y;
+    out.p.z = in.p.z;
+
+    out.v.x = in.v.x*cos_t - in.v.y*sin_t;
+    out.v.y = in.v.x*sin_t + in.v.y*cos_t;
+    out.v.z = in.v.z;
+
+    out.a.x = in.a.x*cos_t - in.a.y*sin_t;
+    out.a.y = in.a.x*sin_t + in.a.y*cos_t;
+    out.a.z = in.a.z;
+
+    return out;
+  }
+
+  __host__ __device__
   void set_ini_state(const UAV::UAVModel::State &s)
   {
     //x
@@ -98,6 +163,7 @@ public:
   float simulate_evaluate(const EDTMap &map, const Evaluator &eva, Model &m, const Swarm &sw, const typename Swarm::Trace &ttr)
   {
     typename Model::State s = m.get_ini_state();
+    float3 trans = make_float3(s.p.x,s.p.y,s.yaw);
     float cost = 0;
     float dt = PSO::PSO_SIM_DT;
     int curr_site_idx = -1;
@@ -113,16 +179,16 @@ public:
       {
         curr_site_idx = i;
         start_time = t;
-        set_ini_state(s);
-        jlt_generate(ttr[curr_site_idx]);
+        set_ini_state(transform(s,trans));
+        jlt_generate(transform(ttr[curr_site_idx],trans));
       }
       get_trajectory(s,t+dt-start_time,u);
 
 
-      cost += eva.process_cost(s,map);
+      cost += eva.process_cost(transform_back(s,trans),map);
 
     }
-    cost += eva.final_cost(s,map);
+    cost += eva.final_cost(transform_back(s,trans),map);
 
     return cost;
   }
@@ -133,7 +199,7 @@ public:
   {
     std::vector<typename Model::State> traj;
     typename Model::State s = m.get_ini_state();
-
+    float3 trans = make_float3(s.p.x,s.p.y,s.yaw);
     int curr_site_idx = -1;
     float start_time = 0.0f;
     float dt = PSO::PSO_CTRL_DT;
@@ -148,12 +214,12 @@ public:
       {
         curr_site_idx = i;
         start_time = t;
-        set_ini_state(s);
-        jlt_generate(ttr[curr_site_idx]);
+        set_ini_state(transform(s,trans));
+        jlt_generate(transform(ttr[curr_site_idx],trans));
       }
 
       get_trajectory(s,t+dt-start_time,u);
-      traj.push_back(s);
+      traj.push_back(transform_back(s,trans));
     }
     return traj;
   }

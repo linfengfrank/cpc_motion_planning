@@ -12,11 +12,13 @@ public:
     float3 p;
     float3 v;
     float3 a;
+    float yaw;
     __host__ __device__
     State():
       p(make_float3(0,0,0)),
       v(make_float3(0,0,0)),
-      a(make_float3(0,0,0))
+      a(make_float3(0,0,0)),
+      yaw(0)
     {
     }
   };
