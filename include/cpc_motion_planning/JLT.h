@@ -10,8 +10,8 @@
 #include <cuda_runtime.h>
 #include <cuda_runtime_api.h>
 
-#define JLT_signEpsilon 1e-5
-#define JLT_reachEpsilon 1e-2
+#define JLT_signEpsilon 1e-5f
+#define JLT_reachEpsilon 1e-2f
 class JLT
 {
 public:
@@ -142,7 +142,7 @@ public:
     pf = calculateEndPosition(vr, mid, lim);
 
     //Case 1: The cruise_sign is zero, directly slows down to zero shall reach the target
-    if(cruise_sign == 0 || fabs(dist_err) < JLT_reachEpsilon)
+    if(cruise_sign == 0 || fabsf(dist_err) < JLT_reachEpsilon)
     {
       ok = 1;
       StageParam STP; //STP for stop (reach the final veocity directly)
@@ -192,7 +192,7 @@ public:
         float tDiff = 0;
         for (int i = 0; i < 64; i++)
         {
-          tProbe = (tHigh + tLow)*0.5;
+          tProbe = (tHigh + tLow)*0.5f;
           mid = stageRefGen(ZCP_U, tProbe);
           pf = calculateEndPosition(vr, mid, lim);
 
@@ -265,9 +265,9 @@ public:
     //find the end velocity, when acceleration immediately goes to zero
     float vE;
     if (ini.a >=0)
-      vE = ini.v + ini.a*fabs(ini.a/lim.jMin)/2.0;
+      vE = ini.v + ini.a*fabsf(ini.a/lim.jMin)/2.0f;
     else
-      vE = ini.v + ini.a*fabs(ini.a/lim.jMax)/2.0;
+      vE = ini.v + ini.a*fabsf(ini.a/lim.jMax)/2.0f;
 
     //determine the cruise direction
     int d = sign(vr - vE);
@@ -293,7 +293,7 @@ public:
       t1 = (ac - ini.a)/lim.jMin;
       tP.j[0] = lim.jMin;
     }
-    float v1 = ini.v + ini.a*t1 + 0.5*tP.j[0]*t1*t1;
+    float v1 = ini.v + ini.a*t1 + 0.5f*tP.j[0]*t1*t1;
 
     //determine t3, j3, v3bar, v2bar
     float t3;
@@ -309,7 +309,7 @@ public:
       t3 = -ac/lim.jMin;
       tP.j[2] = lim.jMin;
     }
-    float v3bar = ac*t3 + 0.5*tP.j[2]*t3*t3;
+    float v3bar = ac*t3 + 0.5f*tP.j[2]*t3*t3;
     float v2bar = vr - v1 - v3bar;
 
     float t2;
@@ -318,44 +318,77 @@ public:
     else
       t2 = v2bar / ac;
 
-    if (t2 >= 0)
-    {
-      tP.t[0] = t1;
-      tP.t[1] = t2;
-      tP.t[2] = t3;
-    }
-    else
+    bool numeric_error = false;
+    if (t2 < 0)
     {
       if (d==1)
       {
-        float a_norm = sqrt((2.0*(vr-ini.v)+ini.a*ini.a/lim.jMax)/(1.0/lim.jMax-1.0/lim.jMin));
-#ifdef DEBUGJLT
-        if (std::isnan(a_norm))
-          assert(0 && "a_norm is nan");
-#endif
-        t1 = (a_norm - ini.a)/lim.jMax;
-        t2 = 0.0;
-        t3 = -a_norm/lim.jMin;
+        float tmp_val = (2.0f*(vr-ini.v)+ini.a*ini.a/lim.jMax)/(1.0f/lim.jMax-1.0f/lim.jMin);
+        if (tmp_val >= 0)
+        {
+          float a_norm = sqrtf(tmp_val);
+          t1 = (a_norm - ini.a)/lim.jMax;
+          t2 = 0.0;
+          t3 = -a_norm/lim.jMin;
+        }
+        else
+          numeric_error = true;
       }
       else if (d == -1)
       {
-        float a_norm = -sqrt((2*(vr-ini.v)+ini.a*ini.a/lim.jMin)/(1/lim.jMin-1/lim.jMax));
-#ifdef DEBUGJLT
-        if (std::isnan(a_norm))
-          assert(0 && "a_norm is nan");
-#endif
-        t1 = (a_norm - ini.a)/lim.jMin;
-        t2 = 0;
-        t3 = -a_norm/lim.jMax;
+        float tmp_val = (2*(vr-ini.v)+ini.a*ini.a/lim.jMin)/(1.0f/lim.jMin-1.0f/lim.jMax);
+        if (tmp_val >= 0)
+        {
+          float a_norm = -sqrtf(tmp_val);
+          t1 = (a_norm - ini.a)/lim.jMin;
+          t2 = 0;
+          t3 = -a_norm/lim.jMax;
+        }
+        else
+          numeric_error = true;
       }
       else
       {
         assert(0 && "sth wrong here.\n");
       }
+    }
+
+    if (!numeric_error)
+    {
       tP.t[0] = t1;
       tP.t[1] = t2;
       tP.t[2] = t3;
+      completeParam(tP, ini);
     }
+    else
+    {
+      zeroAccParam(ini,lim,tP);
+    }
+  }
+
+  //---
+  __host__ __device__
+  void zeroAccParam(const State &ini, const Limit &lim, StageParam& tP)
+  {
+    float t1,t2,t3;
+    if (- ini.a >= 0)
+    {   //increase
+      t1 = (- ini.a)/lim.jMax;
+      tP.j[0] = lim.jMax;
+    }
+    else
+    {   //decrease
+      t1 = (- ini.a)/lim.jMin;
+      tP.j[0] = lim.jMin;
+    }
+    tP.j[2] = lim.jMax;
+    t2 = 0;
+    t3 = 0;
+
+    tP.t[0] = t1;
+    tP.t[1] = t2;
+    tP.t[2] = t3;
+
     completeParam(tP, ini);
   }
   //---
@@ -480,13 +513,13 @@ public:
   __host__ __device__
   inline float calcV(float t, float v0, float a0, float j)
   {
-    return v0 + a0*t + 0.5*j*t*t;
+    return v0 + a0*t + 0.5f*j*t*t;
   }
   //---
   __host__ __device__
   inline float calcP(float t, float x0, float v0, float a0, float j)
   {
-    return x0 + v0*t + 0.5*a0*t *t + 1 / 6.0 * j*t*t*t;
+    return x0 + v0*t + 0.5f*a0*t *t + 1 / 6.0f * j*t*t*t;
   }
   //---
 
