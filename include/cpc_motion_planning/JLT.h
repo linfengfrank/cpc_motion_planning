@@ -5,7 +5,6 @@
 #include <string>
 #include <fstream>
 #include <assert.h>
-#include <cmath>
 #include <cuda.h>
 #include <cuda_runtime.h>
 #include <cuda_runtime_api.h>

@@ -1,14 +1,5 @@
 #ifndef CUDA_MATRIX_CUH
 #define CUDA_MATRIX_CUH
-#include <cuda.h>
-#include <cuda_runtime.h>
-#include <cuda_runtime_api.h>
-#include <math.h>
-#include <stdio.h>
-#include <iostream>
-#include <cstring>
-#include <cfloat>
-#include <cassert>
 #include <cuda_geometry/cuda_geometry.cuh>
 #include <fstream>
 

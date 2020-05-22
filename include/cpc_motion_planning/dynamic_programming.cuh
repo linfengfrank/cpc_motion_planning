@@ -157,7 +157,7 @@ float get_value_3(float s[3], const Matrix<3,float> &S, const Vecf &bins_0, cons
         s_opp[1] = bins_1.const_at(opp[1]);
         s_opp[2] = bins_2.const_at(opp[2]);
 
-        weight = fabs(s[0]-s_opp[0])*fabs(s[1]-s_opp[1])*fabs(s[2]-s_opp[2])/volume;
+        weight = fabsf(s[0]-s_opp[0])*fabsf(s[1]-s_opp[1])*fabsf(s[2]-s_opp[2])/volume;
         val = mat3_get_val_const<float>(loc[0]+idx[0],loc[1]+idx[1],loc[2]+idx[2],S);
         output += weight * val;
 
@@ -206,7 +206,7 @@ float get_value_4(float s[4], const Matrix<4,float> &S, const Vecf &bins_0, cons
           s_opp[2] = bins_2.const_at(opp[2]);
           s_opp[3] = bins_3.const_at(opp[3]);
 
-          weight = fabs(s[0]-s_opp[0])*fabs(s[1]-s_opp[1])*fabs(s[2]-s_opp[2])*fabs(s[3]-s_opp[3])/volume;
+          weight = fabsf(s[0]-s_opp[0])*fabsf(s[1]-s_opp[1])*fabsf(s[2]-s_opp[2])*fabsf(s[3]-s_opp[3])/volume;
           val = mat4_get_val_const<float>(loc[0]+idx[0],loc[1]+idx[1],loc[2]+idx[2],loc[3]+idx[3],S);
           output += weight * val;
         }
@@ -225,7 +225,7 @@ action get_control_uniform_bin_4(float s[4], const Matrix<4,action> &SA, const U
   for (int i=0; i<4; i++)
   {
     bound(s[i],ubc.bins[i].min, ubc.bins[i].max);
-    idx[i] = floor((s[i] - ubc.bins[i].min) / ubc.bins[i].grid);
+    idx[i] = floorf((s[i] - ubc.bins[i].min) / ubc.bins[i].grid);
 
     if (idx[i] < 0)
       idx[i] = 0;
@@ -256,7 +256,7 @@ action get_control_uniform_bin_4(float s[4], const Matrix<4,action> &SA, const U
             s_opp[i] = ubc.bins[i].min + ubc.bins[i].grid*static_cast<float>(opp[i]);
           }
 
-          weight = fabs(s[0]-s_opp[0])*fabs(s[1]-s_opp[1])*fabs(s[2]-s_opp[2])*fabs(s[3]-s_opp[3])/volume;
+          weight = fabsf(s[0]-s_opp[0])*fabsf(s[1]-s_opp[1])*fabsf(s[2]-s_opp[2])*fabsf(s[3]-s_opp[3])/volume;
           val = mat4_get_val_const<action>(loc[0]+idx[0],loc[1]+idx[1],loc[2]+idx[2],loc[3]+idx[3],SA);
           output.acc += weight * val.acc;
           output.alpha += weight * val.alpha;
@@ -276,7 +276,7 @@ action get_control_uniform_bin_3(float s[3], const Matrix<3,action> &SA, const U
   for (int i=0; i<3; i++)
   {
     bound(s[i],ubc.bins[i].min, ubc.bins[i].max);
-    idx[i] = floor((s[i] - ubc.bins[i].min) / ubc.bins[i].grid);
+    idx[i] = floorf((s[i] - ubc.bins[i].min) / ubc.bins[i].grid);
 
     if (idx[i] < 0)
       idx[i] = 0;
@@ -306,7 +306,7 @@ action get_control_uniform_bin_3(float s[3], const Matrix<3,action> &SA, const U
           s_opp[i] = ubc.bins[i].min + ubc.bins[i].grid*static_cast<float>(opp[i]);
         }
 
-        weight = fabs(s[0]-s_opp[0])*fabs(s[1]-s_opp[1])*fabs(s[2]-s_opp[2])/volume;
+        weight = fabsf(s[0]-s_opp[0])*fabsf(s[1]-s_opp[1])*fabsf(s[2]-s_opp[2])/volume;
         val = mat3_get_val_const<action>(loc[0]+idx[0],loc[1]+idx[1],loc[2]+idx[2],SA);
         output.jerk += weight * val.jerk;
       }

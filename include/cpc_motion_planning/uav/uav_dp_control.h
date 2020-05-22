@@ -75,14 +75,14 @@ public:
     float dt = PSO::PSO_SIM_DT;
     for (float t=0.0f; t<PSO::PSO_TOTAL_T; t+=dt)
     {
-      int i = static_cast<int>(floor(t/sw.step_dt));
+      int i = static_cast<int>(floorf(t/sw.step_dt));
       if (i > sw.steps - 1)
         i = sw.steps - 1;
 
       float3 u = dp_control(s, ttr[i]);
       m.model_forward(s,u,dt);
 
-      cost += 0.1*sqrt(u.x*u.x + u.y*u.y + u.z*u.z);
+      cost += 0.1*sqrtf(u.x*u.x + u.y*u.y + u.z*u.z);
       cost += eva.process_cost(s,map);
 
     }
@@ -99,7 +99,7 @@ public:
     float dt = PSO::PSO_CTRL_DT;
     for (float t=0.0f; t<PSO::PSO_TOTAL_T; t+=dt)
     {
-      int i = static_cast<int>(floor(t/sw.step_dt));
+      int i = static_cast<int>(floorf(t/sw.step_dt));
       if (i > sw.steps - 1)
         i = sw.steps - 1;
 

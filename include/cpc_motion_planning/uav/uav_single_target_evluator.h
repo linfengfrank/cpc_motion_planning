@@ -35,15 +35,15 @@ public:
   {
     float cost = 0;
     float3 dist_err = s.p - m_goal.s.p;
-    cost += 0.5f*sqrt(dist_err.x*dist_err.x + dist_err.y*dist_err.y + 3*dist_err.z*dist_err.z);
-    cost += 0.1f*sqrt(s.v.x*s.v.x + s.v.y*s.v.y + s.v.z*s.v.z);
-    cost += 0.1f*sqrt(s.a.x*s.a.x + s.a.y*s.a.y + s.a.z*s.a.z);
+    cost += 0.5f*sqrtf(dist_err.x*dist_err.x + dist_err.y*dist_err.y + 3*dist_err.z*dist_err.z);
+    cost += 0.1f*sqrtf(s.v.x*s.v.x + s.v.y*s.v.y + s.v.z*s.v.z);
+    cost += 0.1f*sqrtf(s.a.x*s.a.x + s.a.y*s.a.y + s.a.z*s.a.z);
 
     if (m_goal.oa)
     {
-      int ix = floor( (s.p.x - map.m_origin.x) / map.m_grid_step + 0.5);
-      int iy = floor( (s.p.y - map.m_origin.y) / map.m_grid_step + 0.5);
-      int iz = floor( (s.p.z - map.m_origin.z) / map.m_grid_step + 0.5);
+      int ix = floorf( (s.p.x - map.m_origin.x) / map.m_grid_step + 0.5);
+      int iy = floorf( (s.p.y - map.m_origin.y) / map.m_grid_step + 0.5);
+      int iz = floorf( (s.p.z - map.m_origin.z) / map.m_grid_step + 0.5);
 
       if (ix<0 || ix>=map.m_map_size.x ||
           iy<0 || iy>=map.m_map_size.y ||
@@ -55,7 +55,7 @@ public:
 
   #ifdef  __CUDA_ARCH__
       float rd = map.edt_const_at(ix,iy,iz).d*0.2;
-      cost += exp(-6*rd)*400;
+      cost += expf(-6*rd)*400;
 
       if (rd < 0.6)
         cost += 100;
@@ -73,14 +73,14 @@ public:
   {
     float cost = 0;
     float3 dist_err = s.p - m_goal.s.p;
-    cost += 1.0f*sqrt(dist_err.x*dist_err.x + dist_err.y*dist_err.y + 3*dist_err.z*dist_err.z);
-    //cost += 0.1f*sqrt(s.a.x*s.a.x + s.a.y*s.a.y + s.a.z*s.a.z);
+    cost += 1.0f*sqrtf(dist_err.x*dist_err.x + dist_err.y*dist_err.y + 3*dist_err.z*dist_err.z);
+    //cost += 0.1f*sqrtf(s.a.x*s.a.x + s.a.y*s.a.y + s.a.z*s.a.z);
 
     if (m_goal.oa)
     {
-      int ix = floor( (s.p.x - map.m_origin.x) / map.m_grid_step + 0.5);
-      int iy = floor( (s.p.y - map.m_origin.y) / map.m_grid_step + 0.5);
-      int iz = floor( (s.p.z - map.m_origin.z) / map.m_grid_step + 0.5);
+      int ix = floorf( (s.p.x - map.m_origin.x) / map.m_grid_step + 0.5);
+      int iy = floorf( (s.p.y - map.m_origin.y) / map.m_grid_step + 0.5);
+      int iz = floorf( (s.p.z - map.m_origin.z) / map.m_grid_step + 0.5);
 
       if (ix<0 || ix>=map.m_map_size.x ||
           iy<0 || iy>=map.m_map_size.y ||
@@ -92,7 +92,7 @@ public:
 
   #ifdef  __CUDA_ARCH__
       float rd = map.edt_const_at(ix,iy,iz).d*0.2;
-      cost += exp(-6*rd)*400;
+      cost += expf(-6*rd)*400;
 
       if (rd < 0.6)
         cost += 100;
