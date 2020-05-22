@@ -15,6 +15,48 @@ LinDistMap::~LinDistMap()
     delete [] _map;
 }
 
+
+CUDA_GEO::pos LinDistMap::findNearestPoint(CUDA_GEO::pos _p, float tor_min_dist, bool valid_z) const {
+    CUDA_GEO::coord _c = transformPosToCoord(_p);
+    float _res = this->getGridStep();
+    float _c_d = this->distAt(_c, -1) * _res;
+    if ( _c_d < -0.1 || _c_d > tor_min_dist ) {
+        return _p;
+    }
+    std::cout << "\033[33m" << "[Path Searcher]: reset point" << "\033[0m"<< std::endl;
+    std::multimap<float, CUDA_GEO::coord> _openSet;
+    CUDA_GEO::coord _tmp_c = _c;
+    float _tmp_c_d = this->distAt(_tmp_c, -1)*_res;
+    int max_iteration = 10000;
+    _openSet.insert(std::make_pair(_tmp_c_d, _tmp_c));
+    while (_tmp_c_d > -0.1 && _tmp_c_d <= tor_min_dist && max_iteration > 0 && !_openSet.empty()) {
+        max_iteration--;
+        std::multimap<float, CUDA_GEO::coord>::iterator _it;
+        _it = _openSet.end();
+        --_it;
+        _tmp_c_d = _it->first;
+        _tmp_c = _it->second;
+        _openSet.erase(_it);
+        for (int i = -1; i <= 1; i++) {
+            for (int j = -1; j <= 1; j++) {
+                for (int k = (valid_z? -1: 0); k <= (valid_z? 1: 0); k++) {
+                    if (i == 0 && j == 0 && k==0) {
+                        continue;
+                    }
+                    CUDA_GEO::coord _delta_c(i, j, k);
+                    float _tmp_tmp_c_d = this->distAt(_delta_c+_tmp_c, -1)*_res;
+                    if (_tmp_tmp_c_d > _tmp_c_d || _tmp_tmp_c_d < -0.1) {
+                        _openSet.insert(std::make_pair(_tmp_tmp_c_d, _delta_c + _tmp_c));
+                    }
+                }
+            }
+        }
+    }
+    _p = transformCoordToPos(_tmp_c);
+    std::cout << "\033[33m" << "[Path Searcher]: (" << max_iteration << ") "<< _p.x << ", " << _p.y  << ", " << _p.z << "\033[0m"<< std::endl;
+    return _p;
+}
+
 float LinDistMap::distAt(const CUDA_GEO::coord & s, const float default_value) const
 {
     if (s.x<0 || s.x>=_w ||
@@ -38,8 +80,8 @@ float LinDistMap::distAt(const float&x, const float&y, const float&z, const floa
 
 void LinDistMap::distWithGrad(const CUDA_GEO::pos& pt, float default_value, float& dist, CUDA_GEO::pos& grad) const
 {
-    dist = this->distAt(pt.x, pt.y, pt.z, default_value);
     float _res = this->getGridStep();
+    dist = this->distAt(pt.x, pt.y, pt.z, default_value) * _res;
     grad.x = 0;
     grad.y = 0;
     grad.z = 0;
@@ -50,7 +92,7 @@ void LinDistMap::distWithGrad(const CUDA_GEO::pos& pt, float default_value, floa
                 (fabsf(_y - pt.y) < 1e-3f) &&
                 (fabsf(_z - pt.z) < 1e-3f))
                     continue;
-                float dist_n = this->distAt(_x, _y, _z, default_value);
+                float dist_n = this->distAt(_x, _y, _z, default_value)*this->getGridStep();
                 if (fabsf(dist_n - default_value) < 1e-3f) {
                     continue;
                 }

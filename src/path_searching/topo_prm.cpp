@@ -15,15 +15,15 @@ namespace std {
             rand_pos_ = uniform_real_distribution<double>(-1.0, 1.0);
 
             // init parameter
-            sample_inflate_(0) = 2.0;
-            sample_inflate_(1) = 5.0;
-            sample_inflate_(2) = 0.3;
-            clearance_ = 1.0; //2.4
-            visible_check_scale = 2.0;
+            sample_inflate_(0) = 1.5;
+            sample_inflate_(1) = 6.0;
+            sample_inflate_(2) = 0.5;
+            clearance_ = 2.2; //2.4
+            visible_check_scale = 2.5;
             short_cut_num_ = 1;
             reserve_num_ = 6;
             max_sample_num_ = 2000;
-            max_sample_time_ = 0.01;
+            max_sample_time_ = 0.007;
             max_raw_path_ = 300;
             max_raw_path2_ = 25;
             parallel_shortcut_ = true;
@@ -67,6 +67,9 @@ namespace std {
             end_pts_ = end_pts;
 
             graph = createGraph(start, end);
+            if (graph.size() == 0) {
+                return;
+            }
 
             graph_time = (ros::Time::now() - t1).toSec();
 
@@ -123,6 +126,17 @@ namespace std {
 
             GraphNode::Ptr start_node = GraphNode::Ptr(new GraphNode(start, GraphNode::Guard, 0));
             GraphNode::Ptr end_node = GraphNode::Ptr(new GraphNode(end, GraphNode::Guard, 1));
+            if (edt_env_->distAt(start(0), start(1), start(2), -1)*edt_env_->getGridStep() < 1.0&&
+                edt_env_->distAt(start(0), start(1), start(2), -1)*edt_env_->getGridStep() > -0.1) {
+                return graph_;
+            }
+            if (edt_env_->distAt(end(0), end(1), end(2), -1)*edt_env_->getGridStep() < 1.0 &&
+                edt_env_->distAt(end(0), end(1), end(2), -1)*edt_env_->getGridStep() > -0.1) {
+//                return graph_;
+                CUDA_GEO::pos g_p(end(0), end(1), end(2));
+                g_p = edt_env_->findNearestPoint(g_p, 1.5, false);
+                end << g_p.x, g_p.y, g_p.z;
+            }
 
             graph_.push_back(start_node);
             graph_.push_back(end_node);
@@ -526,7 +540,7 @@ namespace std {
                         dir = (dis_path[i] - short_path.back()).normalized();
                         push_dir = grad - grad.dot(dir) * dir;
                         push_dir.normalize();
-                        colli_pt = colli_pt + 2.5*resolution_ * push_dir;
+                        colli_pt = colli_pt + 1.25*visible_check_scale*resolution_ * push_dir; //2.5
                     }
                     short_path.push_back(colli_pt);
                 }
@@ -772,7 +786,7 @@ namespace std {
                 tmp_msg.color.b = (2.0* color_scale > 1.0)? (2.0 - 2.0*color_scale) : 2.0*color_scale;
                 tmp_msg.color.a = 1.0;
                 tmp_msg.points.resize(visual_paths[i].size());
-//                tmp_msg.lifetime = ros::Duration(0.1);
+                tmp_msg.lifetime = ros::Duration(0.2);
                 for (int j = 0; j < visual_paths[i].size(); j++) {
                     tmp_msg.points[j].x = visual_paths[i][j](0);
                     tmp_msg.points[j].y = visual_paths[i][j](1);
@@ -797,7 +811,7 @@ namespace std {
             map_msg.action = visualization_msgs::Marker::ADD;
             visualization_msgs::Marker seen_msg = map_msg;
             seen_msg.ns = "map_seen";
-            seen_msg.color.a = 0.1;
+            seen_msg.color.a = 1.0;
             seen_msg.color.r = 0.0;
             seen_msg.color.g = 1.0;
             seen_msg.color.b = 1.0;
@@ -806,6 +820,7 @@ namespace std {
 //            Eigen::Vector3d origin(_edt_origin.x, _edt_origin.y, _edt_origin.z);
             for (int i = 0; i < edt_env_->getMaxX(); i++) {
                 for (int j = 0; j < edt_env_->getMaxY(); j++) {
+                    bool has_seen = false;
                     for (int k = 0; k < edt_env_->getMaxZ(); k++) {
                         CUDA_GEO::pos offset(i*res, j*res, k*res);
                         CUDA_GEO::pos edt_p = _edt_origin + offset;
@@ -816,12 +831,22 @@ namespace std {
                             _p.z = edt_p.z;
                             map_msg.points.push_back(_p);
                         }
-                        if (!edt_env_->isSeen(edt_p.x, edt_p.y, edt_p.z, false)) {
-                            geometry_msgs::Point _p;
-                            _p.x = edt_p.x;
-                            _p.y = edt_p.y;
-                            _p.z = edt_p.z;
-                            seen_msg.points.push_back(_p);
+                        if (edt_env_->isSeen(edt_p.x, edt_p.y, edt_p.z, false)) {
+                            has_seen = true;
+                        }
+                    }
+
+                    if (!has_seen) {
+                        for (int k = 0; k < edt_env_->getMaxZ(); k++) {
+                            CUDA_GEO::pos offset(i*res, j*res, k*res);
+                            CUDA_GEO::pos edt_p = _edt_origin + offset;
+                            if (edt_p.z > 0.0 && edt_p.z < 2.5) {
+                                geometry_msgs::Point _p;
+                                _p.x = edt_p.x;
+                                _p.y = edt_p.y;
+                                _p.z = edt_p.z;
+                                seen_msg.points.push_back(_p);
+                            }
                         }
                     }
                 }

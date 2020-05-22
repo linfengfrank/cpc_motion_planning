@@ -18,7 +18,7 @@
 #include <distmap/LinDistMap.h>
 #include "path_searching/topo_prm.h"
 
-#define SIMPLE_UAV UAV::UAVModel,UAV::UAVJLTControl,UAV::SingleTargetEvaluator,UAV::UAVSwarm<1>
+#define SIMPLE_UAV UAV::UAVModel,UAV::UAVDPControl,UAV::SingleTargetEvaluator,UAV::UAVSwarm<1>
 class UAVMotionPlanner
 {
   typedef pcl::PointCloud<pcl::PointXYZ> PointCloud;

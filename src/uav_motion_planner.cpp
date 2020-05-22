@@ -88,6 +88,11 @@ void UAVMotionPlanner::plan_call_back(const ros::TimerEvent&)
                                            end_pts, graph,
                                            raw_paths, filtered_paths, select_paths);
 
+    if (filtered_paths.size() == 0)
+    {
+      std::cout<<"No Path"<<std::endl;
+    }
+
     visualization_msgs::MarkerArray topology_path_msg;
     topo_path_searching_ptr->getPathsVisualizationMsg(topology_path_msg);
     topology_paths_pub.publish(topology_path_msg);
@@ -116,9 +121,9 @@ void UAVMotionPlanner::plan_call_back(const ros::TimerEvent&)
   m_pso_planner->plan(*m_edt_map);
 
   auto end = std::chrono::steady_clock::now();
-  std::cout << "Consumed: "
-            << std::chrono::duration_cast<std::chrono::milliseconds>(end - start).count()
-            << "ms, cost: " << m_pso_planner->result.best_cost<<std::endl;
+//  std::cout << "Consumed: "
+//            << std::chrono::duration_cast<std::chrono::milliseconds>(end - start).count()
+//            << "ms, cost: " << m_pso_planner->result.best_cost<<std::endl;
 
   //PSO::State cmd_state;
   std::vector<UAV::UAVModel::State> traj = m_ref_gen_planner->generate_trajectory(m_pso_planner->result.best_loc);
@@ -222,7 +227,7 @@ void UAVMotionPlanner::goal_call_back(const geometry_msgs::PoseStamped::ConstPtr
 
   m_goal.s.p.x = msg->pose.position.x;
   m_goal.s.p.y = msg->pose.position.y;
-  m_goal.s.p.z = 1.5;
+  m_goal.s.p.z = 2.8;
   m_goal.oa = m_goal_received;
   if (!m_goal_received)
   {
