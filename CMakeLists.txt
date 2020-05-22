@@ -163,6 +163,9 @@ target_link_libraries(dynamic_programming
 cuda_add_executable(${PROJECT_NAME}_node
     src/motion_planning_node.cpp
     src/uav_motion_planner.cpp
+    src/distmap/LinDistMap.cpp
+    src/path_searching/topo_prm.cpp
+    src/path_searching/raycast.cpp
     src/kernel/pso_kernels.cu)
 
 target_link_libraries(${PROJECT_NAME}_node
