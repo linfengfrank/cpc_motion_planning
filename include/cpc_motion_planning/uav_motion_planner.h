@@ -15,8 +15,6 @@
 #include <cpc_motion_planning/uav/uav_dp_control.h>
 #include <cpc_motion_planning/uav/uav_jlt_control.h>
 #include <cpc_motion_planning/uav/uav_swarm.h>
-#include <distmap/LinDistMap.h>
-#include "path_searching/topo_prm.h"
 
 #define SIMPLE_UAV UAV::UAVModel,UAV::UAVDPControl,UAV::SingleTargetEvaluator,UAV::UAVSwarm<1>
 class UAVMotionPlanner
@@ -62,8 +60,6 @@ private:
   JLT::State m_yaw_state;
   JLT::Limit m_yaw_limit;
   double m_yaw_target;
-  LinDistMap* tMap=nullptr;
-  std::fast_planner::TopologyPRM* topo_path_searching_ptr= nullptr;
 };
 
 #endif // UAV_MOTION_PLANNER_H

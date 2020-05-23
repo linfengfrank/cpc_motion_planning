@@ -21,7 +21,6 @@ UAVMotionPlanner::UAVMotionPlanner():
   m_traj_pub = m_nh.advertise<PointCloud> ("pred_traj", 1);
   m_ctrl_pub = m_nh.advertise<PointCloud> ("ctrl_pnt", 1);
   m_ref_pub = m_nh.advertise<cpc_motion_planning::ref_data>("ref_traj",1);
-  topology_paths_pub = m_nh.advertise<visualization_msgs::MarkerArray>("/topology_paths", 1);
 
   m_planning_timer = m_nh.createTimer(ros::Duration(PSO::PSO_REPLAN_DT), &UAVMotionPlanner::plan_call_back, this);
 
@@ -72,34 +71,6 @@ void UAVMotionPlanner::plan_call_back(const ros::TimerEvent&)
     return;
 
   UAV::UAVModel::State s = m_curr_ref;
-
-  if(m_goal.oa)
-  {
-    Eigen::Vector3d start_pt(s.p.x,s.p.y,s.p.z);
-    Eigen::Vector3d end_pt(m_goal.s.p.x, m_goal.s.p.y, m_goal.s.p.z);
-    std::vector<Eigen::Vector3d> start_pts;
-    std::vector<Eigen::Vector3d> end_pts;
-    std::list<std::fast_planner::GraphNode::Ptr> graph;
-    std::vector<std::vector<Eigen::Vector3d>> raw_paths;
-    std::vector<std::vector<Eigen::Vector3d>> filtered_paths;
-    std::vector<std::vector<Eigen::Vector3d>> select_paths;
-    topo_path_searching_ptr->init();
-    topo_path_searching_ptr->findTopoPaths(start_pt, end_pt, start_pts,
-                                           end_pts, graph,
-                                           raw_paths, filtered_paths, select_paths);
-
-    if (filtered_paths.size() == 0)
-    {
-      std::cout<<"No Path"<<std::endl;
-    }
-
-    visualization_msgs::MarkerArray topology_path_msg;
-    topo_path_searching_ptr->getPathsVisualizationMsg(topology_path_msg);
-    topology_paths_pub.publish(topology_path_msg);
-
-  }
-
-
 
   float3 diff = m_goal.s.p - s.p;
   diff.z = 0;
@@ -202,17 +173,12 @@ void UAVMotionPlanner::map_call_back(const cpc_aux_mapping::grid_map::ConstPtr &
     int3 edt_map_size = make_int3(msg->x_size,msg->y_size,msg->z_size);
     m_edt_map = new EDTMap(origin,msg->width,edt_map_size);
     m_edt_map->setup_device();
-
-    tMap = new LinDistMap(msg->x_size,msg->y_size,msg->z_size);
-    topo_path_searching_ptr = new std::fast_planner::TopologyPRM();
-    topo_path_searching_ptr->setEnvironment(tMap);
   }
   else
   {
     m_edt_map->m_origin = CUDA_GEO::pos(msg->x_origin,msg->y_origin,msg->z_origin);
     m_edt_map->m_grid_step = msg->width;
   }
-  tMap->copyData(*msg);
   CUDA_MEMCPY_H2D(m_edt_map->m_sd_map,msg->payload8.data(),static_cast<size_t>(m_edt_map->m_byte_size));
 }
 
