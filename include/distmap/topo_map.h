@@ -1,73 +1,13 @@
 #ifndef LINDISTMAP_H
 #define LINDISTMAP_H
-#include <cuda_geometry/cuda_edtmap.cuh>
+#include <distmap/map_base.h>
 #include <iostream>
 #include <cpc_aux_mapping/grid_map.h>
-class MapBase
+
+class TopoMap : public MapBase
 {
 public:
-  MapBase()
-  {
-    // Initialize the origin and grid step
-    _origin.x = 0;
-    _origin.y = 0;
-    _origin.z = 0;
-    _gridstep = 0.2f;
-  }
-  //---
-  ~MapBase()
-  {
-
-  }
-  //---
-  void setMapSpecs(const CUDA_GEO::pos &origin, const float &gridstep)
-  {
-    _origin = origin;
-    _gridstep = gridstep;
-  }
-  //---
-  void setOrigin(const CUDA_GEO::pos &origin)
-  {
-    _origin = origin;
-  }
-  //---
-  CUDA_GEO::pos getOrigin() const
-  {
-    return _origin;
-  }
-  //---
-  float getGridStep() const
-  {
-    return _gridstep;
-  }
-  //---
-  CUDA_GEO::coord pos2coord(const CUDA_GEO::pos & p) const
-  {
-    CUDA_GEO::coord output;
-    output.x = floorf( (p.x - _origin.x) / _gridstep + 0.5f);
-    output.y = floorf( (p.y - _origin.y) / _gridstep + 0.5f);
-    output.z = floorf( (p.z - _origin.z) / _gridstep + 0.5f);
-    return output;
-  }
-  //---
-  CUDA_GEO::pos coord2pos(const CUDA_GEO::coord & c) const
-  {
-    CUDA_GEO::pos output;
-    output.x = c.x * _gridstep + _origin.x;
-    output.y = c.y * _gridstep + _origin.y;
-    output.z = c.z * _gridstep + _origin.z;
-
-    return output;
-  }
-protected:
-  CUDA_GEO::pos _origin;
-  float _gridstep;
-};
-
-class LinDistMap : public MapBase
-{
-public:
-  LinDistMap(int maxX, int maxY, int maxZ);
+  TopoMap(int maxX, int maxY, int maxZ);
   CUDA_GEO::pos findNearestPoint(CUDA_GEO::pos _p, float tor_min_dist, bool valid_z) const;
   inline CUDA_GEO::coord transformPosToCoord(CUDA_GEO::pos& _p) const{
     CUDA_GEO::pos _origin = this->getOrigin();
@@ -102,7 +42,7 @@ public:
   void copyData(const cpc_aux_mapping::grid_map &msg);
 
 public:
-  virtual ~LinDistMap();
+  virtual ~TopoMap();
 
 private:
   SeenDist *_map;

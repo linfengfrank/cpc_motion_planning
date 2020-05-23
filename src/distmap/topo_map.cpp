@@ -1,6 +1,6 @@
-#include "distmap/LinDistMap.h"
+#include "distmap/TopoMap.h"
 #include <string.h>
-LinDistMap::LinDistMap(int maxX, int maxY, int maxZ):
+TopoMap::TopoMap(int maxX, int maxY, int maxZ):
     MapBase(),
     _w(maxX),
     _h(maxY),
@@ -10,13 +10,13 @@ LinDistMap::LinDistMap(int maxX, int maxY, int maxZ):
     memset(_map, 0, _w*_h*_d*sizeof(SeenDist));
 }
 
-LinDistMap::~LinDistMap()
+TopoMap::~TopoMap()
 {
     delete [] _map;
 }
 
 
-CUDA_GEO::pos LinDistMap::findNearestPoint(CUDA_GEO::pos _p, float tor_min_dist, bool valid_z) const {
+CUDA_GEO::pos TopoMap::findNearestPoint(CUDA_GEO::pos _p, float tor_min_dist, bool valid_z) const {
     CUDA_GEO::coord _c = transformPosToCoord(_p);
     float _res = this->getGridStep();
     float _c_d = this->distAt(_c, -1) * _res;
@@ -57,7 +57,7 @@ CUDA_GEO::pos LinDistMap::findNearestPoint(CUDA_GEO::pos _p, float tor_min_dist,
     return _p;
 }
 
-float LinDistMap::distAt(const CUDA_GEO::coord & s, const float default_value) const
+float TopoMap::distAt(const CUDA_GEO::coord & s, const float default_value) const
 {
     if (s.x<0 || s.x>=_w ||
             s.y<0 || s.y>=_h ||
@@ -67,7 +67,7 @@ float LinDistMap::distAt(const CUDA_GEO::coord & s, const float default_value) c
     return _map[s.z*_w*_h+s.y*_w+s.x].d;
 }
 
-float LinDistMap::distAt(const float&x, const float&y, const float&z, const float default_value) const
+float TopoMap::distAt(const float&x, const float&y, const float&z, const float default_value) const
 {
     CUDA_GEO::pos _origin = this->getOrigin();
     float _res = this->getGridStep();
@@ -78,7 +78,7 @@ float LinDistMap::distAt(const float&x, const float&y, const float&z, const floa
     return distAt(_s, default_value);
 }
 
-void LinDistMap::distWithGrad(const CUDA_GEO::pos& pt, float default_value, float& dist, CUDA_GEO::pos& grad) const
+void TopoMap::distWithGrad(const CUDA_GEO::pos& pt, float default_value, float& dist, CUDA_GEO::pos& grad) const
 {
     float _res = this->getGridStep();
     dist = this->distAt(pt.x, pt.y, pt.z, default_value) * _res;
@@ -111,7 +111,7 @@ void LinDistMap::distWithGrad(const CUDA_GEO::pos& pt, float default_value, floa
     }
 }
 
-CUDA_GEO::pos LinDistMap::indexToPos(const CUDA_GEO::coord & s) const
+CUDA_GEO::pos TopoMap::indexToPos(const CUDA_GEO::coord & s) const
 {
     CUDA_GEO::pos Pos;
     CUDA_GEO::pos _origin = this->getOrigin();
@@ -123,7 +123,7 @@ CUDA_GEO::pos LinDistMap::indexToPos(const CUDA_GEO::coord & s) const
     return Pos;
 }
 
-bool LinDistMap::isSeen(const CUDA_GEO::coord & s, const bool default_value) const
+bool TopoMap::isSeen(const CUDA_GEO::coord & s, const bool default_value) const
 {
     if (s.x<0 || s.x>=_w ||
             s.y<0 || s.y>=_h ||
@@ -134,7 +134,7 @@ bool LinDistMap::isSeen(const CUDA_GEO::coord & s, const bool default_value) con
 }
 
 
-bool LinDistMap::isSeen(const float&x, const float&y, const float&z, const bool default_value) const
+bool TopoMap::isSeen(const float&x, const float&y, const float&z, const bool default_value) const
 {
     CUDA_GEO::pos _origin = this->getOrigin();
     float _res = this->getGridStep();
@@ -145,7 +145,7 @@ bool LinDistMap::isSeen(const float&x, const float&y, const float&z, const bool 
     return isSeen(_s, default_value);
 }
 
-void LinDistMap::copyData(const cpc_aux_mapping::grid_map &msg)
+void TopoMap::copyData(const cpc_aux_mapping::grid_map &msg)
 {
     if (msg.x_size != _w || msg.y_size != _h || msg.z_size != _d)
     {
