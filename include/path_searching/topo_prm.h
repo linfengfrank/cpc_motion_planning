@@ -3,7 +3,7 @@
 
 //#include <plan_env/edt_environment.h>
 //#include <plan_env/raycast.h>
-#include "distmap/LinDistMap.h"
+#include "distmap/topo_map.h"
 #include <path_searching/raycast.h>
 #include <random>
 #include "ros/ros.h"
@@ -101,8 +101,8 @@ namespace std {
         private:
             /* data */
 //  EDTEnvironment::Ptr edt_environment_;  // environment representation
-//            shared_ptr <LinDistMap> edt_env_;
-            LinDistMap* edt_env_;
+//            shared_ptr <TopoMap> edt_env_;
+            TopoMap* edt_env_;
 
             // sampling generator
             random_device rd_;
@@ -195,8 +195,8 @@ namespace std {
             void init();
 
 //            void setEnvironment(const EDTEnvironment::Ptr &env);
-//            void setEnvironment(const shared_ptr <LinDistMap> &env);
-            void setEnvironment(LinDistMap* env);
+//            void setEnvironment(const shared_ptr <TopoMap> &env);
+            void setEnvironment(TopoMap* env);
 
             void findTopoPaths(Eigen::Vector3d start, Eigen::Vector3d end, vector <Eigen::Vector3d> start_pts,
                                vector <Eigen::Vector3d> end_pts, list <GraphNode::Ptr> &graph,

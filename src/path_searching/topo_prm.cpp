@@ -731,7 +731,7 @@ namespace std {
         }
 
 //void TopologyPRM::setEnvironment(const EDTEnvironment::Ptr& env) { this->edt_environment_ = env; }
-        void TopologyPRM::setEnvironment(LinDistMap* env) { this->edt_env_ = env; }
+        void TopologyPRM::setEnvironment(TopoMap* env) { this->edt_env_ = env; }
 
         bool TopologyPRM::triangleVisib(Eigen::Vector3d pt, Eigen::Vector3d p1, Eigen::Vector3d p2) {
             // get the traversing points along p1-p2
