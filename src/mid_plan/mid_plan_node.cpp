@@ -217,10 +217,10 @@ void mapCallback(const cpc_aux_mapping::grid_map::ConstPtr& msg)
 #ifdef SHOWPC
         publishMap(path_list[3],curr_tgt);
 #endif
-        geometry_msgs::Point tgt_msg;
-        tgt_msg.x = curr_target_pos.x;
-        tgt_msg.y = curr_target_pos.y;
-        tgt_msg.z = curr_target_pos.z;
+        geometry_msgs::PoseStamped tgt_msg;
+        tgt_msg.pose.position.x = curr_target_pos.x;
+        tgt_msg.pose.position.y = curr_target_pos.y;
+        tgt_msg.pose.position.z = curr_target_pos.z;
         point_pub->publish(tgt_msg);
 
         if (stucked)
@@ -256,7 +256,7 @@ int main(int argc, char **argv)
     ros::Subscriber stuck_sub = nh.subscribe("/stuck", 1, &stuckCallback);
     ros::Subscriber glb_tgt_sub = nh.subscribe("/move_base_simple/goal", 1, &goalCallback);
     *pc_pub = nh.advertise<PointCloud> ("/path", 1);
-    *point_pub = nh.advertise<geometry_msgs::Point>("/mid_layer/pos_cmd",1);
+    *point_pub = nh.advertise<geometry_msgs::PoseStamped>("/mid_layer/goal",1);
     pclOut->header.frame_id = "/world";
     nh.param<double>("/nndp_cpp/fly_height",FLY_HEIGHT,2.5);
 

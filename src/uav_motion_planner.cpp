@@ -16,7 +16,7 @@ UAVMotionPlanner::UAVMotionPlanner():
 {
   m_map_sub = m_nh.subscribe("/edt_map", 1, &UAVMotionPlanner::map_call_back, this);
   m_pose_sub = m_nh.subscribe("/mavros/position/local", 1, &UAVMotionPlanner::vehicle_pose_call_back, this);
-  m_goal_sub = m_nh.subscribe("/move_base_simple/goal",1,&UAVMotionPlanner::goal_call_back, this);
+  m_goal_sub = m_nh.subscribe("/mid_layer/goal",1,&UAVMotionPlanner::goal_call_back, this);
 
   m_traj_pub = m_nh.advertise<PointCloud> ("pred_traj", 1);
   m_ctrl_pub = m_nh.advertise<PointCloud> ("ctrl_pnt", 1);
