@@ -92,9 +92,9 @@ void UAVMotionPlanner::plan_call_back(const ros::TimerEvent&)
   m_pso_planner->plan(*m_edt_map);
 
   auto end = std::chrono::steady_clock::now();
-//  std::cout << "Consumed: "
-//            << std::chrono::duration_cast<std::chrono::milliseconds>(end - start).count()
-//            << "ms, cost: " << m_pso_planner->result.best_cost<<std::endl;
+  std::cout << "Consumed: "
+            << std::chrono::duration_cast<std::chrono::milliseconds>(end - start).count()
+            << "ms, cost: " << m_pso_planner->result.best_cost<<std::endl;
 
   //PSO::State cmd_state;
   std::vector<UAV::UAVModel::State> traj = m_ref_gen_planner->generate_trajectory(m_pso_planner->result.best_loc);
@@ -193,8 +193,11 @@ void UAVMotionPlanner::goal_call_back(const geometry_msgs::PoseStamped::ConstPtr
 
   m_goal.s.p.x = msg->pose.position.x;
   m_goal.s.p.y = msg->pose.position.y;
-  m_goal.s.p.z = 2.8;
-  m_goal.oa = m_goal_received;
+  m_goal.s.p.z = msg->pose.position.z;
+
+  if (m_goal_received && m_curr_ref.p.z >= 1.8f && fabsf(m_curr_ref.v.z)<0.3f)
+    m_goal.oa = m_goal_received;
+
   if (!m_goal_received)
   {
     std_srvs::Empty::Request eReq;
@@ -207,10 +210,10 @@ void UAVMotionPlanner::goal_call_back(const geometry_msgs::PoseStamped::ConstPtr
 
   float3 diff = m_goal.s.p - s.p;
   diff.z = 0;
-  double dist = sqrt(dot(diff,diff));
-  if (dist > 0.5)
+  float dist = sqrtf(dot(diff,diff));
+  if (dist > 0.5f)
   {
-      float theta = atan2(diff.y,diff.x);
+      float theta = atan2f(diff.y,diff.x);
       m_pso_planner->m_dp_ctrl.m_theta = theta;
       m_ref_gen_planner->m_dp_ctrl.m_theta = theta;
   }
