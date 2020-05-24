@@ -109,6 +109,16 @@ public:
        obsCostAt(s, 0, occupied);
        return occupied;
     }
+    //---
+    bool isInside(const CUDA_GEO::coord &s)
+    {
+      if (s.x<0 || s.x>=_w ||
+              s.y<0 || s.y>=_h ||
+              s.z<0 || s.z>=_d)
+        return false;
+
+      return true;
+    }
 };
 
 #endif // DIJKSTRA_H

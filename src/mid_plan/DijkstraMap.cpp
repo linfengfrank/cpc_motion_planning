@@ -80,7 +80,7 @@ double DijkstraMap::obsCostAt(CUDA_GEO::coord s, float default_value, bool &occu
     dist *= static_cast<float>(getGridStep());
 
     // Check wheter it is on any obstacle or stays in the height range
-    if (dist <= 1.0 + 0.5)
+    if (dist <= 1.0)
     {
         cost = 400.0*exp(-dist*1.5);
         occupied = true;
@@ -372,7 +372,7 @@ CUDA_GEO::coord DijkstraMap::findTargetCoord(const std::vector<CUDA_GEO::coord> 
             }
         }
 
-        if (max_dist*_gridstep > 1.5)
+        if (max_dist*_gridstep > 2.5)
         {
             target = max_id;
         }
