@@ -50,6 +50,7 @@ public:
     int calcTgtHeightCoord(double tgt_height);
     std::vector<CUDA_GEO::coord> rayCast(const CUDA_GEO::coord &p0Index, const CUDA_GEO::coord &p1Index);
     std::vector<CUDA_GEO::pos> findSplitCoords(const std::vector<CUDA_GEO::coord> &path);
+    bool checkTopo(const std::vector<CUDA_GEO::coord> &path_a,const std::vector<CUDA_GEO::coord> &path_b);
 public:
     virtual ~DijkstraMap();
 

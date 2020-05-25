@@ -227,6 +227,7 @@ void glb_plan(const ros::TimerEvent&)
   }
 
   bool np = false;
+  bool same_topo = false;
   if(!received_ref)
   {
     path_adopt = path_list[0];
@@ -234,8 +235,14 @@ void glb_plan(const ros::TimerEvent&)
   }
   else
   {
-    printf("~~~~~ %f %f\n",cost_list[0],cost_list[1]);
-    if (cost_list[1] > cost_list[0] + 5)
+    same_topo = mid_map->checkTopo(path_list[0],path_list[2]);
+    double damp_dist= 0.0;
+    if (same_topo)
+      damp_dist = 1.0;
+    else
+      damp_dist = 8.0;
+
+    if (cost_list[1] > cost_list[0] + damp_dist)
     {
       np = true;
       path_adopt = path_list[0];
@@ -250,8 +257,17 @@ void glb_plan(const ros::TimerEvent&)
   curr_target_pos = mid_map->coord2pos(curr_tgt);
 
 #ifdef SHOWPC
-  //publishMap(path_list[0],curr_tgt,!np);
-  //publishMap(path_list[2],curr_tgt,np);
+//  if (same_topo)
+//  {
+//    publishMap(path_list[0],curr_tgt,false);
+//    publishMap(path_list[2],curr_tgt,false);
+//  }
+//  else
+//  {
+//    publishMap(path_list[0],curr_tgt,!np);
+//    publishMap(path_list[2],curr_tgt,np);
+//  }
+
   publishMap(path_adopt,curr_tgt,false);
   pcl_conversions::toPCL(ros::Time::now(), pclOut->header.stamp);
   pc_pub->publish (pclOut);

@@ -431,3 +431,20 @@ std::vector<CUDA_GEO::pos> DijkstraMap::findSplitCoords(const std::vector<CUDA_G
     std::cout<<std::endl;
     return split_pts;
 }
+
+bool DijkstraMap::checkTopo(const std::vector<CUDA_GEO::coord> &path_a,const std::vector<CUDA_GEO::coord> &path_b)
+{
+  int K=20;
+  for (int i=0; i<K; i++)
+  {
+    int idx_a = static_cast<double>(i)/K*path_a.size();
+    int idx_b = static_cast<double>(i)/K*path_b.size();
+    std::vector<CUDA_GEO::coord> line = rayCast(path_a[idx_a], path_b[idx_b]);
+    for (CUDA_GEO::coord &c : line)
+    {
+      if(isOccupied(c,0.5f))
+        return false;
+    }
+  }
+  return true;
+}
