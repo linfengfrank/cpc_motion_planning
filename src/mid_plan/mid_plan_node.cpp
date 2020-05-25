@@ -29,7 +29,7 @@ ros::Timer glb_plan_timer;
 cpc_motion_planning::ref_data ref;
 
 //---
-void publishMap(const std::vector<CUDA_GEO::coord> &path, CUDA_GEO::coord local_tgt)
+void publishMap(const std::vector<CUDA_GEO::coord> &path, CUDA_GEO::coord local_tgt, bool blue)
 {
   //publish the point cloud to rviz for checking
   CUDA_GEO::pos p;
@@ -44,13 +44,17 @@ void publishMap(const std::vector<CUDA_GEO::coord> &path, CUDA_GEO::coord local_
     if (path[i] == local_tgt)
       clrP.r = 255;
     else
-      clrP.g = 255;
+    {
+      if (blue)
+        clrP.b = 255;
+      else
+        clrP.g = 255;
+    }
 
     pclOut->points.push_back (clrP);
   }
-  pcl_conversions::toPCL(ros::Time::now(), pclOut->header.stamp);
-  pc_pub->publish (pclOut);
-  pclOut->clear();
+
+  //pclOut->clear();
 }
 //---
 double actualDistBetweenCoords(const CUDA_GEO::coord &c1, const CUDA_GEO::coord &c2)
@@ -197,37 +201,52 @@ void glb_plan(const ros::TimerEvent&)
       c.z = tgt_height_coord;
       if (path_list[1].empty() || !(path_list[1].back() == c))
       {
-        if(mid_map->isOccupied(c) || mid_map->isInside(c))
+        if(mid_map->isOccupied(c,0.5f) || !mid_map->isInside(c))
           break;
-
-        path_list[1].push_back(c);
+        else
+          path_list[1].push_back(c);
       }
-
-      std::reverse(path_list[1].begin(),path_list[1].end());
     }
 
     if (path_list[1].empty())
+    {
       path_list[1].push_back(start);
+    }
 
+    std::reverse(path_list[1].begin(),path_list[1].end());
     cost_list[1] = cascadePath(path_list[1],path_list[2],glb_tgt);
   }
 
+  bool np = false;
   if(!received_ref)
   {
     path_adopt = path_list[0];
+    np = true;
   }
   else
   {
-    if (cost_list[0] < cost_list[1] + 8)
+    printf("~~~~~ %f %f\n",cost_list[0],cost_list[1]);
+    if (cost_list[1] > cost_list[0] + 5)
+    {
+      np = true;
       path_adopt = path_list[0];
+    }
     else
-      path_adopt = path_list[1];
+    {
+      np = false;
+      path_adopt = path_list[2];
+    }
   }
   curr_tgt = mid_map->findTargetCoord(path_adopt);
   curr_target_pos = mid_map->coord2pos(curr_tgt);
 
 #ifdef SHOWPC
-  publishMap(path_adopt,curr_tgt);
+  //publishMap(path_list[0],curr_tgt,!np);
+  //publishMap(path_list[2],curr_tgt,np);
+  publishMap(path_adopt,curr_tgt,false);
+  pcl_conversions::toPCL(ros::Time::now(), pclOut->header.stamp);
+  pc_pub->publish (pclOut);
+  pclOut->clear();
 #endif
   geometry_msgs::PoseStamped tgt_msg;
   tgt_msg.pose.position.x = curr_target_pos.x;

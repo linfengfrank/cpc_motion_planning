@@ -53,7 +53,7 @@ double DijkstraMap::getCost2Come(const CUDA_GEO::coord & s, const double &defaul
 }
 
 double DijkstraMap::obsCostAt(CUDA_GEO::coord s, float default_value, bool &occupied,
-                              const CUDA_GEO::coord *crd_shift, SeenDist *last_val_map) const
+                              const CUDA_GEO::coord *crd_shift, SeenDist *last_val_map, float obstacle_dist) const
 {
     SeenDist* map_ptr;
     if (last_val_map != nullptr)
@@ -80,7 +80,7 @@ double DijkstraMap::obsCostAt(CUDA_GEO::coord s, float default_value, bool &occu
     dist *= static_cast<float>(getGridStep());
 
     // Check wheter it is on any obstacle or stays in the height range
-    if (dist <= 1.0)
+    if (dist <= obstacle_dist)
     {
         cost = 400.0*exp(-dist*1.5);
         occupied = true;

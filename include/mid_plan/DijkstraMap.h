@@ -30,7 +30,7 @@ class DijkstraMap : public MapBase
 public:
     DijkstraMap(int maxX, int maxY, int maxZ);
     double obsCostAt(CUDA_GEO::coord s, float default_value, bool &occupied,
-                     const CUDA_GEO::coord *crd_shift = nullptr, SeenDist *last_val_map = nullptr) const;
+                     const CUDA_GEO::coord *crd_shift = nullptr, SeenDist *last_val_map = nullptr, float obstacle_dist = 1.0) const;
     bool isSeen(const CUDA_GEO::coord & s, const bool default_value) const;
 
     nodeInfo* getIdMapPtr() {return _id_map;}
@@ -103,10 +103,10 @@ public:
         return los;
     }
     //---
-    bool isOccupied(const CUDA_GEO::coord &s)
+    bool isOccupied(const CUDA_GEO::coord &s, float obstacle_dist = 1.0)
     {
        bool occupied = false;
-       obsCostAt(s, 0, occupied);
+       obsCostAt(s, 0, occupied, nullptr,nullptr, obstacle_dist);
        return occupied;
     }
     //---
