@@ -198,7 +198,7 @@ void glb_plan(const ros::TimerEvent&)
     float ini_v_y = ref.data[4];
     float ini_v_z = ref.data[5];
     float speed = sqrtf(ini_v_x*ini_v_x + ini_v_y*ini_v_y + ini_v_z*ini_v_z);
-    int max_i = max(speed/1.0/0.05,10);
+    int max_i = max(speed/1.0/0.05,40);
     //std::cout<<"----"<<max_i<<"----"<<ref.cols<<std::endl;
     for (int i=0; i<ref.cols; i++)
     {
@@ -257,18 +257,18 @@ void glb_plan(const ros::TimerEvent&)
   curr_target_pos = mid_map->coord2pos(curr_tgt);
 
 #ifdef SHOWPC
-//  if (same_topo)
-//  {
-//    publishMap(path_list[0],curr_tgt,false);
-//    publishMap(path_list[2],curr_tgt,false);
-//  }
-//  else
-//  {
-//    publishMap(path_list[0],curr_tgt,!np);
-//    publishMap(path_list[2],curr_tgt,np);
-//  }
+  if (same_topo)
+  {
+    publishMap(path_list[0],curr_tgt,false);
+    publishMap(path_list[2],curr_tgt,false);
+  }
+  else
+  {
+    publishMap(path_list[0],curr_tgt,!np);
+    publishMap(path_list[2],curr_tgt,np);
+  }
 
-  publishMap(path_adopt,curr_tgt,false);
+//  publishMap(path_adopt,curr_tgt,false);
   pcl_conversions::toPCL(ros::Time::now(), pclOut->header.stamp);
   pc_pub->publish (pclOut);
   pclOut->clear();
