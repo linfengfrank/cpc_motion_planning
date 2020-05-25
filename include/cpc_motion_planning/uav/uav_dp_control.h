@@ -24,11 +24,11 @@ public:
 
   void load_data(CUDA_MAT::CudaMatrixFactory &factory, bool load_to_host)
   {
-    S_A_horizontal = static_cast<CUDA_MAT::Matrix<3,UAVModel::Input>*>(factory.load_cuda_matrix<3,UAVModel::Input>("/home/sp/cpc_ws/SA.dat",load_to_host));
-    S_A_vertical = static_cast<CUDA_MAT::Matrix<3,UAVModel::Input>*>(factory.load_cuda_matrix<3,UAVModel::Input>("/home/sp/cpc_ws/SA.dat",load_to_host));
-    factory.load_uniform_bin("/home/sp/cpc_ws/pos_bin.dat",ubc.bins[0]);
-    factory.load_uniform_bin("/home/sp/cpc_ws/vel_bin.dat",ubc.bins[1]);
-    factory.load_uniform_bin("/home/sp/cpc_ws/acc_bin.dat",ubc.bins[2]);
+    S_A_horizontal = static_cast<CUDA_MAT::Matrix<3,UAVModel::Input>*>(factory.load_cuda_matrix<3,UAVModel::Input>("/home/sp/cpc_ws/uav/SA.dat",load_to_host));
+    S_A_vertical = static_cast<CUDA_MAT::Matrix<3,UAVModel::Input>*>(factory.load_cuda_matrix<3,UAVModel::Input>("/home/sp/cpc_ws/uav/SA.dat",load_to_host));
+    factory.load_uniform_bin("/home/sp/cpc_ws/uav/pos_bin.dat",ubc.bins[0]);
+    factory.load_uniform_bin("/home/sp/cpc_ws/uav/vel_bin.dat",ubc.bins[1]);
+    factory.load_uniform_bin("/home/sp/cpc_ws/uav/acc_bin.dat",ubc.bins[2]);
   }
 
   void release_data(CUDA_MAT::CudaMatrixFactory &factory, bool load_from_host)
