@@ -194,11 +194,20 @@ void glb_plan(const ros::TimerEvent&)
   // Plan B: modify based on current trajectory
   if (received_ref)
   {
+    float ini_v_x = ref.data[3];
+    float ini_v_y = ref.data[4];
+    float ini_v_z = ref.data[5];
+    float speed = sqrtf(ini_v_x*ini_v_x + ini_v_y*ini_v_y + ini_v_z*ini_v_z);
+    int max_i = max(speed/1.0/0.05,10);
+    //std::cout<<"----"<<max_i<<"----"<<ref.cols<<std::endl;
     for (int i=0; i<ref.cols; i++)
     {
       CUDA_GEO::pos p(ref.data[i*ref.rows],ref.data[i*ref.rows+1],ref.data[i*ref.rows+2]);
       CUDA_GEO::coord c = mid_map->pos2coord(p);
       c.z = tgt_height_coord;
+      if (i > max_i)
+        break;
+
       if (path_list[1].empty() || !(path_list[1].back() == c))
       {
         if(mid_map->isOccupied(c,0.5f) || !mid_map->isInside(c))
