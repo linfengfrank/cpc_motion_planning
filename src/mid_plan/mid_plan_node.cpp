@@ -16,6 +16,7 @@ typedef pcl::PointCloud<pcl::PointXYZRGB> PointCloud;
 PointCloud::Ptr pclOut (new PointCloud);
 ros::Publisher* point_pub;
 ros::Publisher* pc_pub;
+ros::Publisher* mid_goal_pub;
 DijkstraMap *mid_map=nullptr;
 double FLY_HEIGHT;
 bool first_run = true;
@@ -270,6 +271,16 @@ void glb_plan(const ros::TimerEvent&)
   pcl_conversions::toPCL(ros::Time::now(), pclOut->header.stamp);
   pc_pub->publish (pclOut);
   pclOut->clear();
+
+  CUDA_GEO::pos mid_tgt_pos = mid_map->coord2pos(glb_tgt);
+  pcl::PointXYZRGB clrP;
+  clrP.x = mid_tgt_pos.x;
+  clrP.y = mid_tgt_pos.y;
+  clrP.z = mid_tgt_pos.z;
+  clrP.a = 255;
+  clrP.r = 255;
+  pclOut->points.push_back (clrP);
+  mid_goal_pub->publish(pclOut);
 #endif
   geometry_msgs::PoseStamped tgt_msg;
   tgt_msg.pose.position.x = curr_target_pos.x;
@@ -299,6 +310,7 @@ int main(int argc, char **argv)
   ros::init(argc, argv, "mid_layer_node");
   pc_pub = new ros::Publisher;
   point_pub = new ros::Publisher;
+  mid_goal_pub = new ros::Publisher;
   ros::NodeHandle nh;
   ros::Subscriber map_sub = nh.subscribe("/edt_map", 1, &mapCallback);
   ros::Subscriber stuck_sub = nh.subscribe("/stuck", 1, &stuckCallback);
@@ -306,7 +318,9 @@ int main(int argc, char **argv)
   ros::Subscriber state_sub = nh.subscribe("/ref_traj", 1, get_reference);
 
   *pc_pub = nh.advertise<PointCloud> ("/path", 1);
+  *mid_goal_pub = nh.advertise<PointCloud> ("/mid_goal", 1);
   *point_pub = nh.advertise<geometry_msgs::PoseStamped>("/mid_layer/goal",1);
+
   pclOut->header.frame_id = "/world";
   nh.param<double>("/nndp_cpp/fly_height",FLY_HEIGHT,2.5);
 
