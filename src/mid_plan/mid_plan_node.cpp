@@ -178,9 +178,7 @@ void glb_plan(const ros::TimerEvent&)
   glb_tgt.z = tgt_height_coord;
   glb_tgt = mid_map->rayCast(start,glb_tgt).back();
 
-  CUDA_GEO::coord curr_tgt = mid_map->pos2coord(curr_target_pos);
-  curr_tgt.z = tgt_height_coord;
-  curr_tgt = mid_map->rayCast(start,curr_tgt).back();
+  CUDA_GEO::coord curr_tgt;
 
   // Do the planning
   // Initialize the list
