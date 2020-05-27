@@ -1,0 +1,5 @@
+<?xml version="1.0"?>
+<launch>
+<node pkg="cpc_motion_planning" type="cpc_motion_planning_nf1_plan_node" name="cpc_motion_planning_nf1_plan_node" output="screen">
+</node>
+</launch>
