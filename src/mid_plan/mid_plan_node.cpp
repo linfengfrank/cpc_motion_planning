@@ -18,7 +18,7 @@ ros::Publisher* point_pub;
 ros::Publisher* pc_pub;
 ros::Publisher* mid_goal_pub;
 DijkstraMap *mid_map=nullptr;
-double FLY_HEIGHT;
+float FLY_HEIGHT;
 bool first_run = true;
 CUDA_GEO::pos curr_target_pos;
 bool stucked = false;
@@ -58,16 +58,16 @@ void publishMap(const std::vector<CUDA_GEO::coord> &path, CUDA_GEO::coord local_
   //pclOut->clear();
 }
 //---
-double actualDistBetweenCoords(const CUDA_GEO::coord &c1, const CUDA_GEO::coord &c2)
+float actualDistBetweenCoords(const CUDA_GEO::coord &c1, const CUDA_GEO::coord &c2)
 {
   CUDA_GEO::coord c = c1-c2;
-  return mid_map->getGridStep()*sqrt(static_cast<double>(c.square()));
+  return mid_map->getGridStep()*sqrt(static_cast<float>(c.square()));
 }
 //---
-double planPath(const CUDA_GEO::coord &start, const CUDA_GEO::coord &goal, std::vector<CUDA_GEO::coord> &path,
+float planPath(const CUDA_GEO::coord &start, const CUDA_GEO::coord &goal, std::vector<CUDA_GEO::coord> &path,
                 const CUDA_GEO::coord *crd_shift = nullptr, SeenDist *last_value_map=nullptr)
 {
-  double length = 0;
+  float length = 0;
   path = mid_map->AStar2D(goal,start,false,length,crd_shift,last_value_map);
   length += 1*actualDistBetweenCoords(path[0],goal);
   return length;
@@ -79,7 +79,7 @@ void stuckCallback(const std_msgs::Bool::ConstPtr& msg)
   std::cout<<"Stucked."<<std::endl;
 }
 //---
-CUDA_GEO::coord calculateMapCoordShift(CUDA_GEO::pos old_origin, CUDA_GEO::pos new_origin, double stepSize)
+CUDA_GEO::coord calculateMapCoordShift(CUDA_GEO::pos old_origin, CUDA_GEO::pos new_origin, float stepSize)
 {
   CUDA_GEO::coord output;
   output.x = floor((new_origin.x-old_origin.x)/stepSize + 0.5);
@@ -88,19 +88,19 @@ CUDA_GEO::coord calculateMapCoordShift(CUDA_GEO::pos old_origin, CUDA_GEO::pos n
   return output;
 }
 //---
-double pathLength(const std::vector<CUDA_GEO::coord> &path)
+float pathLength(const std::vector<CUDA_GEO::coord> &path)
 {
-  double length = 0;
+  float length = 0;
   CUDA_GEO::coord shift;
   for (int i=0; i<path.size()-1;i++)
   {
     shift = path[i+1]-path[i];
-    length += sqrt(static_cast<double>(shift.square()))*mid_map->getGridStep();
+    length += sqrt(static_cast<float>(shift.square()))*mid_map->getGridStep();
   }
   return length;
 }
 //---
-double modifyPath(const std::vector<CUDA_GEO::coord> &path_in, std::vector<CUDA_GEO::coord> &path_out)
+float modifyPath(const std::vector<CUDA_GEO::coord> &path_in, std::vector<CUDA_GEO::coord> &path_out)
 {
   // Find the last point with no intersection with obstacle
   int valid_pt = path_in.size()-1; // The last one if there is no intersection
@@ -122,7 +122,7 @@ double modifyPath(const std::vector<CUDA_GEO::coord> &path_in, std::vector<CUDA_
   else
   {
     // otherwise we modify the path
-    double tmp;
+    float tmp;
     path_out = mid_map->AStar2D(path_in[0],path_in[valid_pt],false,tmp);
 
     // cascade the path
@@ -136,7 +136,7 @@ double modifyPath(const std::vector<CUDA_GEO::coord> &path_in, std::vector<CUDA_
   return pathLength(path_out) + 1*actualDistBetweenCoords(path_out[0],path_in[0]);
 }
 //---
-double cascadePath(const std::vector<CUDA_GEO::coord> &path, std::vector<CUDA_GEO::coord> &cascade, CUDA_GEO::coord goal)
+float cascadePath(const std::vector<CUDA_GEO::coord> &path, std::vector<CUDA_GEO::coord> &cascade, CUDA_GEO::coord goal)
 {
   planPath(path[0], goal, cascade);
   cascade.insert(cascade.end(),path.begin(),path.end());
@@ -184,7 +184,7 @@ void glb_plan(const ros::TimerEvent&)
   // Do the planning
   // Initialize the list
   std::vector<std::vector<CUDA_GEO::coord>> path_list(3);
-  std::vector<double> cost_list(2);
+  std::vector<float> cost_list(2);
   std::vector<CUDA_GEO::coord> path_adopt;
 
   // Plan A: the new plan
@@ -235,7 +235,7 @@ void glb_plan(const ros::TimerEvent&)
   else
   {
     same_topo = mid_map->checkTopo(path_list[0],path_list[2]);
-    double damp_dist= 0.0;
+    float damp_dist= 0.0;
     if (same_topo)
       damp_dist = 1.0;
     else
@@ -322,7 +322,7 @@ int main(int argc, char **argv)
   *point_pub = nh.advertise<geometry_msgs::PoseStamped>("/mid_layer/goal",1);
 
   pclOut->header.frame_id = "/world";
-  nh.param<double>("/nndp_cpp/fly_height",FLY_HEIGHT,2.5);
+  nh.param<float>("/nndp_cpp/fly_height",FLY_HEIGHT,2.5);
 
 
   glb_plan_timer = nh.createTimer(ros::Duration(0.333), glb_plan);

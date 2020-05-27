@@ -10,7 +10,7 @@ template<class T>
 class SortedSet
 {
 public:
-    typedef std::pair<double, T> nkey;
+    typedef std::pair<float, T> nkey;
 
     struct SortedSetComp
     {
@@ -24,7 +24,7 @@ public:
     {
 
     }
-    bool insert(T n, double score)
+    bool insert(T n, float score)
     {
         nkey npair;
         if (!n->inQ) // not in set, just insert

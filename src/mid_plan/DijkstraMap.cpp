@@ -39,9 +39,9 @@ DijkstraMap::~DijkstraMap()
     delete [] _init_id_map;
 }
 
-double DijkstraMap::getCost2Come(const CUDA_GEO::coord & s, const double &default_value) const
+float DijkstraMap::getCost2Come(const CUDA_GEO::coord & s, const float &default_value) const
 {
-    double g=0.0;
+    float g=0.0;
     if (s.x<0 || s.x>=_w || s.y<0 || s.y>=_h || s.z<0 || s.z>=_d)
     {
         return default_value;
@@ -52,7 +52,7 @@ double DijkstraMap::getCost2Come(const CUDA_GEO::coord & s, const double &defaul
     }
 }
 
-double DijkstraMap::obsCostAt(CUDA_GEO::coord s, float default_value, bool &occupied,
+float DijkstraMap::obsCostAt(CUDA_GEO::coord s, float default_value, bool &occupied,
                               const CUDA_GEO::coord *crd_shift, SeenDist *last_val_map, float obstacle_dist) const
 {
     SeenDist* map_ptr;
@@ -68,7 +68,7 @@ double DijkstraMap::obsCostAt(CUDA_GEO::coord s, float default_value, bool &occu
     }
 
     float dist = 0.0f;
-    double cost = 0.0;
+    float cost = 0.0;
     if (s.x<0 || s.x>=_w || s.y<0 || s.y>=_h || s.z<0 || s.z>=_d)
     {
         dist = default_value;
@@ -165,12 +165,12 @@ std::vector<CUDA_GEO::coord> DijkstraMap::rayCast(const CUDA_GEO::coord &p0Index
     }
     // Initialization phase ------------------------
     CUDA_GEO::pos direction = p1 - p0;
-    double length = sqrt(direction.square());
+    float length = sqrt(direction.square());
     direction = direction / length; //normalize the vector
 
     int    step[3];
-    double tMax[3];
-    double tDelta[3];
+    float tMax[3];
+    float tDelta[3];
 
     CUDA_GEO::coord currIndex = p0Index;
     for (unsigned int i=0; i<3; i++)
@@ -184,15 +184,15 @@ std::vector<CUDA_GEO::coord> DijkstraMap::rayCast(const CUDA_GEO::coord &p0Index
         //tMax: shortest route? tDelta?  voxelBorder=pos.x?  pos: /m   coord: idx of grid
         if(step[i] != 0)
         {
-            double voxelBorder = double(currIndex.at(i)) * _gridstep +
-                    _origin.const_at(i) + double(step[i]) * _gridstep*0.5;
+            float voxelBorder = float(currIndex.at(i)) * _gridstep +
+                    _origin.const_at(i) + float(step[i]) * _gridstep*0.5;
             tMax[i] = (voxelBorder - p0.const_at(i))/direction.at(i);
             tDelta[i] = _gridstep / fabs(direction.at(i));
         }
         else
         {
-            tMax[i] =  std::numeric_limits<double>::max( );
-            tDelta[i] = std::numeric_limits<double>::max( );
+            tMax[i] =  std::numeric_limits<float>::max( );
+            tDelta[i] = std::numeric_limits<float>::max( );
         }
     }
 
@@ -236,7 +236,7 @@ std::vector<CUDA_GEO::coord> DijkstraMap::rayCast(const CUDA_GEO::coord &p0Index
     return output;
 }
 
-std::vector<CUDA_GEO::coord> DijkstraMap::AStar2D(const CUDA_GEO::coord &goal, const CUDA_GEO::coord &start, bool reached_free_zone,  double &length,
+std::vector<CUDA_GEO::coord> DijkstraMap::AStar2D(const CUDA_GEO::coord &goal, const CUDA_GEO::coord &start, bool reached_free_zone,  float &length,
                                                 const CUDA_GEO::coord *crd_shift, SeenDist *last_val_map)
 {
     std::vector<CUDA_GEO::coord> output;
@@ -248,7 +248,7 @@ std::vector<CUDA_GEO::coord> DijkstraMap::AStar2D(const CUDA_GEO::coord &goal, c
     // Useful variables
     bool occupied = false;
     CUDA_GEO::coord my_coord, child_coord, closest_coord;
-    double min_h = std::numeric_limits<double>::infinity();
+    float min_h = std::numeric_limits<float>::infinity();
 
     //Set the root
     nodeInfo* ni;
@@ -301,7 +301,7 @@ std::vector<CUDA_GEO::coord> DijkstraMap::AStar2D(const CUDA_GEO::coord &goal, c
                 if (p && !p->inClosed)
                 {
 
-                    double new_g = sqrt(static_cast<double>(ix*ix+iy*iy))*getGridStep() +
+                    float new_g = sqrt(static_cast<float>(ix*ix+iy*iy))*getGridStep() +
                             ni->g + obsCostAt(child_coord,0,occupied,crd_shift,last_val_map);
                     if (p->g > new_g && !(occupied && reached_free_zone))
                     {
@@ -328,7 +328,7 @@ std::vector<CUDA_GEO::coord> DijkstraMap::AStar2D(const CUDA_GEO::coord &goal, c
         {
             my_coord = ni->c;
             shift = my_coord-child_coord;
-            length += sqrt(static_cast<double>(shift.square()))*_gridstep;
+            length += sqrt(static_cast<float>(shift.square()))*_gridstep;
         }
     }
 
@@ -341,7 +341,7 @@ std::vector<CUDA_GEO::coord> DijkstraMap::AStar2D(const CUDA_GEO::coord &goal, c
     return output;
 }
 
-int DijkstraMap::calcTgtHeightCoord(double tgt_height)
+int DijkstraMap::calcTgtHeightCoord(float tgt_height)
 {
     int coord = floor( (tgt_height - _origin.z) / _gridstep + 0.5);
 
@@ -367,10 +367,10 @@ CUDA_GEO::coord DijkstraMap::findTargetCoord(const std::vector<CUDA_GEO::coord> 
     {
         // find the largest distance
         int max_id = 0;
-        double max_dist = 0;
+        float max_dist = 0;
         for (int j = target; j< anchor; j++)
         {
-            double dist = point2lineDist(path[anchor],path[target],path[j]);
+            float dist = point2lineDist(path[anchor],path[target],path[j]);
             if (dist > max_dist)
             {
                 max_dist = dist;
@@ -406,10 +406,10 @@ std::vector<CUDA_GEO::pos> DijkstraMap::findSplitCoords(const std::vector<CUDA_G
         pls.pop();
         // find the largest distance
         int max_id = 0;
-        double max_dist = 0;
+        float max_dist = 0;
         for (int j = target; j< anchor; j++)
         {
-            double dist = point2lineDist(path[anchor],path[target],path[j]);
+            float dist = point2lineDist(path[anchor],path[target],path[j]);
             if (dist > max_dist)
             {
                 max_dist = dist;
@@ -443,8 +443,8 @@ bool DijkstraMap::checkTopo(const std::vector<CUDA_GEO::coord> &path_a,const std
   int K=20;
   for (int i=0; i<K; i++)
   {
-    int idx_a = static_cast<double>(i)/K*path_a.size();
-    int idx_b = static_cast<double>(i)/K*path_b.size();
+    int idx_a = static_cast<float>(i)/K*path_a.size();
+    int idx_b = static_cast<float>(i)/K*path_b.size();
     std::vector<CUDA_GEO::coord> line = rayCast(path_a[idx_a], path_b[idx_b]);
     for (CUDA_GEO::coord &c : line)
     {
