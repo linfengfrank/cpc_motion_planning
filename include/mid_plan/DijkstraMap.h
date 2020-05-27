@@ -48,7 +48,7 @@ public:
                                        const CUDA_GEO::coord *crd_shift = nullptr, SeenDist *last_val_map = nullptr);
     CUDA_GEO::coord findTargetCoord(const std::vector<CUDA_GEO::coord> &path);
     int calcTgtHeightCoord(double tgt_height);
-    std::vector<CUDA_GEO::coord> rayCast(const CUDA_GEO::coord &p0Index, const CUDA_GEO::coord &p1Index);
+    std::vector<CUDA_GEO::coord> rayCast(const CUDA_GEO::coord &p0Index, const CUDA_GEO::coord &p1Index, float limit_radius = -1);
     std::vector<CUDA_GEO::pos> findSplitCoords(const std::vector<CUDA_GEO::coord> &path);
     bool checkTopo(const std::vector<CUDA_GEO::coord> &path_a,const std::vector<CUDA_GEO::coord> &path_b);
 public:

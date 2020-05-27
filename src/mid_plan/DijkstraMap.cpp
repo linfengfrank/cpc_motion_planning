@@ -142,7 +142,7 @@ void DijkstraMap::copyEdtData(const cpc_aux_mapping::grid_map::ConstPtr &msg)
     memcpy (_val_map, msg->payload8.data(), sizeof(SeenDist)*_w*_h*_d);
 }
 
-std::vector<CUDA_GEO::coord> DijkstraMap::rayCast(const CUDA_GEO::coord &p0Index, const CUDA_GEO::coord &p1Index)
+std::vector<CUDA_GEO::coord> DijkstraMap::rayCast(const CUDA_GEO::coord &p0Index, const CUDA_GEO::coord &p1Index, float limit_radius)
 {
     std::vector<CUDA_GEO::coord> output;
     CUDA_GEO::pos p0 = coord2pos(p0Index);
@@ -209,6 +209,12 @@ std::vector<CUDA_GEO::coord> DijkstraMap::rayCast(const CUDA_GEO::coord &p0Index
         {
             done = true;
             break;
+        }
+
+        if (limit_radius > 0 && sqrtf((currIndex-p0Index).square())*getGridStep() > limit_radius)
+        {
+          done = true;
+          break;
         }
 
         unsigned int dim;
@@ -442,7 +448,7 @@ bool DijkstraMap::checkTopo(const std::vector<CUDA_GEO::coord> &path_a,const std
     std::vector<CUDA_GEO::coord> line = rayCast(path_a[idx_a], path_b[idx_b]);
     for (CUDA_GEO::coord &c : line)
     {
-      if(isOccupied(c,0.5f))
+      if(isOccupied(c,1.5f))
         return false;
     }
   }
