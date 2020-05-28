@@ -72,18 +72,6 @@ protected:
     return sqrt(static_cast<float>(c.square()));
   }
 
-  inline float point2lineDist(const CUDA_GEO::coord & c1, const CUDA_GEO::coord & c2, const CUDA_GEO::coord & c0)
-  {
-    CUDA_GEO::coord a = c1-c0;
-    CUDA_GEO::coord b = c2-c1;
-    int a_dot_b = a.x*b.x + a.y*b.y + a.z*b.z;
-
-    if (b.square() == 0)
-      return sqrt(static_cast<float>(a.square()));
-
-    return sqrt(static_cast<float>(a.square()*b.square() - a_dot_b*a_dot_b)/static_cast<float>(b.square()));
-  }
-
 public:
   bool isLOS(const CUDA_GEO::coord &p0Index, const CUDA_GEO::coord &p1Index)
   {

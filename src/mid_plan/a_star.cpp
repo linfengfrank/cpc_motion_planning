@@ -236,7 +236,7 @@ CUDA_GEO::coord Astar::findTargetCoord(const std::vector<CUDA_GEO::coord> &path)
     float max_dist = 0;
     for (int j = target; j< anchor; j++)
     {
-      float dist = point2lineDist(path[anchor],path[target],path[j]);
+      float dist = point2lineDist(path[anchor],path[target],path[j],3);
       if (dist > max_dist)
       {
         max_dist = dist;
