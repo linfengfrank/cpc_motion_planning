@@ -172,7 +172,7 @@ target_link_libraries(${PROJECT_NAME}_node
     ${catkin_LIBRARIES})
 
 cuda_add_executable(${PROJECT_NAME}_glb_plan_node
-    src/mid_plan/DijkstraMap.cpp
+    src/mid_plan/grid_graph.cpp
     src/mid_plan/a_star.cpp
     src/mid_plan/mid_plan_node.cpp)
 
@@ -183,7 +183,7 @@ target_link_libraries(${PROJECT_NAME}_glb_plan_node
     ${catkin_LIBRARIES})
 
 cuda_add_executable(${PROJECT_NAME}_nf1_plan_node
-    src/mid_plan/DijkstraMap.cpp
+    src/mid_plan/grid_graph.cpp
     src/mid_plan/dijkstra.cpp
     src/mid_plan/mid_plan_nf1_node.cpp)
 

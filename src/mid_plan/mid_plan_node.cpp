@@ -11,7 +11,7 @@
 #include <algorithm>
 #include "cpc_motion_planning/ref_data.h"
 #define SHOWPC
-
+//#define USE2D
 typedef pcl::PointCloud<pcl::PointXYZRGB> PointCloud;
 PointCloud::Ptr pclOut (new PointCloud);
 ros::Publisher* point_pub;
@@ -68,7 +68,11 @@ float planPath(const CUDA_GEO::coord &start, const CUDA_GEO::coord &goal, std::v
                 const CUDA_GEO::coord *crd_shift = nullptr, SeenDist *last_value_map=nullptr)
 {
   float length = 0;
+#ifdef USE2D
   path = mid_map->AStar2D(goal,start,false,length,crd_shift,last_value_map);
+#else
+  path = mid_map->AStar3D(goal,start,false,length,crd_shift,last_value_map);
+#endif
   length += 1*actualDistBetweenCoords(path[0],goal);
   return length;
 }
@@ -123,7 +127,11 @@ float modifyPath(const std::vector<CUDA_GEO::coord> &path_in, std::vector<CUDA_G
   {
     // otherwise we modify the path
     float tmp;
+#ifdef USE2D
     path_out = mid_map->AStar2D(path_in[0],path_in[valid_pt],false,tmp);
+#else
+    path_out = mid_map->AStar3D(path_in[0],path_in[valid_pt],false,tmp);
+#endif
 
     // cascade the path
     for (int i = valid_pt + 1; i < path_in.size(); i++)
@@ -173,7 +181,9 @@ void glb_plan(const ros::TimerEvent&)
   int tgt_height_coord = mid_map->calcTgtHeightCoord(FLY_HEIGHT);
 
   CUDA_GEO::coord start(mid_map->getMaxX()/2,mid_map->getMaxY()/2,mid_map->getMaxZ()/2);
+#ifdef USE2D
   start.z = tgt_height_coord;
+#endif
 
   CUDA_GEO::coord glb_tgt = mid_map->pos2coord(goal);
   glb_tgt.z = tgt_height_coord;
@@ -203,7 +213,9 @@ void glb_plan(const ros::TimerEvent&)
     {
       CUDA_GEO::pos p(ref.data[i*ref.rows],ref.data[i*ref.rows+1],ref.data[i*ref.rows+2]);
       CUDA_GEO::coord c = mid_map->pos2coord(p);
+#ifdef USE2D
       c.z = tgt_height_coord;
+#endif
       if (i > max_i)
         break;
 

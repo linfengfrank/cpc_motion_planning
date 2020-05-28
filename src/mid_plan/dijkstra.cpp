@@ -1,7 +1,7 @@
 #include "mid_plan/dijkstra.h"
 
 Dijkstra::Dijkstra(int maxX, int maxY, int maxZ):
-  DijkstraMap(maxX,maxY,maxZ)
+  GridGraph(maxX,maxY,maxZ)
 {
 
 }

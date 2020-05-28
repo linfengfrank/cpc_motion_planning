@@ -1,5 +1,5 @@
-#ifndef DIJKSTRAMAP_H
-#define DIJKSTRAMAP_H
+#ifndef GRID_GRAPH
+#define GRID_GRAPH
 #include <cuda_geometry/cuda_edtmap.cuh>
 #include <distmap/map_base.h>
 #include <mid_plan/SortedSet.h>
@@ -25,10 +25,10 @@ struct nodeInfo
   }
 };
 
-class DijkstraMap : public MapBase
+class GridGraph : public MapBase
 {
 public:
-  DijkstraMap(int maxX, int maxY, int maxZ);
+  GridGraph(int maxX, int maxY, int maxZ);
   float obsCostAt(CUDA_GEO::coord s, float default_value, bool &occupied,
                   const CUDA_GEO::coord *crd_shift = nullptr, SeenDist *last_val_map = nullptr, float obstacle_dist = 1.0) const;
   bool isSeen(const CUDA_GEO::coord & s, const bool default_value) const;
@@ -49,7 +49,7 @@ public:
   std::vector<CUDA_GEO::coord> rayCast(const CUDA_GEO::coord &p0Index, const CUDA_GEO::coord &p1Index, float limit_radius = -1);
 
 public:
-  virtual ~DijkstraMap();
+  virtual ~GridGraph();
 
 protected:
   SeenDist *_val_map; // Value map, store EDT value
@@ -119,4 +119,4 @@ public:
   }
 };
 
-#endif // DIJKSTRAMAP_H
+#endif // GRID_GRAPH

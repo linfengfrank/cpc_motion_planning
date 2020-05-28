@@ -2,7 +2,7 @@
 #include <ros/console.h>
 #include <stack>
 Astar::Astar(int maxX, int maxY, int maxZ):
-  DijkstraMap(maxX,maxY,maxZ)
+  GridGraph(maxX,maxY,maxZ)
 {
 
 }
@@ -80,6 +80,114 @@ std::vector<CUDA_GEO::coord> Astar::AStar2D(const CUDA_GEO::coord &goal, const C
             p->g = new_g;
             p->h = dist(p->c, goal)*getGridStep();
             _PQ.insert(p,p->g + p->h);
+          }
+        }
+      }
+    }
+  }
+
+  //retrieve the path
+  ni = getNode(closest_coord);
+  length = 0;
+  CUDA_GEO::coord shift;
+  while(ni != nullptr)
+  {
+    child_coord = ni->c;
+    output.push_back(ni->c);
+    ni = ni->ptr2parent;
+    if (ni != nullptr)
+    {
+      my_coord = ni->c;
+      shift = my_coord-child_coord;
+      length += sqrt(static_cast<float>(shift.square()))*_gridstep;
+    }
+  }
+
+  if (output.size() == 0)
+  {
+    ROS_ERROR("Path size is zero.");
+    exit(-1);
+  }
+
+  return output;
+}
+
+std::vector<CUDA_GEO::coord> Astar::AStar3D(const CUDA_GEO::coord &goal, const CUDA_GEO::coord &start, bool reached_free_zone,  float &length,
+                                            const CUDA_GEO::coord *crd_shift, SeenDist *last_val_map)
+{
+  std::vector<CUDA_GEO::coord> output;
+
+  //First clear the old information
+  memcpy(_id_map,_init_id_map,sizeof(nodeInfo)*_w*_h*_d);
+  _PQ.clear();
+
+  // Useful variables
+  bool occupied = false;
+  CUDA_GEO::coord my_coord, child_coord, closest_coord;
+  float min_h = std::numeric_limits<float>::infinity();
+
+  //Set the root
+  nodeInfo* ni;
+  ni=getNode(start);
+  if (ni)
+  {
+    ni->g = 0;
+    ni->h = dist(ni->c,goal)*getGridStep();
+    _PQ.insert(ni,ni->g + ni->h);
+    closest_coord = ni->c;
+    min_h = ni->h;
+  }
+  else
+  {
+    ROS_ERROR("First point outside the boundary.");
+    exit(-1);
+  }
+
+  while (_PQ.size()>0)
+  {
+    ni=_PQ.pop();
+    ni->inClosed = true;
+    my_coord = ni->c;
+
+    obsCostAt(my_coord,0,occupied,crd_shift,last_val_map);
+    if (!occupied)
+      reached_free_zone = true;
+
+    if (min_h > ni->h)
+    {
+      min_h = ni->h;
+      closest_coord = ni->c;
+    }
+
+    if (my_coord == goal)
+      break;
+
+    // get all neighbours
+    for (int ix=-1;ix<=1;ix++)
+    {
+      for (int iy=-1;iy<=1;iy++)
+      {
+        for (int iz=-1; iz<=1;iz++)
+        {
+          if (ix==0 && iy ==0 && iz == 0)
+            continue;
+
+          child_coord.x = my_coord.x + ix;
+          child_coord.y = my_coord.y + iy;
+          child_coord.z = my_coord.z + iz;
+          nodeInfo* p = getNode(child_coord);
+          if (p && !p->inClosed)
+          {
+
+            float new_g = sqrt(static_cast<float>(ix*ix+iy*iy+iz*iz))*getGridStep() +
+                ni->g + obsCostAt(child_coord,0,occupied,crd_shift,last_val_map);
+            if (p->g > new_g && !(occupied && reached_free_zone))
+            {
+              p->ptr2parent = ni;
+              p->g = new_g;
+              p->h = dist(p->c, goal)*getGridStep();
+              _PQ.insert(p,p->g + p->h);
+            }
           }
         }
       }

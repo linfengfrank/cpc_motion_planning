@@ -1,8 +1,8 @@
-#include "mid_plan/DijkstraMap.h"
+#include "mid_plan/grid_graph.h"
 #include <string.h>
 #include <chrono>
 #include <ros/console.h>
-DijkstraMap::DijkstraMap(int maxX, int maxY, int maxZ):
+GridGraph::GridGraph(int maxX, int maxY, int maxZ):
   MapBase(),
   _w(maxX),
   _h(maxY),
@@ -31,14 +31,14 @@ DijkstraMap::DijkstraMap(int maxX, int maxY, int maxZ):
   }
 }
 
-DijkstraMap::~DijkstraMap()
+GridGraph::~GridGraph()
 {
   delete [] _val_map;
   delete [] _id_map;
   delete [] _init_id_map;
 }
 
-float DijkstraMap::getCost2Come(const CUDA_GEO::coord & s, const float &default_value) const
+float GridGraph::getCost2Come(const CUDA_GEO::coord & s, const float &default_value) const
 {
   float g=0.0;
   if (s.x<0 || s.x>=_w || s.y<0 || s.y>=_h || s.z<0 || s.z>=_d)
@@ -51,7 +51,7 @@ float DijkstraMap::getCost2Come(const CUDA_GEO::coord & s, const float &default_
   }
 }
 
-float DijkstraMap::obsCostAt(CUDA_GEO::coord s, float default_value, bool &occupied,
+float GridGraph::obsCostAt(CUDA_GEO::coord s, float default_value, bool &occupied,
                              const CUDA_GEO::coord *crd_shift, SeenDist *last_val_map, float obstacle_dist) const
 {
   SeenDist* map_ptr;
@@ -93,7 +93,7 @@ float DijkstraMap::obsCostAt(CUDA_GEO::coord s, float default_value, bool &occup
   return cost;
 }
 
-nodeInfo* DijkstraMap::getNode(CUDA_GEO::coord s)
+nodeInfo* GridGraph::getNode(CUDA_GEO::coord s)
 {
   if (s.x<0 || s.x>=_w ||
       s.y<0 || s.y>=_h ||
@@ -103,7 +103,7 @@ nodeInfo* DijkstraMap::getNode(CUDA_GEO::coord s)
   return &_id_map[coord2index(s)];
 }
 
-bool DijkstraMap::isSeen(const CUDA_GEO::coord & s, const bool default_value) const
+bool GridGraph::isSeen(const CUDA_GEO::coord & s, const bool default_value) const
 {
   if (s.x<0 || s.x>=_w ||
       s.y<0 || s.y>=_h ||
@@ -113,7 +113,7 @@ bool DijkstraMap::isSeen(const CUDA_GEO::coord & s, const bool default_value) co
   return _val_map[coord2index(s)].s;
 }
 
-void DijkstraMap::copyIdData(const cpc_aux_mapping::grid_map::ConstPtr &msg)
+void GridGraph::copyIdData(const cpc_aux_mapping::grid_map::ConstPtr &msg)
 {
   if (msg->x_size != _w || msg->y_size != _h || msg->z_size != _d)
   {
@@ -127,7 +127,7 @@ void DijkstraMap::copyIdData(const cpc_aux_mapping::grid_map::ConstPtr &msg)
   memcpy (_id_map, msg->payload8.data(), sizeof(nodeInfo)*_w*_h*_d);
 }
 
-void DijkstraMap::copyEdtData(const cpc_aux_mapping::grid_map::ConstPtr &msg)
+void GridGraph::copyEdtData(const cpc_aux_mapping::grid_map::ConstPtr &msg)
 {
   if (msg->x_size != _w || msg->y_size != _h || msg->z_size != _d)
   {
@@ -141,7 +141,7 @@ void DijkstraMap::copyEdtData(const cpc_aux_mapping::grid_map::ConstPtr &msg)
   memcpy (_val_map, msg->payload8.data(), sizeof(SeenDist)*_w*_h*_d);
 }
 
-std::vector<CUDA_GEO::coord> DijkstraMap::rayCast(const CUDA_GEO::coord &p0Index, const CUDA_GEO::coord &p1Index, float limit_radius)
+std::vector<CUDA_GEO::coord> GridGraph::rayCast(const CUDA_GEO::coord &p0Index, const CUDA_GEO::coord &p1Index, float limit_radius)
 {
   std::vector<CUDA_GEO::coord> output;
   CUDA_GEO::pos p0 = coord2pos(p0Index);
@@ -237,7 +237,7 @@ std::vector<CUDA_GEO::coord> DijkstraMap::rayCast(const CUDA_GEO::coord &p0Index
 
 
 
-int DijkstraMap::calcTgtHeightCoord(float tgt_height)
+int GridGraph::calcTgtHeightCoord(float tgt_height)
 {
   int coord = floor( (tgt_height - _origin.z) / _gridstep + 0.5);
 

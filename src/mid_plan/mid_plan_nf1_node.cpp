@@ -1,5 +1,5 @@
 #include <ros/ros.h>
-#include <mid_plan/DijkstraMap.h>
+#include <mid_plan/grid_graph.h>
 #include <geometry_msgs/PointStamped.h>
 #include <pcl_conversions/pcl_conversions.h>
 #include <pcl_ros/point_cloud.h>
@@ -95,7 +95,7 @@ void stuckCallback(const std_msgs::Bool::ConstPtr& msg)
   std::cout<<"Stucked."<<std::endl;
 }
 //---
-void setup_map_msg(cpc_aux_mapping::grid_map &msg, DijkstraMap* map, bool resize)
+void setup_map_msg(cpc_aux_mapping::grid_map &msg, GridGraph* map, bool resize)
 {
   msg.x_origin = map->getOrigin().x;
   msg.y_origin = map->getOrigin().y;
@@ -113,7 +113,7 @@ void setup_map_msg(cpc_aux_mapping::grid_map &msg, DijkstraMap* map, bool resize
   msg.type = cpc_aux_mapping::grid_map::TYPE_NF1;
 }
 //---
-void copy_map_to_msg(cpc_aux_mapping::grid_map &msg, DijkstraMap* map,int tgt_height_coord)
+void copy_map_to_msg(cpc_aux_mapping::grid_map &msg, GridGraph* map,int tgt_height_coord)
 {
   CUDA_GEO::coord c;
   float *tmp = static_cast<float*>(static_cast<void*>(msg.payload8.data()));
