@@ -163,7 +163,7 @@ void glb_plan(const ros::TimerEvent&)
   // Set all points
   int tgt_height_coord = mid_map->calcTgtHeightCoord(FLY_HEIGHT);
 
-  CUDA_GEO::coord start(mid_map->getMaxX()/2,mid_map->getMaxY()/2,mid_map->getMaxX()/2);
+  CUDA_GEO::coord start(mid_map->getMaxX()/2,mid_map->getMaxY()/2,mid_map->getMaxZ()/2);
   start.z = tgt_height_coord;
 
   CUDA_GEO::coord glb_tgt = mid_map->pos2coord(goal);
