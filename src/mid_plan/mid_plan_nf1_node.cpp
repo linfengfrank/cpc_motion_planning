@@ -28,7 +28,7 @@ bool received_ref = false;
 CUDA_GEO::pos goal;
 ros::Timer glb_plan_timer;
 cpc_motion_planning::ref_data ref;
-
+cpc_aux_mapping::grid_map nf1_map_msg;
 //---
 void publishMap(int tgt_height_coord)
 {
@@ -44,7 +44,7 @@ void publishMap(int tgt_height_coord)
         c.x = x;
         c.y = y;
         c.z = tgt_height_coord;
-        double d_c = mid_map->getCost2Come(c,0.0)*20;
+        double d_c = mid_map->getCost2Come(c,0.0)*15;
         int d = min(static_cast<int>(d_c),255);
 
         //                std::cout<<d<<" ";
@@ -94,6 +94,45 @@ void stuckCallback(const std_msgs::Bool::ConstPtr& msg)
   std::cout<<"Stucked."<<std::endl;
 }
 //---
+void setup_map_msg(cpc_aux_mapping::grid_map &msg, DijkstraMap* map, bool resize)
+{
+  msg.x_origin = map->getOrigin().x;
+  msg.y_origin = map->getOrigin().y;
+  msg.z_origin = map->getOrigin().z;
+  msg.width = map->getGridStep();
+
+  if (resize)
+  {
+    msg.x_size = map->getMaxX();
+    msg.y_size = map->getMaxY();
+    msg.z_size = 1;
+    msg.payload8.resize(sizeof(float)*static_cast<unsigned int>(msg.x_size*msg.y_size*msg.z_size));
+  }
+
+  msg.type = cpc_aux_mapping::grid_map::TYPE_NF1;
+}
+//---
+void copy_map_to_msg(cpc_aux_mapping::grid_map &msg, DijkstraMap* map,int tgt_height_coord)
+{
+  CUDA_GEO::coord c;
+  float *tmp = static_cast<float*>(static_cast<void*>(msg.payload8.data()));
+  int i=0;
+  for (int x=0;x<map->getMaxX();x++)
+  {
+    for (int y=0;y<map->getMaxY();y++)
+    {
+      //for (int z=0;z<map->getMaxZ();z++)
+      {
+        c.x = x;
+        c.y = y;
+        c.z = tgt_height_coord;
+        float d_c = mid_map->getCost2Come(c,0.0);
+        tmp[i++]=d_c;
+      }
+    }
+  }
+}
+//---
 void mapCallback(const cpc_aux_mapping::grid_map::ConstPtr& msg)
 {
   received_map = true;
@@ -101,6 +140,7 @@ void mapCallback(const cpc_aux_mapping::grid_map::ConstPtr& msg)
   if (mid_map == nullptr)
   {
     mid_map = new DijkstraMap(msg->x_size,msg->y_size,msg->z_size);
+    setup_map_msg(nf1_map_msg,mid_map,true);
   }
   mid_map->copyEdtData(msg);
 }
@@ -128,22 +168,15 @@ void glb_plan(const ros::TimerEvent&)
 
   CUDA_GEO::coord glb_tgt = mid_map->pos2coord(goal);
   glb_tgt.z = tgt_height_coord;
-  glb_tgt = mid_map->rayCast(start,glb_tgt,8.0f).back();
+  glb_tgt = mid_map->rayCast(start,glb_tgt).back();
 
   mid_map->dijkstra2D(glb_tgt);
 
-
+  setup_map_msg(nf1_map_msg,mid_map,false);
+  copy_map_to_msg(nf1_map_msg,mid_map,tgt_height_coord);
 #ifdef SHOWPC
   publishMap(tgt_height_coord);
 #endif
-//  geometry_msgs::PoseStamped tgt_msg;
-//  tgt_msg.pose.position.x = curr_target_pos.x;
-//  tgt_msg.pose.position.y = curr_target_pos.y;
-//  tgt_msg.pose.position.z = curr_target_pos.z;
-//  point_pub->publish(tgt_msg);
-
-//  if (stucked)
-//    stucked = false;
 
   auto end_time = std::chrono::steady_clock::now();
       std::cout << "Middle planning time: "
