@@ -173,6 +173,7 @@ target_link_libraries(${PROJECT_NAME}_node
 
 cuda_add_executable(${PROJECT_NAME}_glb_plan_node
     src/mid_plan/DijkstraMap.cpp
+    src/mid_plan/a_star.cpp
     src/mid_plan/mid_plan_node.cpp)
 
 target_link_libraries(${PROJECT_NAME}_glb_plan_node

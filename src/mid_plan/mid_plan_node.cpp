@@ -1,5 +1,5 @@
 #include <ros/ros.h>
-#include <mid_plan/DijkstraMap.h>
+#include <mid_plan/a_star.h>
 #include <geometry_msgs/PointStamped.h>
 #include <pcl_conversions/pcl_conversions.h>
 #include <pcl_ros/point_cloud.h>
@@ -17,7 +17,7 @@ PointCloud::Ptr pclOut (new PointCloud);
 ros::Publisher* point_pub;
 ros::Publisher* pc_pub;
 ros::Publisher* mid_goal_pub;
-DijkstraMap *mid_map=nullptr;
+Astar *mid_map=nullptr;
 float FLY_HEIGHT;
 bool first_run = true;
 CUDA_GEO::pos curr_target_pos;
@@ -149,7 +149,7 @@ void mapCallback(const cpc_aux_mapping::grid_map::ConstPtr& msg)
   CUDA_GEO::pos origin;
   if (mid_map == nullptr)
   {
-    mid_map = new DijkstraMap(msg->x_size,msg->y_size,msg->z_size);
+    mid_map = new Astar(msg->x_size,msg->y_size,msg->z_size);
   }
   mid_map->copyEdtData(msg);
 }
