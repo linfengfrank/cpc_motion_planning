@@ -11,7 +11,7 @@
 #include <algorithm>
 #include "cpc_motion_planning/ref_data.h"
 #define SHOWPC
-//#define USE2D
+#define USE2D
 typedef pcl::PointCloud<pcl::PointXYZRGB> PointCloud;
 PointCloud::Ptr pclOut (new PointCloud);
 ros::Publisher* point_pub;
