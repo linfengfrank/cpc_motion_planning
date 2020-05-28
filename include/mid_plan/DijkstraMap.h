@@ -1,5 +1,5 @@
-#ifndef DIJKSTRA_H
-#define DIJKSTRA_H
+#ifndef DIJKSTRAMAP_H
+#define DIJKSTRAMAP_H
 #include <cuda_geometry/cuda_edtmap.cuh>
 #include <distmap/map_base.h>
 #include <mid_plan/SortedSet.h>
@@ -47,7 +47,7 @@ public:
 
   int calcTgtHeightCoord(float tgt_height);
   std::vector<CUDA_GEO::coord> rayCast(const CUDA_GEO::coord &p0Index, const CUDA_GEO::coord &p1Index, float limit_radius = -1);
-  void dijkstra2D(CUDA_GEO::coord glb_tgt);
+
 public:
   virtual ~DijkstraMap();
 
@@ -119,4 +119,4 @@ public:
   }
 };
 
-#endif // DIJKSTRA_H
+#endif // DIJKSTRAMAP_H

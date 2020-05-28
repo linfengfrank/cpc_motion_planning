@@ -10,6 +10,7 @@
 #include <std_msgs/Bool.h>
 #include <algorithm>
 #include "cpc_motion_planning/ref_data.h"
+#include <mid_plan/dijkstra.h>
 #define SHOWPC
 
 typedef pcl::PointCloud<pcl::PointXYZRGB> PointCloud;
@@ -17,7 +18,7 @@ PointCloud::Ptr pclOut (new PointCloud);
 ros::Publisher* point_pub;
 ros::Publisher* pc_pub;
 ros::Publisher* mid_goal_pub;
-DijkstraMap *mid_map=nullptr;
+Dijkstra *mid_map=nullptr;
 float FLY_HEIGHT;
 bool first_run = true;
 CUDA_GEO::pos curr_target_pos;
@@ -139,7 +140,7 @@ void mapCallback(const cpc_aux_mapping::grid_map::ConstPtr& msg)
   CUDA_GEO::pos origin;
   if (mid_map == nullptr)
   {
-    mid_map = new DijkstraMap(msg->x_size,msg->y_size,msg->z_size);
+    mid_map = new Dijkstra(msg->x_size,msg->y_size,msg->z_size);
     setup_map_msg(nf1_map_msg,mid_map,true);
   }
   mid_map->copyEdtData(msg);

@@ -184,6 +184,7 @@ target_link_libraries(${PROJECT_NAME}_glb_plan_node
 
 cuda_add_executable(${PROJECT_NAME}_nf1_plan_node
     src/mid_plan/DijkstraMap.cpp
+    src/mid_plan/dijkstra.cpp
     src/mid_plan/mid_plan_nf1_node.cpp)
 
 target_link_libraries(${PROJECT_NAME}_nf1_plan_node
