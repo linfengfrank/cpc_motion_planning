@@ -8,7 +8,7 @@ Dijkstra::Dijkstra(int maxX, int maxY, int maxZ):
 
 void Dijkstra::dijkstra2D(CUDA_GEO::coord glb_tgt)
 {
-  memcpy(_id_map,_init_id_map,sizeof(nodeInfo)*_w*_h*_d);
+  memcpy(_id_map,_init_id_map,sizeof(nodeInfo)*static_cast<size_t>(_w*_h*_d));
   //Get the local Dijkstra target
   CUDA_GEO::coord mc = glb_tgt;
   CUDA_GEO::coord pc;
@@ -44,7 +44,7 @@ void Dijkstra::dijkstra2D(CUDA_GEO::coord glb_tgt)
         {
           if (!p->inClosed)
           {
-            double new_g = sqrt(static_cast<double>(ix*ix+iy*iy))*getGridStep() +
+            float new_g = sqrtf(static_cast<float>(ix*ix+iy*iy))*getGridStep() +
                 m->g + obsCostAt(pc,0,occupied);
             if (p->g > new_g)
             {

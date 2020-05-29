@@ -21,15 +21,15 @@ public:
     CUDA_GEO::coord a = c1-c0;
     CUDA_GEO::coord b = c2-c1;
 
-    a.z = a.z * scale_verticle;
-    b.z = b.z * scale_verticle;
+    a.z = static_cast<int>(a.z * scale_verticle);
+    b.z = static_cast<int>(b.z * scale_verticle);
 
     int a_dot_b = a.x*b.x + a.y*b.y + a.z*b.z;
 
     if (b.square() == 0)
-      return sqrt(static_cast<float>(a.square()));
+      return sqrtf(static_cast<float>(a.square()));
 
-    return sqrt(static_cast<float>(a.square()*b.square() - a_dot_b*a_dot_b)/static_cast<float>(b.square()));
+    return sqrtf(static_cast<float>(a.square()*b.square() - a_dot_b*a_dot_b)/static_cast<float>(b.square()));
   }
 
 };

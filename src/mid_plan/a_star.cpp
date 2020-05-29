@@ -13,7 +13,7 @@ std::vector<CUDA_GEO::coord> Astar::AStar2D(const CUDA_GEO::coord &goal, const C
   std::vector<CUDA_GEO::coord> output;
 
   //First clear the old information
-  memcpy(_id_map,_init_id_map,sizeof(nodeInfo)*_w*_h*_d);
+  memcpy(_id_map,_init_id_map,sizeof(nodeInfo)*static_cast<size_t>(_w*_h*_d));
   _PQ.clear();
 
   // Useful variables
@@ -72,7 +72,7 @@ std::vector<CUDA_GEO::coord> Astar::AStar2D(const CUDA_GEO::coord &goal, const C
         if (p && !p->inClosed)
         {
 
-          float new_g = sqrt(static_cast<float>(ix*ix+iy*iy))*getGridStep() +
+          float new_g = sqrtf(static_cast<float>(ix*ix+iy*iy))*getGridStep() +
               ni->g + obsCostAt(child_coord,0,occupied,crd_shift,last_val_map);
           if (p->g > new_g && !(occupied && reached_free_zone))
           {
@@ -99,7 +99,7 @@ std::vector<CUDA_GEO::coord> Astar::AStar2D(const CUDA_GEO::coord &goal, const C
     {
       my_coord = ni->c;
       shift = my_coord-child_coord;
-      length += sqrt(static_cast<float>(shift.square()))*_gridstep;
+      length += sqrtf(static_cast<float>(shift.square()))*_gridstep;
     }
   }
 
@@ -118,7 +118,7 @@ std::vector<CUDA_GEO::coord> Astar::AStar3D(const CUDA_GEO::coord &goal, const C
   std::vector<CUDA_GEO::coord> output;
 
   //First clear the old information
-  memcpy(_id_map,_init_id_map,sizeof(nodeInfo)*_w*_h*_d);
+  memcpy(_id_map,_init_id_map,sizeof(nodeInfo)*static_cast<size_t>(_w*_h*_d));
   _PQ.clear();
 
   // Useful variables
@@ -179,7 +179,7 @@ std::vector<CUDA_GEO::coord> Astar::AStar3D(const CUDA_GEO::coord &goal, const C
           if (p && !p->inClosed)
           {
 
-            float new_g = sqrt(static_cast<float>(ix*ix+iy*iy+iz*iz))*getGridStep() +
+            float new_g = sqrtf(static_cast<float>(ix*ix+iy*iy+iz*iz))*getGridStep() +
                 ni->g + obsCostAt(child_coord,0,occupied,crd_shift,last_val_map);
             if (p->g > new_g && !(occupied && reached_free_zone))
             {
@@ -207,7 +207,7 @@ std::vector<CUDA_GEO::coord> Astar::AStar3D(const CUDA_GEO::coord &goal, const C
     {
       my_coord = ni->c;
       shift = my_coord-child_coord;
-      length += sqrt(static_cast<float>(shift.square()))*_gridstep;
+      length += sqrtf(static_cast<float>(shift.square()))*_gridstep;
     }
   }
 
@@ -226,15 +226,15 @@ CUDA_GEO::coord Astar::findTargetCoord(const std::vector<CUDA_GEO::coord> &path)
   if (path.size() == 0)
     return CUDA_GEO::coord(_w/2,_h/2,_d/2);
 
-  unsigned int anchor = path.size() - 1;
+  unsigned int anchor = static_cast<unsigned int>(path.size() - 1);
   unsigned int target = 0;
 
-  for (int i=0; i<path.size(); i++)
+  for (unsigned int i=0; i<path.size(); i++)
   {
     // find the largest distance
-    int max_id = 0;
+    unsigned int max_id = 0;
     float max_dist = 0;
-    for (int j = target; j< anchor; j++)
+    for (unsigned int j = target; j< anchor; j++)
     {
       float dist = point2lineDist(path[anchor],path[target],path[j],3);
       if (dist > max_dist)
@@ -244,7 +244,7 @@ CUDA_GEO::coord Astar::findTargetCoord(const std::vector<CUDA_GEO::coord> &path)
       }
     }
 
-    if (max_dist*_gridstep > 2.5)
+    if (max_dist*_gridstep > 2.5f)
     {
       target = max_id;
     }
@@ -260,20 +260,28 @@ CUDA_GEO::coord Astar::findTargetCoord(const std::vector<CUDA_GEO::coord> &path)
 std::vector<CUDA_GEO::pos> Astar::findSplitCoords(const std::vector<CUDA_GEO::coord> &path)
 {
   std::vector<CUDA_GEO::pos> split_pts;
-  std::stack<std::pair<int,int>> pls; // fist is anchor, second is target
+
+  // If there is no path, return the center point
+  if (path.size() == 0)
+  {
+    split_pts.push_back(coord2pos(CUDA_GEO::coord(_w/2,_h/2,_d/2)));
+    return split_pts;
+  }
+
+  std::stack<std::pair<unsigned int,unsigned int>> pls; // fist is anchor, second is target
   pls.push(std::make_pair(path.size() - 1, 0));
 
-  int check = path.size() - 1;
+  unsigned int check = static_cast<unsigned int>(path.size()) - 1;
 
   while (pls.size() > 0)
   {
-    int target = pls.top().second;
-    int anchor = pls.top().first;
+    unsigned int target = pls.top().second;
+    unsigned int anchor = pls.top().first;
     pls.pop();
     // find the largest distance
-    int max_id = 0;
+    unsigned int max_id = 0;
     float max_dist = 0;
-    for (int j = target; j< anchor; j++)
+    for (unsigned int j = target; j< anchor; j++)
     {
       float dist = point2lineDist(path[anchor],path[target],path[j]);
       if (dist > max_dist)
@@ -283,7 +291,7 @@ std::vector<CUDA_GEO::pos> Astar::findSplitCoords(const std::vector<CUDA_GEO::co
       }
     }
 
-    if (max_dist*_gridstep > 0.5)
+    if (max_dist*_gridstep > 0.5f)
     {
       pls.push(std::make_pair(max_id, target));
       pls.push(std::make_pair(anchor, max_id));
@@ -300,17 +308,16 @@ std::vector<CUDA_GEO::pos> Astar::findSplitCoords(const std::vector<CUDA_GEO::co
       check = target;
     }
   }
-  std::cout<<std::endl;
   return split_pts;
 }
 
 bool Astar::checkTopo(const std::vector<CUDA_GEO::coord> &path_a,const std::vector<CUDA_GEO::coord> &path_b)
 {
-  int K=20;
-  for (int i=0; i<K; i++)
+  size_t K=20;
+  for (size_t i=0; i<K; i++)
   {
-    int idx_a = static_cast<float>(i)/K*path_a.size();
-    int idx_b = static_cast<float>(i)/K*path_b.size();
+    size_t idx_a = i*path_a.size()/K;
+    size_t idx_b = i*path_b.size()/K;
     std::vector<CUDA_GEO::coord> line = rayCast(path_a[idx_a], path_b[idx_b]);
     for (CUDA_GEO::coord &c : line)
     {

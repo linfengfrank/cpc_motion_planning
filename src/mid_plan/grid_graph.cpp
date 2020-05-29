@@ -10,12 +10,12 @@ GridGraph::GridGraph(int maxX, int maxY, int maxZ):
 {
   // Value map to store the seenDist map received from the edt node
   _val_map = new SeenDist[_w*_h*_d];
-  memset(_val_map, 0, _w*_h*_d*sizeof(SeenDist));
+  memset(_val_map, 0, static_cast<size_t>(_w*_h*_d)*sizeof(SeenDist));
 
   // Identity map used by the Dijkstra's algorithm
   _id_map = new nodeInfo[_w*_h*_d];
   _init_id_map = new nodeInfo[_w*_h*_d];
-  _mapByteSize = _w*_h*_d*sizeof(nodeInfo);
+  _mapByteSize = static_cast<int>(static_cast<size_t>(_w*_h*_d)*sizeof(nodeInfo));
 
   //Assign coords value for all members in the id map
   CUDA_GEO::coord s;
@@ -40,7 +40,6 @@ GridGraph::~GridGraph()
 
 float GridGraph::getCost2Come(const CUDA_GEO::coord & s, const float &default_value) const
 {
-  float g=0.0;
   if (s.x<0 || s.x>=_w || s.y<0 || s.y>=_h || s.z<0 || s.z>=_d)
   {
     return default_value;
@@ -81,7 +80,7 @@ float GridGraph::obsCostAt(CUDA_GEO::coord s, float default_value, bool &occupie
   // Check wheter it is on any obstacle or stays in the height range
   if (dist <= obstacle_dist)
   {
-    cost = 400.0*exp(-dist*1.5);
+    cost = 400.0f*expf(-dist*1.5f);
     occupied = true;
   }
   else
@@ -124,7 +123,7 @@ void GridGraph::copyIdData(const cpc_aux_mapping::grid_map::ConstPtr &msg)
   setMapSpecs(CUDA_GEO::pos(static_cast<float>(msg->x_origin),
                             static_cast<float>(msg->y_origin),
                             static_cast<float>(msg->z_origin)), msg->width);
-  memcpy (_id_map, msg->payload8.data(), sizeof(nodeInfo)*_w*_h*_d);
+  memcpy (_id_map, msg->payload8.data(), sizeof(nodeInfo)*static_cast<size_t>(_w*_h*_d));
 }
 
 void GridGraph::copyEdtData(const cpc_aux_mapping::grid_map::ConstPtr &msg)
@@ -138,7 +137,7 @@ void GridGraph::copyEdtData(const cpc_aux_mapping::grid_map::ConstPtr &msg)
   setMapSpecs(CUDA_GEO::pos(static_cast<float>(msg->x_origin),
                             static_cast<float>(msg->y_origin),
                             static_cast<float>(msg->z_origin)), msg->width);
-  memcpy (_val_map, msg->payload8.data(), sizeof(SeenDist)*_w*_h*_d);
+  memcpy (_val_map, msg->payload8.data(), sizeof(SeenDist)*static_cast<size_t>(_w*_h*_d));
 }
 
 std::vector<CUDA_GEO::coord> GridGraph::rayCast(const CUDA_GEO::coord &p0Index, const CUDA_GEO::coord &p1Index, float limit_radius)
@@ -164,7 +163,7 @@ std::vector<CUDA_GEO::coord> GridGraph::rayCast(const CUDA_GEO::coord &p0Index, 
   }
   // Initialization phase ------------------------
   CUDA_GEO::pos direction = p1 - p0;
-  float length = sqrt(direction.square());
+  float length = sqrtf(direction.square());
   direction = direction / length; //normalize the vector
 
   int    step[3];
@@ -172,11 +171,11 @@ std::vector<CUDA_GEO::coord> GridGraph::rayCast(const CUDA_GEO::coord &p0Index, 
   float tDelta[3];
 
   CUDA_GEO::coord currIndex = p0Index;
-  for (unsigned int i=0; i<3; i++)
+  for (int i=0; i<3; i++)
   {
     // compute step direction
-    if(direction.at(i) > 0.0) step[i] = 1;
-    else if (direction.at(i) < 0.0) step[i] = -1;
+    if(direction.at(i) > 0.0f) step[i] = 1;
+    else if (direction.at(i) < 0.0f) step[i] = -1;
     else step[i] = 0;
 
     // compute tMax, tDelta
@@ -184,9 +183,9 @@ std::vector<CUDA_GEO::coord> GridGraph::rayCast(const CUDA_GEO::coord &p0Index, 
     if(step[i] != 0)
     {
       float voxelBorder = float(currIndex.at(i)) * _gridstep +
-          _origin.const_at(i) + float(step[i]) * _gridstep*0.5;
+          _origin.const_at(i) + float(step[i]) * _gridstep*0.5f;
       tMax[i] = (voxelBorder - p0.const_at(i))/direction.at(i);
-      tDelta[i] = _gridstep / fabs(direction.at(i));
+      tDelta[i] = _gridstep / fabsf(direction.at(i));
     }
     else
     {
@@ -216,7 +215,7 @@ std::vector<CUDA_GEO::coord> GridGraph::rayCast(const CUDA_GEO::coord &p0Index, 
       break;
     }
 
-    unsigned int dim;
+    int dim;
 
     // find minimum tMax;
     if (tMax[0] < tMax[1]){
@@ -239,7 +238,7 @@ std::vector<CUDA_GEO::coord> GridGraph::rayCast(const CUDA_GEO::coord &p0Index, 
 
 int GridGraph::calcTgtHeightCoord(float tgt_height)
 {
-  int coord = floor( (tgt_height - _origin.z) / _gridstep + 0.5);
+  int coord = static_cast<int>(floorf( (tgt_height - _origin.z) / _gridstep + 0.5f));
 
   if (coord < 0)
     coord = 0;
