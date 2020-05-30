@@ -244,7 +244,7 @@ CUDA_GEO::coord Astar::findTargetCoord(const std::vector<CUDA_GEO::coord> &path)
       }
     }
 
-    if (max_dist*_gridstep > 2.5f)
+    if (max_dist*_gridstep > 1.5f)
     {
       target = max_id;
     }

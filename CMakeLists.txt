@@ -68,6 +68,7 @@ endif()
  add_message_files(
    FILES
    ref_data.msg
+   guide_line.msg
  )
 
 ## Generate services in the 'srv' folder
@@ -88,6 +89,7 @@ endif()
 generate_messages(
   DEPENDENCIES
   std_msgs
+  geometry_msgs
 )
 
 ################################################
@@ -192,6 +194,17 @@ target_link_libraries(${PROJECT_NAME}_nf1_plan_node
     ${CUDA_cublas_LIBRARY}
     ${CUDA_LIBRARIES}
     ${catkin_LIBRARIES})
+
+cuda_add_executable(${PROJECT_NAME}_line_plan_node
+    src/mid_plan/grid_graph.cpp
+    src/mid_plan/a_star.cpp
+    src/mid_plan/mid_plan_line_node.cpp)
+
+target_link_libraries(${PROJECT_NAME}_line_plan_node
+    ${CUDA_curand_LIBRARY}
+    ${CUDA_cublas_LIBRARY}
+    ${CUDA_LIBRARIES}
+    ${catkin_LIBRARIES})
 ## Rename C++ executable without prefix
 ## The above recommended prefix causes long target names, the following renames the
 ## target back to the shorter version for ease of user use
@@ -202,6 +215,7 @@ target_link_libraries(${PROJECT_NAME}_nf1_plan_node
 ## same as for the library above
 add_dependencies(${PROJECT_NAME}_node ${${PROJECT_NAME}_EXPORTED_TARGETS} ${catkin_EXPORTED_TARGETS})
 add_dependencies(${PROJECT_NAME}_glb_plan_node ${${PROJECT_NAME}_EXPORTED_TARGETS} ${catkin_EXPORTED_TARGETS})
+add_dependencies(${PROJECT_NAME}_line_plan_node ${${PROJECT_NAME}_EXPORTED_TARGETS} ${catkin_EXPORTED_TARGETS})
 ## Specify libraries to link a library or executable target against
 # target_link_libraries(${PROJECT_NAME}_node
 #   ${catkin_LIBRARIES}

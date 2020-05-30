@@ -10,11 +10,12 @@
 #include <std_msgs/Bool.h>
 #include <algorithm>
 #include "cpc_motion_planning/ref_data.h"
+#include "cpc_motion_planning/guide_line.h"
 #define SHOWPC
 #define USE2D
 typedef pcl::PointCloud<pcl::PointXYZRGB> PointCloud;
 PointCloud::Ptr pclOut (new PointCloud);
-ros::Publisher* point_pub;
+ros::Publisher* line_pub;
 ros::Publisher* pc_pub;
 ros::Publisher* mid_goal_pub;
 Astar *mid_map=nullptr;
@@ -30,7 +31,7 @@ ros::Timer glb_plan_timer;
 cpc_motion_planning::ref_data ref;
 
 //---
-void publishMap(const std::vector<CUDA_GEO::coord> &path, CUDA_GEO::coord local_tgt, bool blue)
+void publishMap(const std::vector<CUDA_GEO::coord> &path, bool blue)
 {
   //publish the point cloud to rviz for checking
   CUDA_GEO::pos p;
@@ -42,15 +43,10 @@ void publishMap(const std::vector<CUDA_GEO::coord> &path, CUDA_GEO::coord local_
     clrP.y = p.y;
     clrP.z = p.z;
     clrP.a = 255;
-    if (path[i] == local_tgt)
-      clrP.r = 255;
+    if (blue)
+      clrP.b = 255;
     else
-    {
-      if (blue)
-        clrP.b = 255;
-      else
-        clrP.g = 255;
-    }
+      clrP.g = 255;
 
     pclOut->points.push_back (clrP);
   }
@@ -189,7 +185,7 @@ void glb_plan(const ros::TimerEvent&)
   glb_tgt.z = tgt_height_coord;
   glb_tgt = mid_map->rayCast(start,glb_tgt,8.0f).back();
 
-  CUDA_GEO::coord curr_tgt;
+
 
   // Do the planning
   // Initialize the list
@@ -264,19 +260,18 @@ void glb_plan(const ros::TimerEvent&)
       path_adopt = path_list[2];
     }
   }
-  curr_tgt = mid_map->findTargetCoord(path_adopt);
-  curr_target_pos = mid_map->coord2pos(curr_tgt);
+
 
 #ifdef SHOWPC
   if (same_topo)
   {
-    publishMap(path_list[0],curr_tgt,false);
-    publishMap(path_list[2],curr_tgt,false);
+    publishMap(path_list[0],false);
+    publishMap(path_list[2],false);
   }
   else
   {
-    publishMap(path_list[0],curr_tgt,!np);
-    publishMap(path_list[2],curr_tgt,np);
+    publishMap(path_list[0],!np);
+    publishMap(path_list[2],np);
   }
 
 //  publishMap(path_adopt,curr_tgt,false);
@@ -292,22 +287,21 @@ void glb_plan(const ros::TimerEvent&)
   clrP.a = 255;
   clrP.r = 255;
   pclOut->points.push_back (clrP);
-
-  clrP.x = curr_target_pos.x;
-  clrP.y = curr_target_pos.y;
-  clrP.z = curr_target_pos.z;
-  clrP.a = 255;
-  clrP.r = 255;
-  clrP.g = 255;
-  pclOut->points.push_back (clrP);
   mid_goal_pub->publish(pclOut);
-  pclOut->clear();
 #endif
-  geometry_msgs::PoseStamped tgt_msg;
-  tgt_msg.pose.position.x = curr_target_pos.x;
-  tgt_msg.pose.position.y = curr_target_pos.y;
-  tgt_msg.pose.position.z = curr_target_pos.z;
-  point_pub->publish(tgt_msg);
+
+  std::vector<CUDA_GEO::pos> output_path = mid_map->findSplitCoords(path_adopt);
+  cpc_motion_planning::guide_line line_msg;
+  geometry_msgs::Point line_pnt;
+
+  for (CUDA_GEO::pos &path_pnt : output_path)
+  {
+    line_pnt.x = path_pnt.x;
+    line_pnt.y = path_pnt.y;
+    line_pnt.z = path_pnt.z;
+    line_msg.pts.push_back(line_pnt);
+  }
+  line_pub->publish(line_msg);
 
   if (stucked)
     stucked = false;
@@ -330,7 +324,7 @@ int main(int argc, char **argv)
 {
   ros::init(argc, argv, "mid_layer_node");
   pc_pub = new ros::Publisher;
-  point_pub = new ros::Publisher;
+  line_pub = new ros::Publisher;
   mid_goal_pub = new ros::Publisher;
   ros::NodeHandle nh;
   ros::Subscriber map_sub = nh.subscribe("/edt_map", 1, &mapCallback);
@@ -340,7 +334,7 @@ int main(int argc, char **argv)
 
   *pc_pub = nh.advertise<PointCloud> ("/path", 1);
   *mid_goal_pub = nh.advertise<PointCloud> ("/mid_goal", 1);
-  *point_pub = nh.advertise<geometry_msgs::PoseStamped>("/mid_layer/goal",1);
+  *line_pub = nh.advertise<cpc_motion_planning::guide_line>("/mid_layer/goal",1);
 
   pclOut->header.frame_id = "/world";
   nh.param<float>("/nndp_cpp/fly_height",FLY_HEIGHT,2.5);
@@ -351,7 +345,7 @@ int main(int argc, char **argv)
   ros::spin();
 
   delete pc_pub;
-  delete point_pub;
+  delete line_pub;
 
   if (mid_map)
   {
