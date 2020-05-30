@@ -11,7 +11,7 @@
 #include <algorithm>
 #include "cpc_motion_planning/ref_data.h"
 #define SHOWPC
-#define USE2D
+//#define USE2D
 typedef pcl::PointCloud<pcl::PointXYZRGB> PointCloud;
 PointCloud::Ptr pclOut (new PointCloud);
 ros::Publisher* point_pub;
@@ -237,12 +237,12 @@ void glb_plan(const ros::TimerEvent&)
     cost_list[1] = cascadePath(path_list[1],path_list[2],glb_tgt);
   }
 
-  bool np = false;
+  unsigned int selected_case = 0;
   bool same_topo = false;
   if(!received_ref)
   {
     path_adopt = path_list[0];
-    np = true;
+    selected_case = 0;
   }
   else
   {
@@ -255,16 +255,27 @@ void glb_plan(const ros::TimerEvent&)
 
     if (cost_list[1] > cost_list[0] + damp_dist)
     {
-      np = true;
+      selected_case = 0;
       path_adopt = path_list[0];
     }
     else
     {
-      np = false;
+      selected_case = 2;
       path_adopt = path_list[2];
     }
   }
-  curr_tgt = mid_map->findTargetCoord(path_adopt);
+
+  unsigned int tgt_idx = 0;
+  if(selected_case == 0)
+  {
+    tgt_idx = max(mid_map->findTargetCoord(path_adopt),mid_map->findTargetCoordLos(path_adopt,start,0));
+  }
+  else
+  {
+    tgt_idx = max(mid_map->findTargetCoord(path_adopt),mid_map->findTargetCoordLos(path_adopt,start,path_list[1].size()));
+  }
+
+  curr_tgt = path_adopt[tgt_idx];
   curr_target_pos = mid_map->coord2pos(curr_tgt);
 
 #ifdef SHOWPC
@@ -275,8 +286,8 @@ void glb_plan(const ros::TimerEvent&)
   }
   else
   {
-    publishMap(path_list[0],curr_tgt,!np);
-    publishMap(path_list[2],curr_tgt,np);
+    publishMap(path_list[0],curr_tgt,selected_case);
+    publishMap(path_list[2],curr_tgt,!selected_case);
   }
 
 //  publishMap(path_adopt,curr_tgt,false);
@@ -343,7 +354,7 @@ int main(int argc, char **argv)
   *point_pub = nh.advertise<geometry_msgs::PoseStamped>("/mid_layer/goal",1);
 
   pclOut->header.frame_id = "/world";
-  nh.param<float>("/nndp_cpp/fly_height",FLY_HEIGHT,2.5);
+  nh.param<float>("/nndp_cpp/fly_height",FLY_HEIGHT,2.0);
 
 
   glb_plan_timer = nh.createTimer(ros::Duration(0.333), glb_plan);

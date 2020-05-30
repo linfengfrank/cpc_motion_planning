@@ -220,11 +220,11 @@ std::vector<CUDA_GEO::coord> Astar::AStar3D(const CUDA_GEO::coord &goal, const C
   return output;
 }
 
-CUDA_GEO::coord Astar::findTargetCoord(const std::vector<CUDA_GEO::coord> &path)
+unsigned int Astar::findTargetCoord(const std::vector<CUDA_GEO::coord> &path)
 {
   // If there is no path, return the center point
   if (path.size() == 0)
-    return CUDA_GEO::coord(_w/2,_h/2,_d/2);
+    return 0;
 
   unsigned int anchor = static_cast<unsigned int>(path.size() - 1);
   unsigned int target = 0;
@@ -244,7 +244,7 @@ CUDA_GEO::coord Astar::findTargetCoord(const std::vector<CUDA_GEO::coord> &path)
       }
     }
 
-    if (max_dist*_gridstep > 1.5f)
+    if (max_dist*_gridstep > 3.4f)
     {
       target = max_id;
     }
@@ -254,7 +254,26 @@ CUDA_GEO::coord Astar::findTargetCoord(const std::vector<CUDA_GEO::coord> &path)
     }
   }
 
-  return path[target];
+  return target;
+}
+
+unsigned int Astar::findTargetCoordLos(std::vector<CUDA_GEO::coord> path, CUDA_GEO::coord start, unsigned int start_idx)
+{
+  // If there is no path, return the center point
+  if (path.size() == 0)
+    return 0;
+
+  std::reverse(path.begin(),path.end());
+  unsigned int target = 0;
+  for (unsigned int i=start_idx; i<path.size(); i++)
+  {
+    if(isLOS(start,path[i],0.1f))
+      target = i;
+    else
+      break;
+  }
+
+  return path.size()-target-1;
 }
 
 std::vector<CUDA_GEO::pos> Astar::findSplitCoords(const std::vector<CUDA_GEO::coord> &path)
@@ -321,7 +340,7 @@ bool Astar::checkTopo(const std::vector<CUDA_GEO::coord> &path_a,const std::vect
     std::vector<CUDA_GEO::coord> line = rayCast(path_a[idx_a], path_b[idx_b]);
     for (CUDA_GEO::coord &c : line)
     {
-      if(isOccupied(c,1.5f))
+      if(isOccupied(c,0.5f))
         return false;
     }
   }

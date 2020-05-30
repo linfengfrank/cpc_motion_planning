@@ -69,17 +69,17 @@ protected:
   inline float dist(const CUDA_GEO::coord & c1, const CUDA_GEO::coord & c2)
   {
     CUDA_GEO::coord c = c1-c2;
-    return sqrt(static_cast<float>(c.square()));
+    return sqrtf(static_cast<float>(c.square()));
   }
 
 public:
-  bool isLOS(const CUDA_GEO::coord &p0Index, const CUDA_GEO::coord &p1Index)
+  bool isLOS(const CUDA_GEO::coord &p0Index, const CUDA_GEO::coord &p1Index, float obstacle_dist = 1.0)
   {
     bool los = true;
     bool occupied = false;
     for (CUDA_GEO::coord s : rayCast(p0Index, p1Index))
     {
-      obsCostAt(s, 0, occupied);
+      obsCostAt(s, 0, occupied, nullptr,nullptr, obstacle_dist);
       if (occupied)
       {
         los = false;

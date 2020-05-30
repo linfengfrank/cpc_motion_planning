@@ -12,7 +12,8 @@ public:
   std::vector<CUDA_GEO::coord> AStar3D(const CUDA_GEO::coord &goal, const CUDA_GEO::coord &start, bool reached_free_zone, float &length,
                                        const CUDA_GEO::coord *crd_shift = nullptr, SeenDist *last_val_map = nullptr);
 
-  CUDA_GEO::coord findTargetCoord(const std::vector<CUDA_GEO::coord> &path);
+  unsigned int findTargetCoord(const std::vector<CUDA_GEO::coord> &path);
+  unsigned int findTargetCoordLos(std::vector<CUDA_GEO::coord> path, CUDA_GEO::coord start, unsigned int start_idx);
   std::vector<CUDA_GEO::pos> findSplitCoords(const std::vector<CUDA_GEO::coord> &path);
   bool checkTopo(const std::vector<CUDA_GEO::coord> &path_a,const std::vector<CUDA_GEO::coord> &path_b);
 
