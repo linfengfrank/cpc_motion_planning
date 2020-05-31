@@ -11,7 +11,7 @@
 #include <algorithm>
 #include "cpc_motion_planning/ref_data.h"
 #define SHOWPC
-//#define USE2D
+#define USE2D
 typedef pcl::PointCloud<pcl::PointXYZRGB> PointCloud;
 PointCloud::Ptr pclOut (new PointCloud);
 ros::Publisher* point_pub;
@@ -197,17 +197,19 @@ void glb_plan(const ros::TimerEvent&)
   std::vector<float> cost_list(2);
   std::vector<CUDA_GEO::coord> path_adopt;
 
-  // Plan A: the new plan
-  cost_list[0]=planPath(start,glb_tgt,path_list[0]);
-
-  // Plan B: modify based on current trajectory
-  if (received_ref)
+  if (!received_ref)
   {
+    // Plan A: the new plan
+    cost_list[0]=planPath(start,glb_tgt,path_list[0]);
+  }
+  else
+  {
+    // Plan B: modify based on current trajectory
     float ini_v_x = ref.data[3];
     float ini_v_y = ref.data[4];
     float ini_v_z = ref.data[5];
     float speed = sqrtf(ini_v_x*ini_v_x + ini_v_y*ini_v_y + ini_v_z*ini_v_z);
-    int max_i = max(speed/1.0/0.05,40);
+    int max_i = max(speed/0.8f/0.05f,20);
     //std::cout<<"----"<<max_i<<"----"<<ref.cols<<std::endl;
     for (int i=0; i<ref.cols; i++)
     {
@@ -238,7 +240,6 @@ void glb_plan(const ros::TimerEvent&)
   }
 
   unsigned int selected_case = 0;
-  bool same_topo = false;
   if(!received_ref)
   {
     path_adopt = path_list[0];
@@ -246,79 +247,56 @@ void glb_plan(const ros::TimerEvent&)
   }
   else
   {
-    same_topo = mid_map->checkTopo(path_list[0],path_list[2]);
-    float damp_dist= 0.0;
-    if (same_topo)
-      damp_dist = 1.0;
-    else
-      damp_dist = 100000.0;
-
-    if (cost_list[1] > cost_list[0] + damp_dist)
-    {
-      selected_case = 0;
-      path_adopt = path_list[0];
-    }
-    else
-    {
-      selected_case = 2;
-      path_adopt = path_list[2];
-    }
+    selected_case = 2;
+    path_adopt = path_list[2];
   }
 
   unsigned int tgt_idx = 0;
   if(selected_case == 0)
   {
-    tgt_idx = max(mid_map->findTargetCoord(path_adopt),mid_map->findTargetCoordLos(path_adopt,start,0));
+    tgt_idx = mid_map->findTargetCoordLos(path_adopt,start,0);
   }
   else
   {
-    tgt_idx = max(mid_map->findTargetCoord(path_adopt),mid_map->findTargetCoordLos(path_adopt,start,path_list[1].size()));
+    tgt_idx = mid_map->findTargetCoordLos(path_adopt,start,path_list[1].size());
   }
 
-  curr_tgt = path_adopt[tgt_idx];
-  curr_target_pos = mid_map->coord2pos(curr_tgt);
+  //if (path_adopt.front() == glb_tgt)
+  {
+    curr_tgt = path_adopt[tgt_idx];
+    curr_target_pos = mid_map->coord2pos(curr_tgt);
 
 #ifdef SHOWPC
-  if (same_topo)
-  {
-    publishMap(path_list[0],curr_tgt,false);
-    publishMap(path_list[2],curr_tgt,false);
-  }
-  else
-  {
-    publishMap(path_list[0],curr_tgt,selected_case);
-    publishMap(path_list[2],curr_tgt,!selected_case);
-  }
+    publishMap(path_adopt,curr_tgt,false);
+    pcl_conversions::toPCL(ros::Time::now(), pclOut->header.stamp);
+    pc_pub->publish (pclOut);
+    pclOut->clear();
 
-//  publishMap(path_adopt,curr_tgt,false);
-  pcl_conversions::toPCL(ros::Time::now(), pclOut->header.stamp);
-  pc_pub->publish (pclOut);
-  pclOut->clear();
+    CUDA_GEO::pos mid_tgt_pos = mid_map->coord2pos(glb_tgt);
+    pcl::PointXYZRGB clrP;
+    clrP.x = mid_tgt_pos.x;
+    clrP.y = mid_tgt_pos.y;
+    clrP.z = mid_tgt_pos.z;
+    clrP.a = 255;
+    clrP.r = 255;
+    pclOut->points.push_back (clrP);
 
-  CUDA_GEO::pos mid_tgt_pos = mid_map->coord2pos(glb_tgt);
-  pcl::PointXYZRGB clrP;
-  clrP.x = mid_tgt_pos.x;
-  clrP.y = mid_tgt_pos.y;
-  clrP.z = mid_tgt_pos.z;
-  clrP.a = 255;
-  clrP.r = 255;
-  pclOut->points.push_back (clrP);
-
-  clrP.x = curr_target_pos.x;
-  clrP.y = curr_target_pos.y;
-  clrP.z = curr_target_pos.z;
-  clrP.a = 255;
-  clrP.r = 255;
-  clrP.g = 255;
-  pclOut->points.push_back (clrP);
-  mid_goal_pub->publish(pclOut);
-  pclOut->clear();
+    clrP.x = curr_target_pos.x;
+    clrP.y = curr_target_pos.y;
+    clrP.z = curr_target_pos.z;
+    clrP.a = 255;
+    clrP.r = 255;
+    clrP.g = 255;
+    pclOut->points.push_back (clrP);
+    mid_goal_pub->publish(pclOut);
+    pclOut->clear();
 #endif
-  geometry_msgs::PoseStamped tgt_msg;
-  tgt_msg.pose.position.x = curr_target_pos.x;
-  tgt_msg.pose.position.y = curr_target_pos.y;
-  tgt_msg.pose.position.z = curr_target_pos.z;
-  point_pub->publish(tgt_msg);
+    geometry_msgs::PoseStamped tgt_msg;
+    tgt_msg.pose.position.x = curr_target_pos.x;
+    tgt_msg.pose.position.y = curr_target_pos.y;
+    tgt_msg.pose.position.z = curr_target_pos.z;
+    point_pub->publish(tgt_msg);
+  }
 
   if (stucked)
     stucked = false;
@@ -357,7 +335,7 @@ int main(int argc, char **argv)
   nh.param<float>("/nndp_cpp/fly_height",FLY_HEIGHT,2.0);
 
 
-  glb_plan_timer = nh.createTimer(ros::Duration(0.333), glb_plan);
+  glb_plan_timer = nh.createTimer(ros::Duration(0.5), glb_plan);
 
   ros::spin();
 
