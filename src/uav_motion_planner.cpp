@@ -42,10 +42,10 @@ UAVMotionPlanner::UAVMotionPlanner():
   m_ref_start_idx = 0;
 
   m_yaw_target = 0;
-  m_yaw_limit.vMax = 1;
-  m_yaw_limit.vMin = -1;
-  m_yaw_limit.aMax = 1;
-  m_yaw_limit.aMin = -1;
+  m_yaw_limit.vMax = 2;
+  m_yaw_limit.vMin = -2;
+  m_yaw_limit.aMax = 2;
+  m_yaw_limit.aMin = -2;
   m_yaw_limit.jMax = 2;
   m_yaw_limit.jMin = -2;
 }

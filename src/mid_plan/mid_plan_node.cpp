@@ -335,7 +335,7 @@ int main(int argc, char **argv)
   nh.param<float>("/nndp_cpp/fly_height",FLY_HEIGHT,2.0);
 
 
-  glb_plan_timer = nh.createTimer(ros::Duration(0.5), glb_plan);
+  glb_plan_timer = nh.createTimer(ros::Duration(1.4), glb_plan);
 
   ros::spin();
 
