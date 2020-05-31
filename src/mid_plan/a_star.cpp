@@ -1,6 +1,7 @@
 #include "mid_plan/a_star.h"
 #include <ros/console.h>
 #include <stack>
+#include <chrono>
 Astar::Astar(int maxX, int maxY, int maxZ):
   GridGraph(maxX,maxY,maxZ)
 {
@@ -143,6 +144,7 @@ std::vector<CUDA_GEO::coord> Astar::AStar3D(const CUDA_GEO::coord &goal, const C
     exit(-1);
   }
 
+  auto start_time = std::chrono::steady_clock::now();
   while (_PQ.size()>0)
   {
     ni=_PQ.pop();
@@ -192,6 +194,10 @@ std::vector<CUDA_GEO::coord> Astar::AStar3D(const CUDA_GEO::coord &goal, const C
         }
       }
     }
+    auto end_time = std::chrono::steady_clock::now();
+    long passed_time = std::chrono::duration_cast<std::chrono::milliseconds>(end_time - start_time).count();
+    if(passed_time > 15)
+      break;
   }
 
   //retrieve the path
@@ -340,7 +346,7 @@ bool Astar::checkTopo(const std::vector<CUDA_GEO::coord> &path_a,const std::vect
     std::vector<CUDA_GEO::coord> line = rayCast(path_a[idx_a], path_b[idx_b]);
     for (CUDA_GEO::coord &c : line)
     {
-      if(isOccupied(c,0.5f))
+      if(isOccupied(c,1.0f))
         return false;
     }
   }
