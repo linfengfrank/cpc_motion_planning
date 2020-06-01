@@ -11,14 +11,17 @@
 #include <algorithm>
 #include "cpc_motion_planning/ref_data.h"
 #include <mid_plan/dijkstra.h>
+#include <mid_plan/a_star.h>
 #define SHOWPC
 
 typedef pcl::PointCloud<pcl::PointXYZRGB> PointCloud;
 PointCloud::Ptr pclOut (new PointCloud);
-ros::Publisher* point_pub;
+ros::Publisher* nf1_pub;
 ros::Publisher* pc_pub;
 ros::Publisher* mid_goal_pub;
 Dijkstra *mid_map=nullptr;
+Astar *a_map=nullptr;
+
 float FLY_HEIGHT;
 bool first_run = true;
 CUDA_GEO::pos curr_target_pos;
@@ -118,9 +121,9 @@ void copy_map_to_msg(cpc_aux_mapping::grid_map &msg, GridGraph* map,int tgt_heig
   CUDA_GEO::coord c;
   float *tmp = static_cast<float*>(static_cast<void*>(msg.payload8.data()));
   int i=0;
-  for (int x=0;x<map->getMaxX();x++)
+  for (int y=0;y<map->getMaxY();y++)
   {
-    for (int y=0;y<map->getMaxY();y++)
+    for (int x=0;x<map->getMaxX();x++)
     {
       //for (int z=0;z<map->getMaxZ();z++)
       {
@@ -142,8 +145,11 @@ void mapCallback(const cpc_aux_mapping::grid_map::ConstPtr& msg)
   {
     mid_map = new Dijkstra(msg->x_size,msg->y_size,msg->z_size);
     setup_map_msg(nf1_map_msg,mid_map,true);
+
+    a_map = new Astar(msg->x_size,msg->y_size,msg->z_size);
   }
   mid_map->copyEdtData(msg);
+  a_map->copyEdtData(msg);
 }
 //---
 void goalCallback(const geometry_msgs::PoseStamped::ConstPtr &msg)
@@ -171,10 +177,14 @@ void glb_plan(const ros::TimerEvent&)
   glb_tgt.z = tgt_height_coord;
   glb_tgt = mid_map->rayCast(start,glb_tgt).back();
 
-  mid_map->dijkstra2D(glb_tgt);
+  float length = 0.0f;
+  std::vector<CUDA_GEO::coord> path = a_map->AStar2D(glb_tgt,start,false,length);
+
+  mid_map->dijkstra2D(path[0]);
 
   setup_map_msg(nf1_map_msg,mid_map,false);
   copy_map_to_msg(nf1_map_msg,mid_map,tgt_height_coord);
+  nf1_pub->publish(nf1_map_msg);
 #ifdef SHOWPC
   publishMap(tgt_height_coord);
 #endif
@@ -191,7 +201,7 @@ int main(int argc, char **argv)
 {
   ros::init(argc, argv, "mid_layer_node");
   pc_pub = new ros::Publisher;
-  point_pub = new ros::Publisher;
+  nf1_pub = new ros::Publisher;
   mid_goal_pub = new ros::Publisher;
   ros::NodeHandle nh;
   ros::Subscriber map_sub = nh.subscribe("/edt_map", 1, &mapCallback);
@@ -200,7 +210,7 @@ int main(int argc, char **argv)
 
   *pc_pub = nh.advertise<PointCloud> ("/nf1", 1);
   *mid_goal_pub = nh.advertise<PointCloud> ("/mid_goal", 1);
-  *point_pub = nh.advertise<geometry_msgs::PoseStamped>("/mid_layer/goal",1);
+  *nf1_pub = nh.advertise<cpc_aux_mapping::grid_map>("/mid_layer/goal",1);
 
   pclOut->header.frame_id = "/world";
   nh.param<float>("/nndp_cpp/fly_height",FLY_HEIGHT,2.0);
@@ -211,11 +221,12 @@ int main(int argc, char **argv)
   ros::spin();
 
   delete pc_pub;
-  delete point_pub;
+  delete nf1_pub;
 
   if (mid_map)
   {
     delete mid_map;
+    delete a_map;
   }
   return 0;
 }

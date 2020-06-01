@@ -1,46 +1,45 @@
-#ifndef UAV_SINGLE_TARGET_EVLUATOR_H
-#define UAV_SINGLE_TARGET_EVLUATOR_H
+#ifndef UAV_NF1_EVLUATOR_H
+#define UAV_NF1_EVLUATOR_H
 #include <cpc_motion_planning/uav/uav_model.h>
 #include <cpc_motion_planning/dynamic_programming.cuh>
+#include <cuda_geometry/cuda_nf1map.cuh>
 #include <cuda_geometry/cuda_edtmap.cuh>
 namespace UAV
 {
-class SingleTargetEvaluator
+class NF1Evaluator
 {
 public:
 
   struct Target
   {
-    UAVModel::State s;
     bool oa;
   };
 
-  SingleTargetEvaluator()
+  NF1Evaluator():m_oa(false)
   {
 
   }
 
-  ~SingleTargetEvaluator()
+  ~NF1Evaluator()
   {
 
-  }
-
-  __host__ __device__
-  void setTarget(const Target &goal)
-  {
-    m_goal = goal;
   }
 
   __host__ __device__
   float process_cost(const UAVModel::State &s, const EDTMap &map) const
   {
     float cost = 0;
-    float3 dist_err = s.p - m_goal.s.p;
-    cost += 0.5f*sqrtf(dist_err.x*dist_err.x + dist_err.y*dist_err.y + 3*dist_err.z*dist_err.z);
-    cost += 0.1f*sqrtf(s.v.x*s.v.x + s.v.y*s.v.y + s.v.z*s.v.z);
+    float dist_err = s.p.z - 2.0f;
+    cost += 0.5f*3.0f*sqrtf(dist_err*dist_err);
     cost += 0.1f*sqrtf(s.a.x*s.a.x + s.a.y*s.a.y + s.a.z*s.a.z);
 
-    if (m_goal.oa)
+   CUDA_GEO::coord c = m_nf1_map.pos2coord(s.p);
+#ifdef  __CUDA_ARCH__
+    cost += 0.5f*m_nf1_map.nf1_const_at(c.x,c.y,0);
+#endif
+        //cost += 0.5f*1.0f*sqrtf(s.p.x*s.p.x + s.p.y+s.p.y);
+
+    if (m_oa)
     {
       int ix = floorf( (s.p.x - map.m_origin.x) / map.m_grid_step + 0.5);
       int iy = floorf( (s.p.y - map.m_origin.y) / map.m_grid_step + 0.5);
@@ -62,7 +61,7 @@ public:
         cost += 100;
 
       if (!map.edt_const_at(ix,iy,iz).s)
-          cost += 70;
+          cost += 100;
   #endif
     }
 
@@ -73,11 +72,18 @@ public:
   float final_cost(const UAVModel::State &s, const EDTMap &map) const
   {
     float cost = 0;
-    float3 dist_err = s.p - m_goal.s.p;
-    cost += 1.0f*sqrtf(dist_err.x*dist_err.x + dist_err.y*dist_err.y + 3*dist_err.z*dist_err.z);
-    //cost += 0.1f*sqrtf(s.a.x*s.a.x + s.a.y*s.a.y + s.a.z*s.a.z);
+    float dist_err = s.p.z - 2.0f;
+    cost += 0.5f*3.0f*sqrtf(dist_err*dist_err);
+    cost += 0.1f*sqrtf(s.a.x*s.a.x + s.a.y*s.a.y + s.a.z*s.a.z);
 
-    if (m_goal.oa)
+    CUDA_GEO::coord c = m_nf1_map.pos2coord(s.p);
+#ifdef  __CUDA_ARCH__
+    cost += 0.5f*m_nf1_map.nf1_const_at(c.x,c.y,0);
+#endif
+    //cost += 0.5f*1.0f*sqrtf(s.p.x*s.p.x + s.p.y+s.p.y);
+
+
+    if (m_oa)
     {
       int ix = floorf( (s.p.x - map.m_origin.x) / map.m_grid_step + 0.5);
       int iy = floorf( (s.p.y - map.m_origin.y) / map.m_grid_step + 0.5);
@@ -99,15 +105,14 @@ public:
         cost += 100;
 
       if (!map.edt_const_at(ix,iy,iz).s)
-          cost += 70;
+          cost += 100;
   #endif
     }
 
     return  cost;
   }
-
-  Target m_goal;
+  bool m_oa;
+  NF1Map m_nf1_map;
 };
 }
-
-#endif // UAV_SINGLE_TARGET_EVLUATOR_H
+#endif // UAV_NF1_EVLUATOR_H

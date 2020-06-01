@@ -165,6 +165,7 @@ target_link_libraries(dynamic_programming
 cuda_add_executable(${PROJECT_NAME}_node
     src/motion_planning_node.cpp
     src/uav_motion_planner.cpp
+    src/uav_nf1_motion_planner.cpp
     src/kernel/pso_kernels.cu)
 
 target_link_libraries(${PROJECT_NAME}_node
@@ -187,6 +188,7 @@ target_link_libraries(${PROJECT_NAME}_glb_plan_node
 cuda_add_executable(${PROJECT_NAME}_nf1_plan_node
     src/mid_plan/grid_graph.cpp
     src/mid_plan/dijkstra.cpp
+    src/mid_plan/a_star.cpp
     src/mid_plan/mid_plan_nf1_node.cpp)
 
 target_link_libraries(${PROJECT_NAME}_nf1_plan_node

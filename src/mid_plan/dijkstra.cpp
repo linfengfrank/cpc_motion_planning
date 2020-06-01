@@ -1,4 +1,5 @@
 #include "mid_plan/dijkstra.h"
+#include <ros/console.h>
 
 Dijkstra::Dijkstra(int maxX, int maxY, int maxZ):
   GridGraph(maxX,maxY,maxZ)
@@ -112,3 +113,5 @@ void Dijkstra::dijkstra3D(CUDA_GEO::coord glb_tgt)
     }
   }
 }
+
+
