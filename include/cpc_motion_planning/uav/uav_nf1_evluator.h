@@ -107,11 +107,24 @@ public:
       if (!map.edt_const_at(ix,iy,iz).s)
           cost += 100;
   #endif
+
+      float3 diff = s.p - m_curr_pos;
+      diff.z = 0;
+      if (sqrtf(diff.x*diff.x + diff.y*diff.y) > 0.3f)
+      {
+          float theta = atan2f(diff.y,diff.x);
+          theta -= m_curr_yaw;
+          theta = theta - floorf((theta + M_PI) / (2 * M_PI)) * 2 * M_PI;
+          if (fabsf(theta) > M_PI*0.25f)
+              cost += 100;
+      }
     }
 
     return  cost;
   }
   bool m_oa;
+  float m_curr_yaw;
+  float3 m_curr_pos;
   NF1Map m_nf1_map;
 };
 }

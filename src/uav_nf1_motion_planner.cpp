@@ -5,7 +5,7 @@
 
 template <typename T> int sgn(T val)
 {
-    return (T(0) < val) - (val < T(0));
+  return (T(0) < val) - (val < T(0));
 }
 
 UAVNF1MotionPlanner::UAVNF1MotionPlanner():
@@ -73,29 +73,51 @@ void UAVNF1MotionPlanner::plan_call_back(const ros::TimerEvent&)
 
   UAV::UAVModel::State s = m_curr_ref;
 
-//  float3 diff = m_goal.s.p - s.p;
-//  diff.z = 0;
-//  double dist = sqrt(dot(diff,diff));
-//  if (dist > 0.5)
-//  {
-//      m_yaw_target = atan2(diff.y,diff.x);
-//      m_yaw_target = m_yaw_target - m_yaw_state.p;
-//      m_yaw_target = m_yaw_target - floor((m_yaw_target + M_PI) / (2 * M_PI)) * 2 * M_PI;
-//      m_yaw_target = m_yaw_target + m_yaw_state.p;
-//  }
-
   m_pso_planner->m_model.set_ini_state(s);
   m_ref_gen_planner->m_model.set_ini_state(s);
-
+  m_pso_planner->m_eva.m_curr_yaw = m_yaw_state.p;
+  m_pso_planner->m_eva.m_curr_pos = s.p;
   auto start = std::chrono::steady_clock::now();
-  JLT::TPBVPParam yaw_param;
-  m_yaw_planner.solveTPBVP(0,0,m_yaw_state,m_yaw_limit,yaw_param);
+
   m_pso_planner->plan(*m_edt_map);
 
+  float3 diff = m_pso_planner->result.best_loc[0] - s.p;
+  diff.z = 0;
+  double dist = sqrt(dot(diff,diff));
+  if (dist > 0.5)
+  {
+    m_yaw_target = atan2(diff.y,diff.x);
+    m_yaw_target = m_yaw_target - m_yaw_state.p;
+    m_yaw_target = m_yaw_target - floor((m_yaw_target + M_PI) / (2 * M_PI)) * 2 * M_PI;
+    m_yaw_target = m_yaw_target + m_yaw_state.p;
+  }
+  else
+  {
+    static int stuck_ctt = 0;
+    if ( m_pso_planner->m_eva.m_oa && dot(s.v,s.v)<0.2f && dot(s.a,s.a)<0.2f && m_pso_planner->result.best_cost>10)
+    {
+      stuck_ctt++;
+      if (stuck_ctt >=5)
+      {
+        m_yaw_target = m_yaw_state.p + M_PI;
+        m_yaw_target = m_yaw_target - m_yaw_state.p;
+        m_yaw_target = m_yaw_target - floor((m_yaw_target + M_PI) / (2 * M_PI)) * 2 * M_PI;
+        m_yaw_target = m_yaw_target + m_yaw_state.p;
+        std::cout<<"Rotation "<<stuck_ctt<<std::endl;
+        stuck_ctt = 0;
+      }
+    }
+    else
+    {
+      stuck_ctt = 0;
+    }
+  }
+  JLT::TPBVPParam yaw_param;
+  m_yaw_planner.solveTPBVP(m_yaw_target,0,m_yaw_state,m_yaw_limit,yaw_param);
   auto end = std::chrono::steady_clock::now();
-  std::cout << "Consumed: "
-            << std::chrono::duration_cast<std::chrono::milliseconds>(end - start).count()
-            << "ms, cost: " << m_pso_planner->result.best_cost<<std::endl;
+  //  std::cout << "Consumed: "
+  //            << std::chrono::duration_cast<std::chrono::milliseconds>(end - start).count()
+  //            << "ms, cost: " << m_pso_planner->result.best_cost<<std::endl;
 
 
 
@@ -108,7 +130,7 @@ void UAVNF1MotionPlanner::plan_call_back(const ros::TimerEvent&)
 
 
 
-//-----------------------------------------------------------------------------------------------------------------
+  //-----------------------------------------------------------------------------------------------------------------
   //PSO::State cmd_state;
   std::vector<UAV::UAVModel::State> traj = m_ref_gen_planner->generate_trajectory(m_pso_planner->result.best_loc);
   int cols = 0;
@@ -128,10 +150,10 @@ void UAVNF1MotionPlanner::plan_call_back(const ros::TimerEvent&)
     m_traj_pnt_cld->points.push_back(clrP);
 
 
-//    clrP.x = m_pso_planner->result.best_loc[i].x;
-//    clrP.y = m_pso_planner->result.best_loc[i].y;
-//    clrP.z = m_pso_planner->result.best_loc[i].z;
-//    m_ctrl_pnt_cld->points.push_back(clrP);
+    //    clrP.x = m_pso_planner->result.best_loc[i].x;
+    //    clrP.y = m_pso_planner->result.best_loc[i].y;
+    //    clrP.z = m_pso_planner->result.best_loc[i].z;
+    //    m_ctrl_pnt_cld->points.push_back(clrP);
 
     ref_counter++;
     //std::cout<<"b: "<<ref_counter<<std::endl;
@@ -230,17 +252,17 @@ void UAVNF1MotionPlanner::goal_call_back(const cpc_aux_mapping::grid_map::ConstP
   }
   m_goal_received = true;
 
-//  UAV::UAVModel::State s = m_curr_ref;
+  //  UAV::UAVModel::State s = m_curr_ref;
 
-//  float3 diff = m_goal.s.p - s.p;
-//  diff.z = 0;
-//  float dist = sqrtf(dot(diff,diff));
-//  if (dist > 0.5f)
-//  {
-//      float theta = atan2f(diff.y,diff.x);
-//      m_pso_planner->m_dp_ctrl.m_theta = theta;
-//      m_ref_gen_planner->m_dp_ctrl.m_theta = theta;
-//  }
+  //  float3 diff = m_goal.s.p - s.p;
+  //  diff.z = 0;
+  //  float dist = sqrtf(dot(diff,diff));
+  //  if (dist > 0.5f)
+  //  {
+  //      float theta = atan2f(diff.y,diff.x);
+  //      m_pso_planner->m_dp_ctrl.m_theta = theta;
+  //      m_ref_gen_planner->m_dp_ctrl.m_theta = theta;
+  //  }
 
   //  double phi,theta,psi;
 

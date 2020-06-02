@@ -190,9 +190,9 @@ void glb_plan(const ros::TimerEvent&)
 #endif
 
   auto end_time = std::chrono::steady_clock::now();
-      std::cout << "Middle planning time: "
-                << std::chrono::duration_cast<std::chrono::milliseconds>(end_time - start_time).count()
-                << " ms" << std::endl;
+//      std::cout << "Middle planning time: "
+//                << std::chrono::duration_cast<std::chrono::milliseconds>(end_time - start_time).count()
+//                << " ms" << std::endl;
 
   first_run = false;
 }
