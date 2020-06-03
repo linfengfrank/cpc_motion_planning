@@ -175,7 +175,7 @@ target_link_libraries(${PROJECT_NAME}_node
     ${catkin_LIBRARIES})
 
 cuda_add_executable(${PROJECT_NAME}_nf1_node
-    src/motion_planning_node.cpp
+    src/motion_planning_nf1_node.cpp
     src/uav_motion_planner.cpp
     src/uav_nf1_motion_planner.cpp
     src/kernel/pso_kernels.cu)
