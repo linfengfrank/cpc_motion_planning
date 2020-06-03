@@ -25,10 +25,13 @@ UAVNF1MotionPlanner::UAVNF1MotionPlanner():
 
   m_planning_timer = m_nh.createTimer(ros::Duration(PSO::PSO_REPLAN_DT), &UAVNF1MotionPlanner::plan_call_back, this);
 
-  m_pso_planner = new PSO::Planner<SIMPLE_UAV_NF1>(150,30,1);
+  m_guide_planner = new PSO::Planner<SIMPLE_UAV_NF1>(150,30,1);
+  m_guide_planner->initialize(false);
+
+  m_pso_planner = new PSO::Planner<SIMPLE_UAV_F>(150,30,1);
   m_pso_planner->initialize(false);
 
-  m_ref_gen_planner = new PSO::Planner<SIMPLE_UAV_NF1>(1,1,1);
+  m_ref_gen_planner = new PSO::Planner<SIMPLE_UAV_F>(1,1,1);
   m_ref_gen_planner->initialize(true);
   m_traj_pnt_cld = PointCloud::Ptr(new PointCloud);
   m_traj_pnt_cld->header.frame_id = "/world";
@@ -45,10 +48,10 @@ UAVNF1MotionPlanner::UAVNF1MotionPlanner():
   m_yaw_target = 0;
   m_yaw_limit.vMax = 2;
   m_yaw_limit.vMin = -2;
-  m_yaw_limit.aMax = 2;
-  m_yaw_limit.aMin = -2;
-  m_yaw_limit.jMax = 2;
-  m_yaw_limit.jMin = -2;
+  m_yaw_limit.aMax = 4;
+  m_yaw_limit.aMin = -4;
+  m_yaw_limit.jMax = 4;
+  m_yaw_limit.jMin = -4;
 }
 
 UAVNF1MotionPlanner::~UAVNF1MotionPlanner()
@@ -58,6 +61,9 @@ UAVNF1MotionPlanner::~UAVNF1MotionPlanner()
     m_edt_map->free_device();
     delete m_edt_map;
   }
+
+  m_guide_planner->release();
+  delete m_guide_planner;
 
   m_pso_planner->release();
   delete m_pso_planner;
@@ -73,15 +79,23 @@ void UAVNF1MotionPlanner::plan_call_back(const ros::TimerEvent&)
 
   UAV::UAVModel::State s = m_curr_ref;
 
+  m_guide_planner->m_model.set_ini_state(s);
   m_pso_planner->m_model.set_ini_state(s);
   m_ref_gen_planner->m_model.set_ini_state(s);
+  m_guide_planner->m_eva.m_curr_yaw = m_yaw_state.p;
+  m_guide_planner->m_eva.m_curr_pos = s.p;
   m_pso_planner->m_eva.m_curr_yaw = m_yaw_state.p;
   m_pso_planner->m_eva.m_curr_pos = s.p;
+
   auto start = std::chrono::steady_clock::now();
 
-  m_pso_planner->plan(*m_edt_map);
+  static int ctt = 0;
+  if ((ctt++)%3==0)
+    m_guide_planner->plan(*m_edt_map);
 
-  float3 diff = m_pso_planner->result.best_loc[0] - s.p;
+  //std::vector<UAV::UAVModel::State> traj_guide = m_ref_gen_planner->generate_trajectory(m_guide_planner->result.best_loc);
+
+  float3 diff = m_guide_planner->result.best_loc[0] - s.p;
   diff.z = 0;
   double dist = sqrt(dot(diff,diff));
   if (dist > 0.5)
@@ -91,38 +105,24 @@ void UAVNF1MotionPlanner::plan_call_back(const ros::TimerEvent&)
     m_yaw_target = m_yaw_target - floor((m_yaw_target + M_PI) / (2 * M_PI)) * 2 * M_PI;
     m_yaw_target = m_yaw_target + m_yaw_state.p;
   }
-  else
-  {
-    static int stuck_ctt = 0;
-    if ( m_pso_planner->m_eva.m_oa && dot(s.v,s.v)<0.2f && dot(s.a,s.a)<0.2f && m_pso_planner->result.best_cost>10)
-    {
-      stuck_ctt++;
-      if (stuck_ctt >=5)
-      {
-        m_yaw_target = m_yaw_state.p + M_PI;
-        m_yaw_target = m_yaw_target - m_yaw_state.p;
-        m_yaw_target = m_yaw_target - floor((m_yaw_target + M_PI) / (2 * M_PI)) * 2 * M_PI;
-        m_yaw_target = m_yaw_target + m_yaw_state.p;
-        std::cout<<"Rotation "<<stuck_ctt<<std::endl;
-        stuck_ctt = 0;
-      }
-    }
-    else
-    {
-      stuck_ctt = 0;
-    }
-  }
   JLT::TPBVPParam yaw_param;
   m_yaw_planner.solveTPBVP(m_yaw_target,0,m_yaw_state,m_yaw_limit,yaw_param);
+
+
+  m_pso_planner->m_eva.m_goal.s.p = m_guide_planner->result.best_loc[0];
+  m_pso_planner->plan(*m_edt_map);
   auto end = std::chrono::steady_clock::now();
-  //  std::cout << "Consumed: "
-  //            << std::chrono::duration_cast<std::chrono::milliseconds>(end - start).count()
-  //            << "ms, cost: " << m_pso_planner->result.best_cost<<std::endl;
+    std::cout << "Consumed: "
+              << std::chrono::duration_cast<std::chrono::milliseconds>(end - start).count()
+              << "ms, cost: " << m_guide_planner->result.best_cost<<std::endl;
 
 
 
-
-
+    pcl::PointXYZ clrPa;
+    clrPa.x = m_guide_planner->result.best_loc[0].x;
+    clrPa.y = m_guide_planner->result.best_loc[0].y;
+    clrPa.z = m_guide_planner->result.best_loc[0].z;
+    m_ctrl_pnt_cld->points.push_back(clrPa);
 
 
 
@@ -150,10 +150,7 @@ void UAVNF1MotionPlanner::plan_call_back(const ros::TimerEvent&)
     m_traj_pnt_cld->points.push_back(clrP);
 
 
-    //    clrP.x = m_pso_planner->result.best_loc[i].x;
-    //    clrP.y = m_pso_planner->result.best_loc[i].y;
-    //    clrP.z = m_pso_planner->result.best_loc[i].z;
-    //    m_ctrl_pnt_cld->points.push_back(clrP);
+
 
     ref_counter++;
     //std::cout<<"b: "<<ref_counter<<std::endl;
@@ -240,9 +237,9 @@ void UAVNF1MotionPlanner::goal_call_back(const cpc_aux_mapping::grid_map::ConstP
   CUDA_MEMCPY_H2D(m_nf1_map->m_nf1_map,msg->payload8.data(),static_cast<size_t>(m_nf1_map->m_byte_size));
 
   if (m_goal_received && m_curr_ref.p.z >= 1.8f && fabsf(m_curr_ref.v.z)<0.3f)
-    m_pso_planner->m_eva.m_oa = m_goal_received;
+    m_pso_planner->m_eva.m_goal.oa = m_goal_received;
 
-  m_pso_planner->m_eva.m_nf1_map = *m_nf1_map;
+  m_guide_planner->m_eva.m_nf1_map = *m_nf1_map;
 
   if (!m_goal_received)
   {
@@ -252,26 +249,4 @@ void UAVNF1MotionPlanner::goal_call_back(const cpc_aux_mapping::grid_map::ConstP
   }
   m_goal_received = true;
 
-  //  UAV::UAVModel::State s = m_curr_ref;
-
-  //  float3 diff = m_goal.s.p - s.p;
-  //  diff.z = 0;
-  //  float dist = sqrtf(dot(diff,diff));
-  //  if (dist > 0.5f)
-  //  {
-  //      float theta = atan2f(diff.y,diff.x);
-  //      m_pso_planner->m_dp_ctrl.m_theta = theta;
-  //      m_ref_gen_planner->m_dp_ctrl.m_theta = theta;
-  //  }
-
-  //  double phi,theta,psi;
-
-  //  tf::Quaternion q( msg->pose.orientation.x,
-  //                    msg->pose.orientation.y,
-  //                    msg->pose.orientation.z,
-  //                    msg->pose.orientation.w);
-  //  tf::Matrix3x3 m(q);
-  //  m.getRPY(phi, theta, psi);
-
-  //m_goal.theta = psi;
 }

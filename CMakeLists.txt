@@ -174,6 +174,18 @@ target_link_libraries(${PROJECT_NAME}_node
     ${CUDA_LIBRARIES}
     ${catkin_LIBRARIES})
 
+cuda_add_executable(${PROJECT_NAME}_nf1_node
+    src/motion_planning_node.cpp
+    src/uav_motion_planner.cpp
+    src/uav_nf1_motion_planner.cpp
+    src/kernel/pso_kernels.cu)
+
+target_link_libraries(${PROJECT_NAME}_nf1_node
+    ${CUDA_curand_LIBRARY}
+    ${CUDA_cublas_LIBRARY}
+    ${CUDA_LIBRARIES}
+    ${catkin_LIBRARIES})
+
 cuda_add_executable(${PROJECT_NAME}_glb_plan_node
     src/mid_plan/grid_graph.cpp
     src/mid_plan/a_star.cpp
@@ -216,6 +228,7 @@ target_link_libraries(${PROJECT_NAME}_line_plan_node
 ## Add cmake target dependencies of the executable
 ## same as for the library above
 add_dependencies(${PROJECT_NAME}_node ${${PROJECT_NAME}_EXPORTED_TARGETS} ${catkin_EXPORTED_TARGETS})
+add_dependencies(${PROJECT_NAME}_nf1_node ${${PROJECT_NAME}_EXPORTED_TARGETS} ${catkin_EXPORTED_TARGETS})
 add_dependencies(${PROJECT_NAME}_glb_plan_node ${${PROJECT_NAME}_EXPORTED_TARGETS} ${catkin_EXPORTED_TARGETS})
 add_dependencies(${PROJECT_NAME}_line_plan_node ${${PROJECT_NAME}_EXPORTED_TARGETS} ${catkin_EXPORTED_TARGETS})
 ## Specify libraries to link a library or executable target against

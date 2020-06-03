@@ -18,7 +18,9 @@
 #include <cpc_motion_planning/uav/uav_jlt_control.h>
 #include <cpc_motion_planning/uav/uav_swarm.h>
 
-#define SIMPLE_UAV_NF1 UAV::UAVModel,UAV::UAVDPControl,UAV::NF1Evaluator,UAV::UAVSwarm<1>
+#define SIMPLE_UAV_NF1 UAV::UAVModel,UAV::UAVJLTControl,UAV::NF1Evaluator,UAV::UAVSwarm<1>
+#define SIMPLE_UAV_F UAV::UAVModel,UAV::UAVDPControl,UAV::SingleTargetEvaluator,UAV::UAVSwarm<1>
+
 class UAVNF1MotionPlanner
 {
   typedef pcl::PointCloud<pcl::PointXYZ> PointCloud;
@@ -51,8 +53,9 @@ private:
   bool m_goal_received;
   EDTMap *m_edt_map;
   NF1Map *m_nf1_map;
-  PSO::Planner<SIMPLE_UAV_NF1> *m_pso_planner;
-  PSO::Planner<SIMPLE_UAV_NF1> *m_ref_gen_planner;
+  PSO::Planner<SIMPLE_UAV_NF1> *m_guide_planner;
+  PSO::Planner<SIMPLE_UAV_F> *m_pso_planner;
+  PSO::Planner<SIMPLE_UAV_F> *m_ref_gen_planner;
   PointCloud::Ptr m_traj_pnt_cld, m_ctrl_pnt_cld;
   //UAV::SingleTargetEvaluator::Target m_goal;
   UAV::UAVModel::State m_curr_ref;

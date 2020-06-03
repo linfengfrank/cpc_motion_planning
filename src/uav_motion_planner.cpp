@@ -84,6 +84,8 @@ void UAVMotionPlanner::plan_call_back(const ros::TimerEvent&)
   }
 
   m_pso_planner->set_problem(s,m_goal);
+  m_pso_planner->m_eva.m_curr_pos = s.p;
+  m_pso_planner->m_eva.m_curr_yaw = m_yaw_state.p;
   m_ref_gen_planner->set_problem(s,m_goal);
 
   auto start = std::chrono::steady_clock::now();

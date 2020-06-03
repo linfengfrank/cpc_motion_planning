@@ -187,7 +187,7 @@ void glb_plan(const ros::TimerEvent&)
 
   CUDA_GEO::coord glb_tgt = mid_map->pos2coord(goal);
   glb_tgt.z = tgt_height_coord;
-  glb_tgt = mid_map->rayCast(start,glb_tgt,8.0f).back();
+  glb_tgt = mid_map->rayCast(start,glb_tgt).back();
 
   CUDA_GEO::coord curr_tgt;
 
