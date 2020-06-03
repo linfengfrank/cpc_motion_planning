@@ -13,7 +13,7 @@ public:
                                        const CUDA_GEO::coord *crd_shift = nullptr, SeenDist *last_val_map = nullptr);
 
   unsigned int findTargetCoord(const std::vector<CUDA_GEO::coord> &path);
-  unsigned int findTargetCoordLos(std::vector<CUDA_GEO::coord> path, CUDA_GEO::coord start, unsigned int start_idx);
+  unsigned int findTargetCoordLos(std::vector<CUDA_GEO::coord> path, CUDA_GEO::coord start, unsigned int start_idx, float look_ahead_diff=0.5f);
   std::vector<CUDA_GEO::pos> findSplitCoords(const std::vector<CUDA_GEO::coord> &path);
   bool checkTopo(const std::vector<CUDA_GEO::coord> &path_a,const std::vector<CUDA_GEO::coord> &path_b);
 

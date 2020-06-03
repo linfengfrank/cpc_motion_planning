@@ -254,11 +254,11 @@ void glb_plan(const ros::TimerEvent&)
   unsigned int tgt_idx = 0;
   if(selected_case == 0)
   {
-    tgt_idx = mid_map->findTargetCoordLos(path_adopt,start,0);
+    tgt_idx = mid_map->findTargetCoordLos(path_adopt,start,0,1.0f);
   }
   else
   {
-    tgt_idx = mid_map->findTargetCoordLos(path_adopt,start,path_list[1].size());
+    tgt_idx = mid_map->findTargetCoordLos(path_adopt,start,path_list[1].size(),1.0f);
   }
 
   //if (path_adopt.front() == glb_tgt)
@@ -335,7 +335,7 @@ int main(int argc, char **argv)
   nh.param<float>("/nndp_cpp/fly_height",FLY_HEIGHT,2.0);
 
 
-  glb_plan_timer = nh.createTimer(ros::Duration(1.4), glb_plan);
+  glb_plan_timer = nh.createTimer(ros::Duration(1.0), glb_plan);
 
   ros::spin();
 

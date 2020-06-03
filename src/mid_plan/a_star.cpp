@@ -263,7 +263,7 @@ unsigned int Astar::findTargetCoord(const std::vector<CUDA_GEO::coord> &path)
   return target;
 }
 
-unsigned int Astar::findTargetCoordLos(std::vector<CUDA_GEO::coord> path, CUDA_GEO::coord start, unsigned int start_idx)
+unsigned int Astar::findTargetCoordLos(std::vector<CUDA_GEO::coord> path, CUDA_GEO::coord start, unsigned int start_idx, float look_ahead_diff)
 {
   // If there is no path, return the center point
   if (path.size() == 0)
@@ -279,7 +279,16 @@ unsigned int Astar::findTargetCoordLos(std::vector<CUDA_GEO::coord> path, CUDA_G
       break;
   }
 
-  return path.size()-target-1;
+  unsigned int target_look_ahead = target;
+  for (unsigned int i=target; i<path.size(); i++)
+  {
+    if(point2lineDist(start,path[i],path[target])*_gridstep > look_ahead_diff)
+      break;
+    else
+      target_look_ahead = i;
+  }
+
+  return path.size()-target_look_ahead-1;
 }
 
 std::vector<CUDA_GEO::pos> Astar::findSplitCoords(const std::vector<CUDA_GEO::coord> &path)
