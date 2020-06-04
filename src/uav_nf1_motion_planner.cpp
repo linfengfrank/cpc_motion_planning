@@ -13,7 +13,8 @@ UAVNF1MotionPlanner::UAVNF1MotionPlanner():
   m_pose_received(false),
   m_goal_received(false),
   m_edt_map(nullptr),
-  m_nf1_map(nullptr)
+  m_nf1_map(nullptr),
+  m_stuck_pbty(0.0f)
 {
   m_map_sub = m_nh.subscribe("/edt_map", 1, &UAVNF1MotionPlanner::map_call_back, this);
   m_pose_sub = m_nh.subscribe("/mavros/position/local", 1, &UAVNF1MotionPlanner::vehicle_pose_call_back, this);
@@ -43,12 +44,12 @@ UAVNF1MotionPlanner::UAVNF1MotionPlanner():
   m_ref_start_idx = 0;
 
   m_yaw_target = 0;
-  m_yaw_limit.vMax = 2;
-  m_yaw_limit.vMin = -2;
-  m_yaw_limit.aMax = 4;
-  m_yaw_limit.aMin = -4;
-  m_yaw_limit.jMax = 4;
-  m_yaw_limit.jMin = -4;
+  m_yaw_limit.vMax = 1;
+  m_yaw_limit.vMin = -1;
+  m_yaw_limit.aMax = 2;
+  m_yaw_limit.aMin = -2;
+  m_yaw_limit.jMax = 2;
+  m_yaw_limit.jMin = -2;
 }
 
 UAVNF1MotionPlanner::~UAVNF1MotionPlanner()
@@ -96,6 +97,36 @@ void UAVNF1MotionPlanner::plan_call_back(const ros::TimerEvent&)
   JLT::TPBVPParam yaw_param;
   m_yaw_planner.solveTPBVP(m_yaw_target,0,m_yaw_state,m_yaw_limit,yaw_param);
 
+
+
+  // !!!TODO: MOVE IT BACK!!!
+  std::vector<UAV::UAVModel::State> traj = m_ref_gen_planner->generate_trajectory(m_pso_planner->result.best_loc);
+
+
+
+
+
+  if(is_stuck(yaw_param))
+  {
+    std::cout<<"stuck"<<std::endl;
+    bool old_redord = m_pso_planner->m_eva.m_oa;
+    m_pso_planner->m_eva.m_oa = false;
+    m_pso_planner->plan(*m_edt_map);
+    m_pso_planner->m_eva.m_oa = old_redord;
+
+    float3 diff = m_pso_planner->result.best_loc[0] - s.p;
+    diff.z = 0;
+    float dist = sqrtf(dot(diff,diff));
+    if (dist > 0.5f)
+    {
+      m_yaw_target = atan2f(diff.y,diff.x);
+      m_yaw_target = m_yaw_target - m_yaw_state.p;
+      m_yaw_target = m_yaw_target - floorf((m_yaw_target + M_PI) / (2 * M_PI)) * 2 * M_PI;
+      m_yaw_target = m_yaw_target + m_yaw_state.p;
+    }
+    JLT::TPBVPParam yaw_param;
+    m_yaw_planner.solveTPBVP(m_yaw_target,0,m_yaw_state,m_yaw_limit,yaw_param);
+  }
   auto end = std::chrono::steady_clock::now();
     std::cout << "Consumed: "
               << std::chrono::duration_cast<std::chrono::milliseconds>(end - start).count()
@@ -117,7 +148,7 @@ void UAVNF1MotionPlanner::plan_call_back(const ros::TimerEvent&)
 
   //-----------------------------------------------------------------------------------------------------------------
   //PSO::State cmd_state;
-  std::vector<UAV::UAVModel::State> traj = m_ref_gen_planner->generate_trajectory(m_pso_planner->result.best_loc);
+
   int cols = 0;
   int ref_counter = m_ref_start_idx;
   int next_ref_start_idx = (m_plan_cycle+1)*PSO::PSO_REPLAN_CYCLE+PSO::PSO_PLAN_CONSUME_CYCLE;
@@ -234,4 +265,62 @@ void UAVNF1MotionPlanner::goal_call_back(const cpc_aux_mapping::grid_map::ConstP
   }
   m_goal_received = true;
 
+}
+
+bool UAVNF1MotionPlanner::is_stuck(const JLT::TPBVPParam &yaw_param)
+{
+    if (!m_pso_planner->m_eva.m_oa)
+        return false;
+
+    bool far_from_tgt = false;
+    bool no_turning = false;
+    bool no_moving_intention = false;
+
+    if (m_pso_planner->result.best_cost > 10)
+        far_from_tgt = true;
+
+    float max_turn = 0;
+    float turn, u_yaw;
+    JLT::State ini_yaw_state = m_yaw_planner.TPBVPRefGen(yaw_param,0,u_yaw);
+    for(float t=0; t<4.0f; t+=0.1f)
+    {
+      JLT::State tmp_yaw_state = m_yaw_planner.TPBVPRefGen(yaw_param,t,u_yaw);
+      turn = fabsf(tmp_yaw_state.p - ini_yaw_state.p);
+      if (turn > max_turn)
+          max_turn = turn;
+    }
+    if (max_turn < 0.25f)
+        no_turning = true;
+
+
+    std::vector<UAV::UAVModel::State> traj = m_ref_gen_planner->generate_trajectory(m_pso_planner->result.best_loc);
+    float max_dist = 0;
+    float dist;
+    UAV::UAVModel::State ini_s = traj[0];
+    float3 shift = traj[0].p;
+    for (UAV::UAVModel::State s : traj)
+    {
+        shift = ini_s.p - s.p;
+        dist = sqrtf(dot(shift,shift));
+        if (dist > max_dist)
+            max_dist = dist;
+    }
+
+    if (max_dist < 0.4f)
+        no_moving_intention = true;
+
+    if (far_from_tgt && no_turning && no_moving_intention)
+        m_stuck_pbty +=0.15f;
+    else
+        m_stuck_pbty *=0.8f;
+
+    if (m_stuck_pbty > 1)
+    {
+        m_stuck_pbty = 0;
+        return true;
+    }
+    else
+    {
+        return false;
+    }
 }

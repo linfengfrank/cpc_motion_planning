@@ -33,6 +33,7 @@ private:
   void map_call_back(const cpc_aux_mapping::grid_map::ConstPtr &msg);
   void goal_call_back(const cpc_aux_mapping::grid_map::ConstPtr &msg);
   void vehicle_pose_call_back(const geometry_msgs::PoseStamped::ConstPtr &msg);
+  bool is_stuck(const JLT::TPBVPParam &yaw_param);
 
 private:
   ros::NodeHandle m_nh;
@@ -64,6 +65,7 @@ private:
   JLT::State m_yaw_state;
   JLT::Limit m_yaw_limit;
   float m_yaw_target;
+  float m_stuck_pbty;
 };
 
 #endif // UAV_NF1_MOTION_PLANNER_H
