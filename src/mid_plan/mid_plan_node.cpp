@@ -10,11 +10,14 @@
 #include <std_msgs/Bool.h>
 #include <algorithm>
 #include "cpc_motion_planning/ref_data.h"
+#include "cpc_motion_planning/guide_line.h"
+
 #define SHOWPC
 #define USE2D
 typedef pcl::PointCloud<pcl::PointXYZRGB> PointCloud;
 PointCloud::Ptr pclOut (new PointCloud);
 ros::Publisher* point_pub;
+ros::Publisher* line_pub;
 ros::Publisher* pc_pub;
 ros::Publisher* mid_goal_pub;
 Astar *mid_map=nullptr;
@@ -296,6 +299,21 @@ void glb_plan(const ros::TimerEvent&)
     tgt_msg.pose.position.y = curr_target_pos.y;
     tgt_msg.pose.position.z = curr_target_pos.z;
     point_pub->publish(tgt_msg);
+
+    //publish the guide line
+    std::reverse(path_adopt.begin(),path_adopt.end());
+    cpc_motion_planning::guide_line line_msg;
+    geometry_msgs::Point line_pnt;
+
+    for (CUDA_GEO::coord &path_crd : path_adopt)
+    {
+      CUDA_GEO::pos path_pnt = mid_map->coord2pos(path_crd);
+      line_pnt.x = path_pnt.x;
+      line_pnt.y = path_pnt.y;
+      line_pnt.z = path_pnt.z;
+      line_msg.pts.push_back(line_pnt);
+    }
+    line_pub->publish(line_msg);
   }
 
   if (stucked)
@@ -320,12 +338,14 @@ int main(int argc, char **argv)
   ros::init(argc, argv, "mid_layer_node");
   pc_pub = new ros::Publisher;
   point_pub = new ros::Publisher;
+  line_pub = new ros::Publisher;
   mid_goal_pub = new ros::Publisher;
   ros::NodeHandle nh;
   ros::Subscriber map_sub = nh.subscribe("/edt_map", 1, &mapCallback);
   ros::Subscriber stuck_sub = nh.subscribe("/stuck", 1, &stuckCallback);
   ros::Subscriber glb_tgt_sub = nh.subscribe("/move_base_simple/goal", 1, &goalCallback);
   ros::Subscriber state_sub = nh.subscribe("/ref_traj", 1, get_reference);
+  *line_pub = nh.advertise<cpc_motion_planning::guide_line>("/mid_layer/guide_line",1);
 
   *pc_pub = nh.advertise<PointCloud> ("/path", 1);
   *mid_goal_pub = nh.advertise<PointCloud> ("/mid_goal", 1);
