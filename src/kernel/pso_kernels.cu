@@ -141,3 +141,6 @@ INST_iterate_particles(UAV::UAVModel, UAV::UAVDPControl, UAV::NF1Evaluator, UAV:
 
 INST_initialize_particles(UAV::UAVModel, UAV::UAVJLTControl, UAV::NF1Evaluator, UAV::UAVSwarm<1>);
 INST_iterate_particles(UAV::UAVModel, UAV::UAVJLTControl, UAV::NF1Evaluator, UAV::UAVSwarm<1>);
+
+INST_initialize_particles(UAV::UAVModel, UAV::UAVDPControl, UAV::CorridorEvaluator, UAV::UAVSwarm<1>);
+INST_iterate_particles(UAV::UAVModel, UAV::UAVDPControl, UAV::CorridorEvaluator, UAV::UAVSwarm<1>);

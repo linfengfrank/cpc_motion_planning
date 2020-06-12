@@ -186,6 +186,18 @@ target_link_libraries(${PROJECT_NAME}_nf1_node
     ${CUDA_LIBRARIES}
     ${catkin_LIBRARIES})
 
+cuda_add_executable(${PROJECT_NAME}_corridor_node
+    src/motion_planning_corridor_node.cpp
+    src/uav_motion_planner.cpp
+    src/uav_nf1_motion_planner.cpp
+    src/kernel/pso_kernels.cu)
+
+target_link_libraries(${PROJECT_NAME}_corridor_node
+    ${CUDA_curand_LIBRARY}
+    ${CUDA_cublas_LIBRARY}
+    ${CUDA_LIBRARIES}
+    ${catkin_LIBRARIES})
+
 cuda_add_executable(${PROJECT_NAME}_glb_plan_node
     src/mid_plan/grid_graph.cpp
     src/mid_plan/a_star.cpp

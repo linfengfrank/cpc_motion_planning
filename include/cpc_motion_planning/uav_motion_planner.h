@@ -12,11 +12,13 @@
 #include <cpc_motion_planning/ref_data.h>
 #include <cpc_motion_planning/JLT.h>
 #include <cpc_motion_planning/uav/uav_single_target_evluator.h>
+#include <cpc_motion_planning/uav/uav_corridor_nf2_evaluator.h>
 #include <cpc_motion_planning/uav/uav_dp_control.h>
 #include <cpc_motion_planning/uav/uav_jlt_control.h>
 #include <cpc_motion_planning/uav/uav_swarm.h>
 
 #define SIMPLE_UAV UAV::UAVModel,UAV::UAVDPControl,UAV::SingleTargetEvaluator,UAV::UAVSwarm<1>
+#define CORRID_UAV UAV::UAVModel,UAV::UAVDPControl,UAV::CorridorEvaluator,UAV::UAVSwarm<1>
 class UAVMotionPlanner
 {
   typedef pcl::PointCloud<pcl::PointXYZ> PointCloud;
