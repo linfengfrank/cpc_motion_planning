@@ -13,7 +13,7 @@
 #include "cpc_motion_planning/guide_line.h"
 
 #define SHOWPC
-#define USE2D
+//#define USE2D
 typedef pcl::PointCloud<pcl::PointXYZRGB> PointCloud;
 PointCloud::Ptr pclOut (new PointCloud);
 ros::Publisher* point_pub;
@@ -30,7 +30,10 @@ bool received_map = false;
 bool received_ref = false;
 CUDA_GEO::pos goal;
 ros::Timer glb_plan_timer;
+ros::Timer target_extract_timer;
 cpc_motion_planning::ref_data ref;
+std::vector<CUDA_GEO::pos> guide_path;
+CUDA_GEO::coord glb_tgt;
 
 //---
 void publishMap(const std::vector<CUDA_GEO::coord> &path, CUDA_GEO::coord local_tgt, bool blue)
@@ -173,7 +176,77 @@ void goalCallback(const geometry_msgs::PoseStamped::ConstPtr &msg)
   goal.z = msg->pose.position.z;
 }
 //---
-void glb_plan(const ros::TimerEvent&)
+void extract_target(const ros::TimerEvent&)
+{
+  if (guide_path.empty())
+    return;
+
+  std::vector<CUDA_GEO::coord> path_adopt;
+
+  for (CUDA_GEO::pos &path_pnt : guide_path)
+  {
+    CUDA_GEO::coord path_crd = mid_map->pos2coord(path_pnt);
+    path_adopt.push_back(path_crd);
+  }
+  std::reverse(path_adopt.begin(),path_adopt.end());
+
+  CUDA_GEO::coord start;
+  if(received_ref)
+  {
+    CUDA_GEO::pos start_pos(ref.data[0], ref.data[1], ref.data[2]);
+    start = mid_map->pos2coord(start_pos);
+  }
+  else
+  {
+    start = CUDA_GEO::coord(mid_map->getMaxX()/2,mid_map->getMaxY()/2,mid_map->getMaxZ()/2);
+  }
+
+  int tgt_height_coord = mid_map->calcTgtHeightCoord(FLY_HEIGHT);
+#ifdef USE2D
+  start.z = tgt_height_coord;
+#endif
+
+  unsigned int tgt_idx = 0;
+  tgt_idx = mid_map->findTargetCoordLos(path_adopt,start,0,0.5f);
+
+  CUDA_GEO::coord curr_tgt = path_adopt[tgt_idx];
+  curr_target_pos = mid_map->coord2pos(curr_tgt);
+
+#ifdef SHOWPC
+  publishMap(path_adopt,curr_tgt,false);
+  pcl_conversions::toPCL(ros::Time::now(), pclOut->header.stamp);
+  pc_pub->publish (pclOut);
+  pclOut->clear();
+
+//  CUDA_GEO::pos mid_tgt_pos = mid_map->coord2pos(glb_tgt);
+//  pcl::PointXYZRGB clrP;
+//  clrP.x = mid_tgt_pos.x;
+//  clrP.y = mid_tgt_pos.y;
+//  clrP.z = mid_tgt_pos.z;
+//  clrP.a = 255;
+//  clrP.r = 255;
+//  pclOut->points.push_back (clrP);
+
+  pcl::PointXYZRGB clrP;
+  clrP.x = curr_target_pos.x;
+  clrP.y = curr_target_pos.y;
+  clrP.z = curr_target_pos.z;
+  clrP.a = 255;
+  clrP.r = 255;
+  clrP.g = 255;
+  pclOut->points.push_back (clrP);
+  mid_goal_pub->publish(pclOut);
+  pclOut->clear();
+#endif
+
+  geometry_msgs::PoseStamped tgt_msg;
+  tgt_msg.pose.position.x = curr_target_pos.x;
+  tgt_msg.pose.position.y = curr_target_pos.y;
+  tgt_msg.pose.position.z = curr_target_pos.z;
+  point_pub->publish(tgt_msg);
+}
+//---
+void glb_plan(const ros::TimerEvent& msg)
 {
   if (!received_cmd || !received_map)
     return;
@@ -188,11 +261,9 @@ void glb_plan(const ros::TimerEvent&)
   start.z = tgt_height_coord;
 #endif
 
-  CUDA_GEO::coord glb_tgt = mid_map->pos2coord(goal);
+  glb_tgt = mid_map->pos2coord(goal);
   glb_tgt.z = tgt_height_coord;
   glb_tgt = mid_map->rayCast(start,glb_tgt).back();
-
-  CUDA_GEO::coord curr_tgt;
 
   // Do the planning
   // Initialize the list
@@ -254,67 +325,21 @@ void glb_plan(const ros::TimerEvent&)
     path_adopt = path_list[2];
   }
 
-  unsigned int tgt_idx = 0;
-  if(selected_case == 0)
+  //publish the guide line
+  std::reverse(path_adopt.begin(),path_adopt.end());
+  cpc_motion_planning::guide_line line_msg;
+  geometry_msgs::Point line_pnt;
+  guide_path.clear();
+  for (CUDA_GEO::coord &path_crd : path_adopt)
   {
-    tgt_idx = mid_map->findTargetCoordLos(path_adopt,start,0,1.0f);
+    CUDA_GEO::pos path_pnt = mid_map->coord2pos(path_crd);
+    guide_path.push_back(path_pnt);
+    line_pnt.x = path_pnt.x;
+    line_pnt.y = path_pnt.y;
+    line_pnt.z = path_pnt.z;
+    line_msg.pts.push_back(line_pnt);
   }
-  else
-  {
-    tgt_idx = mid_map->findTargetCoordLos(path_adopt,start,path_list[1].size(),1.0f);
-  }
-
-  //if (path_adopt.front() == glb_tgt)
-  {
-    curr_tgt = path_adopt[tgt_idx];
-    curr_target_pos = mid_map->coord2pos(curr_tgt);
-
-#ifdef SHOWPC
-    publishMap(path_adopt,curr_tgt,false);
-    pcl_conversions::toPCL(ros::Time::now(), pclOut->header.stamp);
-    pc_pub->publish (pclOut);
-    pclOut->clear();
-
-    CUDA_GEO::pos mid_tgt_pos = mid_map->coord2pos(glb_tgt);
-    pcl::PointXYZRGB clrP;
-    clrP.x = mid_tgt_pos.x;
-    clrP.y = mid_tgt_pos.y;
-    clrP.z = mid_tgt_pos.z;
-    clrP.a = 255;
-    clrP.r = 255;
-    pclOut->points.push_back (clrP);
-
-    clrP.x = curr_target_pos.x;
-    clrP.y = curr_target_pos.y;
-    clrP.z = curr_target_pos.z;
-    clrP.a = 255;
-    clrP.r = 255;
-    clrP.g = 255;
-    pclOut->points.push_back (clrP);
-    mid_goal_pub->publish(pclOut);
-    pclOut->clear();
-#endif
-    geometry_msgs::PoseStamped tgt_msg;
-    tgt_msg.pose.position.x = curr_target_pos.x;
-    tgt_msg.pose.position.y = curr_target_pos.y;
-    tgt_msg.pose.position.z = curr_target_pos.z;
-    point_pub->publish(tgt_msg);
-
-    //publish the guide line
-    std::reverse(path_adopt.begin(),path_adopt.end());
-    cpc_motion_planning::guide_line line_msg;
-    geometry_msgs::Point line_pnt;
-
-    for (CUDA_GEO::coord &path_crd : path_adopt)
-    {
-      CUDA_GEO::pos path_pnt = mid_map->coord2pos(path_crd);
-      line_pnt.x = path_pnt.x;
-      line_pnt.y = path_pnt.y;
-      line_pnt.z = path_pnt.z;
-      line_msg.pts.push_back(line_pnt);
-    }
-    line_pub->publish(line_msg);
-  }
+  line_pub->publish(line_msg);
 
   if (stucked)
     stucked = false;
@@ -325,6 +350,8 @@ void glb_plan(const ros::TimerEvent&)
                 << " ms" << std::endl;
 
   first_run = false;
+
+  extract_target(msg);
 }
 //---
 void get_reference(const cpc_motion_planning::ref_data::ConstPtr &msg)
@@ -355,7 +382,8 @@ int main(int argc, char **argv)
   nh.param<float>("/nndp_cpp/fly_height",FLY_HEIGHT,2.0);
 
 
-  glb_plan_timer = nh.createTimer(ros::Duration(1.0), glb_plan);
+  glb_plan_timer = nh.createTimer(ros::Duration(1.5), &glb_plan);
+  target_extract_timer = nh.createTimer(ros::Duration(0.2), &extract_target);
 
   ros::spin();
 
