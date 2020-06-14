@@ -15,7 +15,7 @@ public:
     bool oa;
   };
 
-  NF1Evaluator():m_oa(false)
+  NF1Evaluator():m_oa(false),m_fov(false)
   {
 
   }
@@ -63,6 +63,10 @@ public:
       if (!map.edt_const_at(ix,iy,iz).s)
           cost += 100;
   #endif
+    }
+
+    if (m_fov)
+    {
       float3 diff = s.p - m_curr_pos;
       diff.z = 0;
       if (sqrtf(diff.x*diff.x + diff.y*diff.y) > 0.3f)
@@ -117,7 +121,9 @@ public:
       if (!map.edt_const_at(ix,iy,iz).s)
           cost += 100;
   #endif
-
+    }
+    if (m_fov)
+    {
       float3 diff = s.p - m_curr_pos;
       diff.z = 0;
       if (sqrtf(diff.x*diff.x + diff.y*diff.y) > 0.3f)
@@ -133,6 +139,7 @@ public:
     return  cost;
   }
   bool m_oa;
+  bool m_fov;
   float m_curr_yaw;
   float3 m_curr_pos;
   NF1Map m_nf1_map;

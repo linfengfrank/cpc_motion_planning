@@ -109,10 +109,10 @@ void UAVNF1MotionPlanner::plan_call_back(const ros::TimerEvent&)
   if(is_stuck(yaw_param))
   {
     std::cout<<"stuck"<<std::endl;
-    bool old_redord = m_pso_planner->m_eva.m_oa;
-    m_pso_planner->m_eva.m_oa = false;
+    bool old_redord = m_pso_planner->m_eva.m_fov;
+    m_pso_planner->m_eva.m_fov = false;
     m_pso_planner->plan(*m_edt_map);
-    m_pso_planner->m_eva.m_oa = old_redord;
+    m_pso_planner->m_eva.m_fov = old_redord;
 
     float3 diff = m_pso_planner->result.best_loc[0] - s.p;
     diff.z = 0;
@@ -253,7 +253,10 @@ void UAVNF1MotionPlanner::goal_call_back(const cpc_aux_mapping::grid_map::ConstP
   CUDA_MEMCPY_H2D(m_nf1_map->m_nf1_map,msg->payload8.data(),static_cast<size_t>(m_nf1_map->m_byte_size));
 
   if (m_goal_received && m_curr_ref.p.z >= 1.8f && fabsf(m_curr_ref.v.z)<0.3f)
+  {
     m_pso_planner->m_eva.m_oa = m_goal_received;
+    m_pso_planner->m_eva.m_fov = m_goal_received;
+  }
 
   m_pso_planner->m_eva.m_nf1_map = *m_nf1_map;
 

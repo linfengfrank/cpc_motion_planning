@@ -48,8 +48,9 @@ void publishMap(int tgt_height_coord)
         c.x = x;
         c.y = y;
         c.z = tgt_height_coord;
-        double d_c = mid_map->getCost2Come(c,0.0)*15;
-        int d = min(static_cast<int>(d_c),255);
+        float d_c = mid_map->getCost2Come(c,0.0f)*15;
+        if (d_c > 255) d_c = 255;
+        int d = static_cast<int>(d_c);
 
         //                std::cout<<d<<" ";
         //int color = (EDTMap::MAX_RANGE*EDTMap::MAX_RANGE-d)*255/EDTMap::MAX_RANGE/EDTMap::MAX_RANGE;
@@ -180,7 +181,7 @@ void glb_plan(const ros::TimerEvent&)
   float length = 0.0f;
   std::vector<CUDA_GEO::coord> path = a_map->AStar2D(glb_tgt,start,false,length);
 
-  mid_map->dijkstra2D(path[0]);
+  mid_map->bfs2D(path[0]);
 
   setup_map_msg(nf1_map_msg,mid_map,false);
   copy_map_to_msg(nf1_map_msg,mid_map,tgt_height_coord);
