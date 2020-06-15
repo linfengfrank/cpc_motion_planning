@@ -1,6 +1,6 @@
 #include <ros/ros.h>
-#include <cpc_motion_planning/uav_motion_planner.h>
-#include <cpc_motion_planning/uav_nf1_motion_planner.h>
+#include <loc_plan/uav_astar_motion_planner.h>
+#include <loc_plan/uav_nf1_motion_planner.h>
 #include <chrono>
 
 float RandomFloat(float a, float b) {

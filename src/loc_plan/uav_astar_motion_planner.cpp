@@ -1,4 +1,4 @@
-#include "cpc_motion_planning/uav_motion_planner.h"
+#include "loc_plan/uav_astar_motion_planner.h"
 #include "tf/tf.h"
 #include <chrono>
 #include <std_srvs/Empty.h>
