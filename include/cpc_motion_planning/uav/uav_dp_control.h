@@ -68,11 +68,12 @@ public:
 
   template<class Model, class Evaluator, class Swarm>
   __host__ __device__
-  float simulate_evaluate(const EDTMap &map, const Evaluator &eva, Model &m, const Swarm &sw, const typename Swarm::Trace &ttr)
+  float simulate_evaluate(const EDTMap &map, const Evaluator &eva, Model &m, const Swarm &sw, const typename Swarm::Trace &ttr, bool &collision)
   {
     typename Model::State s = m.get_ini_state();
     float cost = 0;
     float dt = PSO::PSO_SIM_DT;
+    collision = false;
     for (float t=0.0f; t<PSO::PSO_TOTAL_T; t+=dt)
     {
       int i = static_cast<int>(floorf(t/sw.step_dt));
@@ -82,8 +83,8 @@ public:
       float3 u = dp_control(s, ttr[i]);
       m.model_forward(s,u,dt);
 
-      cost += 0.1*sqrtf(u.x*u.x + u.y*u.y + u.z*u.z);
-      cost += eva.process_cost(s,map);
+      cost += 0.1f*sqrtf(u.x*u.x + u.y*u.y + u.z*u.z);
+      cost += eva.process_cost(s,map,t,collision);
 
     }
     cost += eva.final_cost(s,map);

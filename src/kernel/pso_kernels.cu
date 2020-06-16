@@ -24,7 +24,7 @@ void initialize_particles_kernel(bool first_run,
   {
     sw.initialize_a_particle(m.get_ini_state(),sw.ptcls[idx]);
   }
-  sw.ptcls[idx].best_cost = ctrl.template simulate_evaluate<Model,Evaluator,Swarm>(map,eva,m,sw,sw.ptcls[idx].best_loc);
+  sw.ptcls[idx].best_cost = ctrl.template simulate_evaluate<Model,Evaluator,Swarm>(map,eva,m,sw,sw.ptcls[idx].best_loc,sw.ptcls[idx].collision);
 }
 
 //---
@@ -52,9 +52,9 @@ void iterate_particles_kernel(float weight,
 
   sw.bound_ptcl_location(m.get_ini_state(), sw.ptcls[idx]);
 
-  float cost = ctrl.template simulate_evaluate<Model,Evaluator,Swarm>(map,eva,m,sw,sw.ptcls[idx].curr_loc);
+  float cost = ctrl.template simulate_evaluate<Model,Evaluator,Swarm>(map,eva,m,sw,sw.ptcls[idx].curr_loc,sw.ptcls[idx].collision);
 
-  if (cost < sw.ptcls[idx].best_cost)
+  if (cost < sw.ptcls[idx].best_cost && !sw.ptcls[idx].collision)
   {
     sw.ptcls[idx].best_cost = cost;
     sw.ptcls[idx].best_loc = sw.ptcls[idx].curr_loc;

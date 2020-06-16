@@ -128,9 +128,10 @@ void UAVNF1MotionPlanner::plan_call_back(const ros::TimerEvent&)
     m_yaw_planner.solveTPBVP(m_yaw_target,0,m_yaw_state,m_yaw_limit,yaw_param);
   }
   auto end = std::chrono::steady_clock::now();
-    std::cout << "Consumed: "
-              << std::chrono::duration_cast<std::chrono::milliseconds>(end - start).count()
-              << "ms, cost: " << m_pso_planner->result.best_cost<<std::endl;
+  std::cout << "local planner: "
+            << std::chrono::duration_cast<std::chrono::milliseconds>(end - start).count()
+            << "ms, cost: " << m_pso_planner->result.best_cost
+            << ", collision: " << m_pso_planner->result.collision<<std::endl;
 
 
 

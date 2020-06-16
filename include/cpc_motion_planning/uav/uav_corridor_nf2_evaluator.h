@@ -126,10 +126,9 @@ public:
   }
 
   __host__ __device__
-  float process_cost(const UAVModel::State &s, const EDTMap &map) const
+  float process_cost(const UAVModel::State &s, const EDTMap &map, const float &time, bool &collision) const
   {
     float cost = 0;
-
     cost = cost+fc_cost(s.p);
     //    float3 dist_err = s.p - m_goal.s.p;
     //    cost += 0.5f*sqrtf(dist_err.x*dist_err.x + dist_err.y*dist_err.y + 3*dist_err.z*dist_err.z);

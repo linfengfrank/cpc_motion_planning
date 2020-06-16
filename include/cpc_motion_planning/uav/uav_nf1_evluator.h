@@ -26,7 +26,7 @@ public:
   }
 
   __host__ __device__
-  float process_cost(const UAVModel::State &s, const EDTMap &map) const
+  float process_cost(const UAVModel::State &s, const EDTMap &map, const float &time, bool &collision) const
   {
     float cost = 0;
     float dist_err = s.p.z - 2.0f;
@@ -57,8 +57,15 @@ public:
       float rd = map.edt_const_at(ix,iy,iz).d*0.2;
       cost += expf(-6*rd)*400;
 
-      if (rd < 0.6)
+      if (rd < 0.61)
+      {
         cost += 100;
+      }
+
+      if (rd < 0.41)
+      {
+        collision = true;
+      }
 
       if (!map.edt_const_at(ix,iy,iz).s)
           cost += 100;

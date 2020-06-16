@@ -107,6 +107,7 @@ public:
     Trace best_loc;  //self best
     Trace ptcl_vel;  //particle velocity
     float best_cost; //self best cost
+    bool collision;  //marks the particle leads to an inevitable collision state
     curandState rs;  //random state
   };
 
@@ -164,6 +165,7 @@ public:
     bound_ptcl_location(s_ini,p);
 
     p.best_loc = p.curr_loc;
+    p.collision = false;
     //printf("%f\n",p.best_loc[0].x);
   }
 
