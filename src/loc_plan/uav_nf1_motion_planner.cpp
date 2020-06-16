@@ -72,18 +72,33 @@ void UAVNF1MotionPlanner::plan_call_back(const ros::TimerEvent&)
   if (!m_pose_received || !m_received_map || !m_goal_received)
     return;
 
+  // set the current initial state
   UAV::UAVModel::State s = m_curr_ref;
-
   m_pso_planner->m_model.set_ini_state(s);
   m_ref_gen_planner->m_model.set_ini_state(s);
   m_pso_planner->m_eva.m_curr_yaw = m_yaw_state.p;
   m_pso_planner->m_eva.m_curr_pos = s.p;
 
+  // conduct the motion planning
   auto start = std::chrono::steady_clock::now();
   m_pso_planner->plan(*m_edt_map);
 
-  //std::vector<UAV::UAVModel::State> traj_guide = m_ref_gen_planner->generate_trajectory(m_guide_planner->result.best_loc);
+  // show the trace
+  pcl::PointXYZ clrPa;
+  clrPa.x = m_pso_planner->result.best_loc[0].x;
+  clrPa.y = m_pso_planner->result.best_loc[0].y;
+  clrPa.z = m_pso_planner->result.best_loc[0].z;
+  m_ctrl_pnt_cld->points.push_back(clrPa);
 
+  // generate the trajectory
+  std::vector<UAV::UAVModel::State> traj = m_ref_gen_planner->generate_trajectory(m_pso_planner->result.best_loc);
+  auto end = std::chrono::steady_clock::now();
+  std::cout << "local planner: "
+            << std::chrono::duration_cast<std::chrono::milliseconds>(end - start).count()
+            << "ms, cost: " << m_pso_planner->result.best_cost
+            << ", collision: " << m_pso_planner->result.collision<<std::endl;
+
+  // calculate the yaw trajectory
   float3 diff = m_pso_planner->result.best_loc[0] - s.p;
   diff.z = 0;
   float dist = sqrtf(dot(diff,diff));
@@ -97,15 +112,7 @@ void UAVNF1MotionPlanner::plan_call_back(const ros::TimerEvent&)
   JLT::TPBVPParam yaw_param;
   m_yaw_planner.solveTPBVP(m_yaw_target,0,m_yaw_state,m_yaw_limit,yaw_param);
 
-
-
-  // !!!TODO: MOVE IT BACK!!!
-  std::vector<UAV::UAVModel::State> traj = m_ref_gen_planner->generate_trajectory(m_pso_planner->result.best_loc);
-
-
-
-
-
+  // if stuck, then recalculate the yaw trajectory without FOV constraint
   if(is_stuck(yaw_param))
   {
     std::cout<<"stuck"<<std::endl;
@@ -124,32 +131,10 @@ void UAVNF1MotionPlanner::plan_call_back(const ros::TimerEvent&)
       m_yaw_target = m_yaw_target - floorf((m_yaw_target + M_PI) / (2 * M_PI)) * 2 * M_PI;
       m_yaw_target = m_yaw_target + m_yaw_state.p;
     }
-    JLT::TPBVPParam yaw_param;
     m_yaw_planner.solveTPBVP(m_yaw_target,0,m_yaw_state,m_yaw_limit,yaw_param);
   }
-  auto end = std::chrono::steady_clock::now();
-  std::cout << "local planner: "
-            << std::chrono::duration_cast<std::chrono::milliseconds>(end - start).count()
-            << "ms, cost: " << m_pso_planner->result.best_cost
-            << ", collision: " << m_pso_planner->result.collision<<std::endl;
 
-
-
-    pcl::PointXYZ clrPa;
-    clrPa.x = m_pso_planner->result.best_loc[0].x;
-    clrPa.y = m_pso_planner->result.best_loc[0].y;
-    clrPa.z = m_pso_planner->result.best_loc[0].z;
-    m_ctrl_pnt_cld->points.push_back(clrPa);
-
-
-
-
-
-
-
-  //-----------------------------------------------------------------------------------------------------------------
-  //PSO::State cmd_state;
-
+  // trajectory generation
   int cols = 0;
   int ref_counter = m_ref_start_idx;
   int next_ref_start_idx = (m_plan_cycle+1)*PSO::PSO_REPLAN_CYCLE+PSO::PSO_PLAN_CONSUME_CYCLE;
@@ -166,11 +151,7 @@ void UAVNF1MotionPlanner::plan_call_back(const ros::TimerEvent&)
     clrP.z = traj_s.p.z;
     m_traj_pnt_cld->points.push_back(clrP);
 
-
-
-
     ref_counter++;
-    //std::cout<<"b: "<<ref_counter<<std::endl;
     m_ref_msg.ids.push_back(ref_counter);
     m_ref_msg.data.push_back(traj_s.p.x);
     m_ref_msg.data.push_back(traj_s.p.y);
@@ -197,7 +178,6 @@ void UAVNF1MotionPlanner::plan_call_back(const ros::TimerEvent&)
     cols++;
   }
 
-  //std::cout<<"--------------"<<std::endl;
   m_ref_start_idx = next_ref_start_idx;
   m_ref_msg.cols = cols;
   m_ref_pub.publish(m_ref_msg);

@@ -41,9 +41,9 @@ public:
 
     if (m_oa)
     {
-      int ix = floorf( (s.p.x - map.m_origin.x) / map.m_grid_step + 0.5);
-      int iy = floorf( (s.p.y - map.m_origin.y) / map.m_grid_step + 0.5);
-      int iz = floorf( (s.p.z - map.m_origin.z) / map.m_grid_step + 0.5);
+      int ix = floorf( (s.p.x - map.m_origin.x) / map.m_grid_step + 0.5f);
+      int iy = floorf( (s.p.y - map.m_origin.y) / map.m_grid_step + 0.5f);
+      int iz = floorf( (s.p.z - map.m_origin.z) / map.m_grid_step + 0.5f);
 
       if (ix<0 || ix>=map.m_map_size.x ||
           iy<0 || iy>=map.m_map_size.y ||
@@ -106,9 +106,9 @@ public:
 
     if (m_oa)
     {
-      int ix = floorf( (s.p.x - map.m_origin.x) / map.m_grid_step + 0.5);
-      int iy = floorf( (s.p.y - map.m_origin.y) / map.m_grid_step + 0.5);
-      int iz = floorf( (s.p.z - map.m_origin.z) / map.m_grid_step + 0.5);
+      int ix = floorf( (s.p.x - map.m_origin.x) / map.m_grid_step + 0.5f);
+      int iy = floorf( (s.p.y - map.m_origin.y) / map.m_grid_step + 0.5f);
+      int iz = floorf( (s.p.z - map.m_origin.z) / map.m_grid_step + 0.5f);
 
       if (ix<0 || ix>=map.m_map_size.x ||
           iy<0 || iy>=map.m_map_size.y ||
