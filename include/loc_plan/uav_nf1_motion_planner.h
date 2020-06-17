@@ -34,7 +34,12 @@ private:
   void map_call_back(const cpc_aux_mapping::grid_map::ConstPtr &msg);
   void goal_call_back(const cpc_aux_mapping::grid_map::ConstPtr &msg);
   void vehicle_pose_call_back(const geometry_msgs::PoseStamped::ConstPtr &msg);
-  bool is_stuck(const JLT::TPBVPParam &yaw_param);
+  bool is_stuck(const JLT::TPBVPParam &yaw_param, const std::vector<UAV::UAVModel::State> &traj);
+
+  template<class Model, class Controller, class Evaluator, class Swarm>
+  void calculate_trajectory(PSO::Planner<Model, Controller, Evaluator, Swarm> *planner, std::vector<UAV::UAVModel::State> &traj);
+
+  void calculate_yaw(JLT::TPBVPParam &yaw_param, const std::vector<UAV::UAVModel::State> &traj);
 
 private:
   ros::NodeHandle m_nh;
@@ -70,6 +75,7 @@ private:
   JLT::Limit m_yaw_limit;
   float m_yaw_target;
   float m_stuck_pbty;
+  JLT::TPBVPParam m_yaw_param;
 };
 
 #endif // UAV_NF1_MOTION_PLANNER_H

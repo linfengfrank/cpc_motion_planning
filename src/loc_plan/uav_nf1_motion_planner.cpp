@@ -70,62 +70,25 @@ UAVNF1MotionPlanner::~UAVNF1MotionPlanner()
   delete m_emergent_planner;
 }
 
-void UAVNF1MotionPlanner::plan_call_back(const ros::TimerEvent&)
+template<class Model, class Controller, class Evaluator, class Swarm>
+void UAVNF1MotionPlanner::calculate_trajectory(PSO::Planner<Model, Controller, Evaluator, Swarm> *planner, std::vector<UAV::UAVModel::State> &traj)
 {
-  if (!m_pose_received || !m_received_map || !m_goal_received)
-    return;
-
   // set the current initial state
   UAV::UAVModel::State s = m_curr_ref;
-  m_pso_planner->m_model.set_ini_state(s);
-  m_pso_planner->m_eva.m_curr_yaw = m_yaw_state.p;
-  m_pso_planner->m_eva.m_curr_pos = s.p;
+  planner->m_model.set_ini_state(s);
+  planner->m_eva.m_curr_yaw = m_yaw_state.p;
+  planner->m_eva.m_curr_pos = s.p;
 
   // conduct the motion planning
-  auto start = std::chrono::steady_clock::now();
-  m_pso_planner->plan(*m_edt_map);
-
-  // show the trace
-  pcl::PointXYZ clrPa;
-  clrPa.x = m_pso_planner->result.best_loc[0].x;
-  clrPa.y = m_pso_planner->result.best_loc[0].y;
-  clrPa.z = m_pso_planner->result.best_loc[0].z;
-  m_ctrl_pnt_cld->points.push_back(clrPa);
+  planner->plan(*m_edt_map);
 
   // generate the trajectory
-  std::vector<UAV::UAVModel::State> traj = m_pso_planner->generate_trajectory(m_pso_planner->result.best_loc);
-  auto end = std::chrono::steady_clock::now();
-  std::cout << "local planner: "
-            << std::chrono::duration_cast<std::chrono::milliseconds>(end - start).count()
-            << "ms, cost: " << m_pso_planner->result.best_cost
-            << ", collision: " << m_pso_planner->result.collision<<std::endl;
-  //------------------------------------------------------------------------
-  if (m_pso_planner->result.collision)
-  {
-    m_emergent_planner->m_model.set_ini_state(s);
-    m_emergent_planner->m_eva.m_curr_yaw = m_yaw_state.p;
-    m_emergent_planner->m_eva.m_curr_pos = s.p;
+  traj = planner->generate_trajectory();
+}
 
-    m_emergent_planner->plan(*m_edt_map);
-    std::cout << "emergent planner collision: "<<m_emergent_planner->result.collision<<std::endl;
-
-    if(!m_emergent_planner->result.collision)
-    {
-      traj = m_emergent_planner->generate_trajectory(m_emergent_planner->result.best_loc);
-    }
-    else
-    {
-      traj.clear();
-      UAV::UAVModel::State s_tmp = m_curr_ref;
-      s_tmp.v = make_float3(0,0,0);
-      s_tmp.a = make_float3(0,0,0);
-      for (float t=0.0f; t<PSO::PSO_TOTAL_T; t+=PSO::PSO_CTRL_DT)
-      {
-        traj.push_back(s_tmp);
-      }
-    }
-  }
-  //------------------------------------------------------------------------
+void UAVNF1MotionPlanner::calculate_yaw(JLT::TPBVPParam &yaw_param, const std::vector<UAV::UAVModel::State> &traj)
+{
+  UAV::UAVModel::State s = m_curr_ref;
   // calculate the yaw trajectory
   float3 diff = m_pso_planner->result.best_loc[0] - s.p;
   diff.z = 0;
@@ -137,11 +100,11 @@ void UAVNF1MotionPlanner::plan_call_back(const ros::TimerEvent&)
     m_yaw_target = m_yaw_target - floorf((m_yaw_target + M_PI) / (2 * M_PI)) * 2 * M_PI;
     m_yaw_target = m_yaw_target + m_yaw_state.p;
   }
-  JLT::TPBVPParam yaw_param;
+
   m_yaw_planner.solveTPBVP(m_yaw_target,0,m_yaw_state,m_yaw_limit,yaw_param);
 
   // if stuck, then recalculate the yaw trajectory without FOV constraint
-  if(is_stuck(yaw_param))
+  if(is_stuck(yaw_param, traj))
   {
     std::cout<<"stuck"<<std::endl;
     bool old_redord = m_pso_planner->m_eva.m_fov;
@@ -161,6 +124,55 @@ void UAVNF1MotionPlanner::plan_call_back(const ros::TimerEvent&)
     }
     m_yaw_planner.solveTPBVP(m_yaw_target,0,m_yaw_state,m_yaw_limit,yaw_param);
   }
+}
+
+void UAVNF1MotionPlanner::plan_call_back(const ros::TimerEvent&)
+{
+  if (!m_pose_received || !m_received_map || !m_goal_received)
+    return;
+
+  std::vector<UAV::UAVModel::State> traj;
+  auto start = std::chrono::steady_clock::now();
+  calculate_trajectory<SIMPLE_UAV_NF1>(m_pso_planner,traj);
+  auto end = std::chrono::steady_clock::now();
+  std::cout << "local planner: "
+            << std::chrono::duration_cast<std::chrono::milliseconds>(end - start).count()
+            << "ms, cost: " << m_pso_planner->result.best_cost
+            << ", collision: " << m_pso_planner->result.collision<<std::endl;
+
+//  // show the trace
+//  pcl::PointXYZ clrPa;
+//  clrPa.x = m_pso_planner->result.best_loc[0].x;
+//  clrPa.y = m_pso_planner->result.best_loc[0].y;
+//  clrPa.z = m_pso_planner->result.best_loc[0].z;
+//  m_ctrl_pnt_cld->points.push_back(clrPa);
+  //------------------------------------------------------------------------
+  if (m_pso_planner->result.collision)
+  {
+    calculate_trajectory<EMERGENT_UAV_NF1>(m_emergent_planner,traj);
+    std::cout << "emergent planner collision: "<<m_emergent_planner->result.collision<<std::endl;
+    if(m_emergent_planner->result.collision)
+    {
+      traj.clear();
+      UAV::UAVModel::State s_tmp = m_curr_ref;
+      s_tmp.v = make_float3(0,0,0);
+      s_tmp.a = make_float3(0,0,0);
+      for (float t=0.0f; t<PSO::PSO_TOTAL_T; t+=PSO::PSO_CTRL_DT)
+      {
+        traj.push_back(s_tmp);
+      }
+    }
+    else
+    {
+      calculate_yaw(m_yaw_param,traj);
+    }
+  }
+  else
+  {
+    calculate_yaw(m_yaw_param,traj);
+  }
+  //------------------------------------------------------------------------
+
 
   // trajectory generation
   int cols = 0;
@@ -171,7 +183,7 @@ void UAVNF1MotionPlanner::plan_call_back(const ros::TimerEvent&)
   for (UAV::UAVModel::State traj_s : traj)
   {
     t += PSO::PSO_CTRL_DT;
-    JLT::State tmp_yaw_state = m_yaw_planner.TPBVPRefGen(yaw_param,t,u_yaw);
+    JLT::State tmp_yaw_state = m_yaw_planner.TPBVPRefGen(m_yaw_param,t,u_yaw);
 
     pcl::PointXYZ clrP;
     clrP.x = traj_s.p.x;
@@ -283,7 +295,7 @@ void UAVNF1MotionPlanner::goal_call_back(const cpc_aux_mapping::grid_map::ConstP
 
 }
 
-bool UAVNF1MotionPlanner::is_stuck(const JLT::TPBVPParam &yaw_param)
+bool UAVNF1MotionPlanner::is_stuck(const JLT::TPBVPParam &yaw_param, const std::vector<UAV::UAVModel::State> &traj)
 {
     if (!m_pso_planner->m_eva.m_oa)
         return false;
@@ -292,9 +304,12 @@ bool UAVNF1MotionPlanner::is_stuck(const JLT::TPBVPParam &yaw_param)
     bool no_turning = false;
     bool no_moving_intention = false;
 
+    // check is it far from target
+    // TODO: make a better checking condition
     if (m_pso_planner->result.best_cost > 10)
         far_from_tgt = true;
 
+    // check whether the vehicle is about to turn
     float max_turn = 0;
     float turn, u_yaw;
     JLT::State ini_yaw_state = m_yaw_planner.TPBVPRefGen(yaw_param,0,u_yaw);
@@ -308,8 +323,7 @@ bool UAVNF1MotionPlanner::is_stuck(const JLT::TPBVPParam &yaw_param)
     if (max_turn < 0.25f)
         no_turning = true;
 
-
-    std::vector<UAV::UAVModel::State> traj = m_pso_planner->generate_trajectory(m_pso_planner->result.best_loc);
+    // check whether the vehicle is about to move
     float max_dist = 0;
     float dist;
     UAV::UAVModel::State ini_s = traj[0];
@@ -321,10 +335,10 @@ bool UAVNF1MotionPlanner::is_stuck(const JLT::TPBVPParam &yaw_param)
         if (dist > max_dist)
             max_dist = dist;
     }
-
     if (max_dist < 0.4f)
         no_moving_intention = true;
 
+    // update stuck probability
     if (far_from_tgt && no_turning && no_moving_intention)
         m_stuck_pbty +=0.15f;
     else

@@ -34,6 +34,11 @@ public:
     return m_ctrl_host.template generate_trajectory<Model,Swarm>(m_model,m_swarm,ttr);
   }
 
+  std::vector<typename Model::State> generate_trajectory()
+  {
+    return m_ctrl_host.template generate_trajectory<Model,Swarm>(m_model,m_swarm,result.best_loc);
+  }
+
   void plan(const EDTMap &map)
   {
     //test_plan<N>(s,goal,m_ptcls, m_best_values, m_num_of_ptcls, &result, true,m_carrier,m_cbls_hdl);
