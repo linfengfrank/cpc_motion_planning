@@ -33,10 +33,7 @@ int main(int argc, char *argv[])
   float dt = 0.05;
 
   PSO::Planner<CORRID_UAV> p(100,40,1);
-  p.initialize(false);
-
-  PSO::Planner<CORRID_UAV> q(1,1,1);
-  q.initialize(true);
+  p.initialize();
 
 
   //--------------------------------------------------------------------
@@ -80,7 +77,6 @@ int main(int argc, char *argv[])
 
 
   p.m_model.set_ini_state(s);
-  q.m_model.set_ini_state(s);
   //  m_pso_planner->m_eva.m_curr_pos = s.p;
   //  m_pso_planner->m_eva.m_curr_yaw = m_yaw_state.p;
   //  m_ref_gen_planner->set_problem(s,m_goal);
@@ -98,13 +94,12 @@ int main(int argc, char *argv[])
               << "ms, cost: " << p.result.best_cost<<std::endl;
 
 
-    std::vector<UAV::UAVModel::State> traj = q.generate_trajectory(p.result.best_loc);
+    std::vector<UAV::UAVModel::State> traj = p.generate_trajectory(p.result.best_loc);
 
     for (unsigned int i=0;i<5;i++)
     {
       s = traj[i];
       p.m_model.set_ini_state(s);
-      q.m_model.set_ini_state(s);
       // std::cout<<p.result.best_cost<<std::endl;
       // std::cout<<s.p.x<<" "<<s.p.y<<" "<<s.p.z<<" "<<p.result.best_cost<<std::endl;
       log_file<<s.p.x<<" "<<s.p.y<<" "<<s.p.z<<" "<<s.v.x<<" "<<s.v.y<<" "<<s.v.z<<" "<<s.a.x<<" "<<s.a.y<<" "<<s.a.z<<" "<<p.result.best_cost<<std::endl;

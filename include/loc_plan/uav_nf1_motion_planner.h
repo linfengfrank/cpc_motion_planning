@@ -54,11 +54,10 @@ private:
   bool m_goal_received;
   EDTMap *m_edt_map;
   NF1Map *m_nf1_map;
-  PSO::Planner<SIMPLE_UAV_NF1> *m_pso_planner;
-  PSO::Planner<SIMPLE_UAV_NF1> *m_ref_gen_planner;
 
+  PSO::Planner<SIMPLE_UAV_NF1> *m_pso_planner;
   PSO::Planner<EMERGENT_UAV_NF1> *m_emergent_planner;
-  PSO::Planner<EMERGENT_UAV_NF1> *m_emergent_ref_gen_planner;
+
 
   PointCloud::Ptr m_traj_pnt_cld, m_ctrl_pnt_cld;
   //UAV::SingleTargetEvaluator::Target m_goal;

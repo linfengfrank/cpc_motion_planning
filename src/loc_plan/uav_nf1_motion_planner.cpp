@@ -27,19 +27,12 @@ UAVNF1MotionPlanner::UAVNF1MotionPlanner():
   m_planning_timer = m_nh.createTimer(ros::Duration(PSO::PSO_REPLAN_DT), &UAVNF1MotionPlanner::plan_call_back, this);
 
   m_pso_planner = new PSO::Planner<SIMPLE_UAV_NF1>(150,30,1);
-  m_pso_planner->initialize(false);
-
-  m_ref_gen_planner = new PSO::Planner<SIMPLE_UAV_NF1>(1,1,1);
-  m_ref_gen_planner->initialize(true);
+  m_pso_planner->initialize();
 
   m_emergent_planner = new PSO::Planner<EMERGENT_UAV_NF1>(50,20,1);
-  m_emergent_planner->initialize(false);
-
-  m_emergent_ref_gen_planner = new PSO::Planner<EMERGENT_UAV_NF1>(1,1,1);
-  m_emergent_ref_gen_planner->initialize(true);
-
-  m_emergent_planner->m_dp_ctrl.set_limit(make_float2(5,2), make_float2(4,2), make_float2(5,5));
-  m_emergent_ref_gen_planner->m_dp_ctrl.set_limit(make_float2(5,2), make_float2(4,2), make_float2(5,5));
+  m_emergent_planner->initialize();
+  m_emergent_planner->m_ctrl_dev.set_limit(make_float2(5,2), make_float2(4,2), make_float2(5,5));
+  m_emergent_planner->m_ctrl_host.set_limit(make_float2(5,2), make_float2(4,2), make_float2(5,5));
 
   m_traj_pnt_cld = PointCloud::Ptr(new PointCloud);
   m_traj_pnt_cld->header.frame_id = "/world";
@@ -73,14 +66,8 @@ UAVNF1MotionPlanner::~UAVNF1MotionPlanner()
   m_pso_planner->release();
   delete m_pso_planner;
 
-  m_ref_gen_planner->release();
-  delete m_ref_gen_planner;
-
   m_emergent_planner->release();
   delete m_emergent_planner;
-
-  m_emergent_ref_gen_planner->release();
-  delete m_emergent_ref_gen_planner;
 }
 
 void UAVNF1MotionPlanner::plan_call_back(const ros::TimerEvent&)
@@ -91,7 +78,6 @@ void UAVNF1MotionPlanner::plan_call_back(const ros::TimerEvent&)
   // set the current initial state
   UAV::UAVModel::State s = m_curr_ref;
   m_pso_planner->m_model.set_ini_state(s);
-  m_ref_gen_planner->m_model.set_ini_state(s);
   m_pso_planner->m_eva.m_curr_yaw = m_yaw_state.p;
   m_pso_planner->m_eva.m_curr_pos = s.p;
 
@@ -107,7 +93,7 @@ void UAVNF1MotionPlanner::plan_call_back(const ros::TimerEvent&)
   m_ctrl_pnt_cld->points.push_back(clrPa);
 
   // generate the trajectory
-  std::vector<UAV::UAVModel::State> traj = m_ref_gen_planner->generate_trajectory(m_pso_planner->result.best_loc);
+  std::vector<UAV::UAVModel::State> traj = m_pso_planner->generate_trajectory(m_pso_planner->result.best_loc);
   auto end = std::chrono::steady_clock::now();
   std::cout << "local planner: "
             << std::chrono::duration_cast<std::chrono::milliseconds>(end - start).count()
@@ -117,7 +103,6 @@ void UAVNF1MotionPlanner::plan_call_back(const ros::TimerEvent&)
   if (m_pso_planner->result.collision)
   {
     m_emergent_planner->m_model.set_ini_state(s);
-    m_emergent_ref_gen_planner->m_model.set_ini_state(s);
     m_emergent_planner->m_eva.m_curr_yaw = m_yaw_state.p;
     m_emergent_planner->m_eva.m_curr_pos = s.p;
 
@@ -126,7 +111,7 @@ void UAVNF1MotionPlanner::plan_call_back(const ros::TimerEvent&)
 
     if(!m_emergent_planner->result.collision)
     {
-      traj = m_emergent_ref_gen_planner->generate_trajectory(m_emergent_planner->result.best_loc);
+      traj = m_emergent_planner->generate_trajectory(m_emergent_planner->result.best_loc);
     }
     else
     {
@@ -324,7 +309,7 @@ bool UAVNF1MotionPlanner::is_stuck(const JLT::TPBVPParam &yaw_param)
         no_turning = true;
 
 
-    std::vector<UAV::UAVModel::State> traj = m_ref_gen_planner->generate_trajectory(m_pso_planner->result.best_loc);
+    std::vector<UAV::UAVModel::State> traj = m_pso_planner->generate_trajectory(m_pso_planner->result.best_loc);
     float max_dist = 0;
     float dist;
     UAV::UAVModel::State ini_s = traj[0];

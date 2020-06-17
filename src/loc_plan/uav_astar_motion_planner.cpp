@@ -25,10 +25,8 @@ UAVMotionPlanner::UAVMotionPlanner():
   m_planning_timer = m_nh.createTimer(ros::Duration(PSO::PSO_REPLAN_DT), &UAVMotionPlanner::plan_call_back, this);
 
   m_pso_planner = new PSO::Planner<SIMPLE_UAV>(150,30,1);
-  m_pso_planner->initialize(false);
+  m_pso_planner->initialize();
 
-  m_ref_gen_planner = new PSO::Planner<SIMPLE_UAV>(1,1,1);
-  m_ref_gen_planner->initialize(true);
   m_traj_pnt_cld = PointCloud::Ptr(new PointCloud);
   m_traj_pnt_cld->header.frame_id = "/world";
 
@@ -60,9 +58,6 @@ UAVMotionPlanner::~UAVMotionPlanner()
 
   m_pso_planner->release();
   delete m_pso_planner;
-
-  m_ref_gen_planner->release();
-  delete m_ref_gen_planner;
 }
 
 void UAVMotionPlanner::plan_call_back(const ros::TimerEvent&)
@@ -86,7 +81,6 @@ void UAVMotionPlanner::plan_call_back(const ros::TimerEvent&)
   m_pso_planner->set_problem(s,m_goal);
   m_pso_planner->m_eva.m_curr_pos = s.p;
   m_pso_planner->m_eva.m_curr_yaw = m_yaw_state.p;
-  m_ref_gen_planner->set_problem(s,m_goal);
 
   auto start = std::chrono::steady_clock::now();
   JLT::TPBVPParam yaw_param;
@@ -99,7 +93,7 @@ void UAVMotionPlanner::plan_call_back(const ros::TimerEvent&)
             << "ms, cost: " << m_pso_planner->result.best_cost<<std::endl;
 
   //PSO::State cmd_state;
-  std::vector<UAV::UAVModel::State> traj = m_ref_gen_planner->generate_trajectory(m_pso_planner->result.best_loc);
+  std::vector<UAV::UAVModel::State> traj = m_pso_planner->generate_trajectory(m_pso_planner->result.best_loc);
   int cols = 0;
   int ref_counter = m_ref_start_idx;
   int next_ref_start_idx = (m_plan_cycle+1)*PSO::PSO_REPLAN_CYCLE+PSO::PSO_PLAN_CONSUME_CYCLE;
@@ -216,8 +210,7 @@ void UAVMotionPlanner::goal_call_back(const geometry_msgs::PoseStamped::ConstPtr
   if (dist > 0.5f)
   {
       float theta = atan2f(diff.y,diff.x);
-      m_pso_planner->m_dp_ctrl.m_theta = theta;
-      m_ref_gen_planner->m_dp_ctrl.m_theta = theta;
+      m_pso_planner->m_ctrl_dev.m_theta = theta;
   }
 
   //  double phi,theta,psi;
