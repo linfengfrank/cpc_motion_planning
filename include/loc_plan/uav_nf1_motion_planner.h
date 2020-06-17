@@ -19,6 +19,7 @@
 #include <cpc_motion_planning/uav/uav_swarm.h>
 
 #define SIMPLE_UAV_NF1 UAV::UAVModel,UAV::UAVDPControl,UAV::NF1Evaluator,UAV::UAVSwarm<1>
+#define EMERGENT_UAV_NF1 UAV::UAVModel,UAV::UAVJLTControl,UAV::NF1Evaluator,UAV::UAVSwarm<1>
 
 class UAVNF1MotionPlanner
 {
@@ -55,6 +56,10 @@ private:
   NF1Map *m_nf1_map;
   PSO::Planner<SIMPLE_UAV_NF1> *m_pso_planner;
   PSO::Planner<SIMPLE_UAV_NF1> *m_ref_gen_planner;
+
+  PSO::Planner<EMERGENT_UAV_NF1> *m_emergent_planner;
+  PSO::Planner<EMERGENT_UAV_NF1> *m_emergent_ref_gen_planner;
+
   PointCloud::Ptr m_traj_pnt_cld, m_ctrl_pnt_cld;
   //UAV::SingleTargetEvaluator::Target m_goal;
   UAV::UAVModel::State m_curr_ref;

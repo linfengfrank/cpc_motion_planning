@@ -31,6 +31,16 @@ UAVNF1MotionPlanner::UAVNF1MotionPlanner():
 
   m_ref_gen_planner = new PSO::Planner<SIMPLE_UAV_NF1>(1,1,1);
   m_ref_gen_planner->initialize(true);
+
+  m_emergent_planner = new PSO::Planner<EMERGENT_UAV_NF1>(50,20,1);
+  m_emergent_planner->initialize(false);
+
+  m_emergent_ref_gen_planner = new PSO::Planner<EMERGENT_UAV_NF1>(1,1,1);
+  m_emergent_ref_gen_planner->initialize(true);
+
+  m_emergent_planner->m_dp_ctrl.set_limit(make_float2(5,2), make_float2(4,2), make_float2(5,5));
+  m_emergent_ref_gen_planner->m_dp_ctrl.set_limit(make_float2(5,2), make_float2(4,2), make_float2(5,5));
+
   m_traj_pnt_cld = PointCloud::Ptr(new PointCloud);
   m_traj_pnt_cld->header.frame_id = "/world";
 
@@ -65,6 +75,12 @@ UAVNF1MotionPlanner::~UAVNF1MotionPlanner()
 
   m_ref_gen_planner->release();
   delete m_ref_gen_planner;
+
+  m_emergent_planner->release();
+  delete m_emergent_planner;
+
+  m_emergent_ref_gen_planner->release();
+  delete m_emergent_ref_gen_planner;
 }
 
 void UAVNF1MotionPlanner::plan_call_back(const ros::TimerEvent&)
@@ -97,7 +113,34 @@ void UAVNF1MotionPlanner::plan_call_back(const ros::TimerEvent&)
             << std::chrono::duration_cast<std::chrono::milliseconds>(end - start).count()
             << "ms, cost: " << m_pso_planner->result.best_cost
             << ", collision: " << m_pso_planner->result.collision<<std::endl;
+  //------------------------------------------------------------------------
+  if (m_pso_planner->result.collision)
+  {
+    m_emergent_planner->m_model.set_ini_state(s);
+    m_emergent_ref_gen_planner->m_model.set_ini_state(s);
+    m_emergent_planner->m_eva.m_curr_yaw = m_yaw_state.p;
+    m_emergent_planner->m_eva.m_curr_pos = s.p;
 
+    m_emergent_planner->plan(*m_edt_map);
+    std::cout << "emergent planner collision: "<<m_emergent_planner->result.collision<<std::endl;
+
+    if(!m_emergent_planner->result.collision)
+    {
+      traj = m_emergent_ref_gen_planner->generate_trajectory(m_emergent_planner->result.best_loc);
+    }
+    else
+    {
+      traj.clear();
+      UAV::UAVModel::State s_tmp = m_curr_ref;
+      s_tmp.v = make_float3(0,0,0);
+      s_tmp.a = make_float3(0,0,0);
+      for (float t=0.0f; t<PSO::PSO_TOTAL_T; t+=PSO::PSO_CTRL_DT)
+      {
+        traj.push_back(s_tmp);
+      }
+    }
+  }
+  //------------------------------------------------------------------------
   // calculate the yaw trajectory
   float3 diff = m_pso_planner->result.best_loc[0] - s.p;
   diff.z = 0;
@@ -237,9 +280,13 @@ void UAVNF1MotionPlanner::goal_call_back(const cpc_aux_mapping::grid_map::ConstP
   {
     m_pso_planner->m_eva.m_oa = m_goal_received;
     m_pso_planner->m_eva.m_fov = m_goal_received;
+
+    m_emergent_planner->m_eva.m_oa = m_goal_received;
+    m_emergent_planner->m_eva.m_fov = m_goal_received;
   }
 
   m_pso_planner->m_eva.m_nf1_map = *m_nf1_map;
+  m_emergent_planner->m_eva.m_nf1_map = *m_nf1_map;
 
   if (!m_goal_received)
   {

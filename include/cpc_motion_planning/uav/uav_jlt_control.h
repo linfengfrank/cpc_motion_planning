@@ -23,14 +23,28 @@ public:
 
   void load_data(CUDA_MAT::CudaMatrixFactory &factory, bool load_to_host)
   {
-        m_limit[0].aMax = 2.5;
-        m_limit[0].aMin = -2.5;
 
-        m_limit[0].jMax = 3.5;
-        m_limit[0].jMin = -3.5;
+  }
 
-        m_limit[0].vMax = 4.5;
-        m_limit[0].vMin = -4.5;
+  void set_limit(const float2 &vM, const float2 &aM, const float2 &jM)
+  {
+    m_limit[0].vMax = vM.x;
+    m_limit[0].vMin = -vM.x;
+
+    m_limit[0].aMax = aM.x;
+    m_limit[0].aMin = -aM.x;
+
+    m_limit[0].jMax = jM.x;
+    m_limit[0].jMin = -jM.x;
+
+    m_limit[1].vMax = vM.y;
+    m_limit[1].vMin = -vM.y;
+
+    m_limit[1].aMax = aM.y;
+    m_limit[1].aMin = -aM.y;
+
+    m_limit[1].jMax = jM.y;
+    m_limit[1].jMin = -jM.y;
   }
 
   void release_data(CUDA_MAT::CudaMatrixFactory &factory, bool load_from_host)
