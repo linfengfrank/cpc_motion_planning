@@ -12,6 +12,10 @@
 #include "cpc_motion_planning/ref_data.h"
 #include <mid_plan/dijkstra.h>
 #include <mid_plan/a_star.h>
+
+
+#include <ubfs/cuda_mid_map.cuh>
+#include <ubfs/bfs_wrapper.cuh>
 #define SHOWPC
 
 typedef pcl::PointCloud<pcl::PointXYZRGB> PointCloud;
@@ -21,6 +25,8 @@ ros::Publisher* pc_pub;
 ros::Publisher* mid_goal_pub;
 Dijkstra *mid_map=nullptr;
 Astar *a_map=nullptr;
+
+NF1Map3D *nf1map3d =nullptr;
 
 float FLY_HEIGHT;
 bool first_run = true;
@@ -138,6 +144,14 @@ void copy_map_to_msg(cpc_aux_mapping::grid_map &msg, GridGraph* map,int tgt_heig
   }
 }
 //---
+void nf1map2msg(cpc_aux_mapping::grid_map &msg)
+{
+  float *tmp = static_cast<float*>(static_cast<void*>(msg.payload8.data()));
+  CUDA_MEMCPY_D2H(tmp,nf1map3d->d_cost_to_go,nf1map3d->m_byte_size);
+
+}
+//---
+
 void mapCallback(const cpc_aux_mapping::grid_map::ConstPtr& msg)
 {
   received_map = true;
@@ -151,6 +165,11 @@ void mapCallback(const cpc_aux_mapping::grid_map::ConstPtr& msg)
   }
   mid_map->copyEdtData(msg);
   a_map->copyEdtData(msg);
+
+
+  // copy seendist msg to cuda
+  nf1map3d->setDefaut();
+  CUDA_MEMCPY_H2D(nf1map3d->d_val_map,msg->payload8.data(),nf1map3d->m_edt_size);
 }
 //---
 void goalCallback(const geometry_msgs::PoseStamped::ConstPtr &msg)
@@ -181,10 +200,15 @@ void glb_plan(const ros::TimerEvent&)
   float length = 0.0f;
   std::vector<CUDA_GEO::coord> path = a_map->AStar2D(glb_tgt,start,false,length);
 
-  mid_map->bfs2D(path[0]);
+//  mid_map->bfs2D(path[0]);
 
   setup_map_msg(nf1_map_msg,mid_map,false);
-  copy_map_to_msg(nf1_map_msg,mid_map,tgt_height_coord);
+//  copy_map_to_msg(nf1_map_msg,mid_map,tgt_height_coord);
+
+  // cuda bfs
+  int3 tgt_i3{path[0].x,path[0].y,path[0].z};
+  ubfs_sssp3d_wrapper(tgt_i3,nf1map3d);
+  nf1map2msg(nf1_map_msg);
   nf1_pub->publish(nf1_map_msg);
 #ifdef SHOWPC
   publishMap(tgt_height_coord);
@@ -201,6 +225,11 @@ void glb_plan(const ros::TimerEvent&)
 int main(int argc, char **argv)
 {
   ros::init(argc, argv, "mid_layer_node");
+
+  int3 map_size = int3{100,100,30};
+  nf1map3d =new NF1Map3D(map_size,0.2);
+  nf1map3d->setup_device();
+
   pc_pub = new ros::Publisher;
   nf1_pub = new ros::Publisher;
   mid_goal_pub = new ros::Publisher;
@@ -229,5 +258,6 @@ int main(int argc, char **argv)
     delete mid_map;
     delete a_map;
   }
+   nf1map3d->free_device();
   return 0;
 }

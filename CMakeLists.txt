@@ -1,6 +1,7 @@
 cmake_minimum_required(VERSION 2.8.3)
 project(cpc_motion_planning)
-
+set(ROS_BUILD_TYPE Debug)
+set(CMAKE_BUILD_TYPE Debug)
 ## Compile as C++11, supported in ROS Kinetic and newer
 add_compile_options(-std=c++11)
 
@@ -34,7 +35,7 @@ else()
     SET(CUDA_NVCC_FLAGS "-g ;-G ;-arch=sm_52" CACHE STRING "nvcc flags" FORCE)
     SET(CUDA_VERBOSE_BUILD ON CACHE BOOL "nvcc verbose" FORCE)
 endif()
-
+set(CUDA_NVCC_FLAGS ${CUDA_NVCC_FLAGS} -std=c++11)
 ## Uncomment this if the package has a setup.py. This macro ensures
 ## modules and global scripts declared therein get installed
 ## See http://ros.org/doc/api/catkin/html/user_guide/setup_dot_py.html
@@ -201,7 +202,9 @@ target_link_libraries(${PROJECT_NAME}_corridor_node
 cuda_add_executable(${PROJECT_NAME}_glb_plan_node
     src/mid_plan/grid_graph.cpp
     src/mid_plan/a_star.cpp
-    src/mid_plan/mid_plan_node.cpp)
+    src/mid_plan/mid_plan_node.cpp
+    src/kernel/cuda_mid_map.cu
+    src/kernel/bfs_wrapper.cu)
 
 target_link_libraries(${PROJECT_NAME}_glb_plan_node
     ${CUDA_curand_LIBRARY}
@@ -213,7 +216,9 @@ cuda_add_executable(${PROJECT_NAME}_nf1_plan_node
     src/mid_plan/grid_graph.cpp
     src/mid_plan/dijkstra.cpp
     src/mid_plan/a_star.cpp
-    src/mid_plan/mid_plan_nf1_node.cpp)
+    src/mid_plan/mid_plan_nf1_node.cpp
+    src/kernel/cuda_mid_map.cu
+    src/kernel/bfs_wrapper.cu)
 
 target_link_libraries(${PROJECT_NAME}_nf1_plan_node
     ${CUDA_curand_LIBRARY}
