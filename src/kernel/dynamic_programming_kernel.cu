@@ -31,7 +31,7 @@ void test(VoidPtrCarrier data)
 
   for (float acc=-2;acc<2.1;acc+=0.2)
   {
-    for (float alpha=-3;alpha<3.1;alpha+=0.3)
+    for (float alpha=-1.5;alpha<1.6;alpha+=0.3)
     {
       s_next[0] = s_curr[0] + s_curr[1]*DT + 0.5*acc*DT*DT;
       s_next[1] = s_curr[1] + acc*DT;
@@ -46,11 +46,11 @@ void test(VoidPtrCarrier data)
       if (s_curr[1] < -1.2)
         val += 80*(-s_curr[1] - 1.2);
 
-      if (s_curr[3] - 1.5 > 0)
-        val += 80*(s_curr[3] - 1.5);
+      if (s_curr[3] - 0.6 > 0)
+        val += 80*(s_curr[3] - 0.6);
 
-      if (s_curr[3] < -1.5)
-        val += 80*(-s_curr[3] - 1.5);
+      if (s_curr[3] < -0.6)
+        val += 80*(-s_curr[3] - 0.6);
 
       acc_lat = s_curr[1]*s_curr[3];
       acc_tot = sqrt(acc_lat*acc_lat + acc*acc);
