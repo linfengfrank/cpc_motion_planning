@@ -123,3 +123,23 @@ bool UAVLocalMotionPlanner::is_stuck(const std::vector<UAV::UAVModel::State> &tr
     }
 }
 
+void UAVLocalMotionPlanner::add_to_ref_msg(cpc_motion_planning::ref_data& ref_msg, int ref_counter, const UAV::UAVModel::State &traj_s, const JLT::State &yaw_state)
+{
+  ref_msg.ids.push_back(ref_counter);
+  ref_msg.data.push_back(traj_s.p.x);
+  ref_msg.data.push_back(traj_s.p.y);
+  ref_msg.data.push_back(traj_s.p.z);
+
+  ref_msg.data.push_back(traj_s.v.x);
+  ref_msg.data.push_back(traj_s.v.y);
+  ref_msg.data.push_back(traj_s.v.z);
+
+  ref_msg.data.push_back(traj_s.a.x);
+  ref_msg.data.push_back(traj_s.a.y);
+  ref_msg.data.push_back(traj_s.a.z);
+
+  ref_msg.data.push_back(yaw_state.p);
+  ref_msg.data.push_back(yaw_state.v);
+  ref_msg.data.push_back(yaw_state.a);
+}
+

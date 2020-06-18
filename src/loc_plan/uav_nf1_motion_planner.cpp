@@ -141,22 +141,7 @@ void UAVNF1MotionPlanner::plan_call_back(const ros::TimerEvent&)
     m_traj_pnt_cld->points.push_back(clrP);
 
     ref_counter++;
-    m_ref_msg.ids.push_back(ref_counter);
-    m_ref_msg.data.push_back(traj_s.p.x);
-    m_ref_msg.data.push_back(traj_s.p.y);
-    m_ref_msg.data.push_back(traj_s.p.z);
-
-    m_ref_msg.data.push_back(traj_s.v.x);
-    m_ref_msg.data.push_back(traj_s.v.y);
-    m_ref_msg.data.push_back(traj_s.v.z);
-
-    m_ref_msg.data.push_back(traj_s.a.x);
-    m_ref_msg.data.push_back(traj_s.a.y);
-    m_ref_msg.data.push_back(traj_s.a.z);
-
-    m_ref_msg.data.push_back(yaw_state.p);
-    m_ref_msg.data.push_back(yaw_state.v);
-    m_ref_msg.data.push_back(yaw_state.a);
+    add_to_ref_msg(m_ref_msg,ref_counter,traj_s,yaw_state);
 
     if (ref_counter == next_ref_start_idx)
     {
