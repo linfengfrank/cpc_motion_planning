@@ -15,8 +15,7 @@ UAVNF1MotionPlanner::UAVNF1MotionPlanner():
 {
   m_goal_sub = m_nh.subscribe("/mid_layer/goal",1,&UAVNF1MotionPlanner::goal_call_back, this);
 
-  m_traj_pub = m_nh.advertise<PointCloud> ("pred_traj", 1);
-  m_ctrl_pub = m_nh.advertise<PointCloud> ("ctrl_pnt", 1);
+
   m_ref_pub = m_nh.advertise<cpc_motion_planning::ref_data>("ref_traj",1);
 
   m_planning_timer = m_nh.createTimer(ros::Duration(PSO::PSO_REPLAN_DT), &UAVNF1MotionPlanner::plan_call_back, this);
@@ -29,12 +28,6 @@ UAVNF1MotionPlanner::UAVNF1MotionPlanner():
   m_emergent_planner->m_ctrl_dev.set_limit(make_float2(5,2), make_float2(4,2), make_float2(5,5));
   m_emergent_planner->m_ctrl_host.set_limit(make_float2(5,2), make_float2(4,2), make_float2(5,5));
 
-  m_traj_pnt_cld = PointCloud::Ptr(new PointCloud);
-  m_traj_pnt_cld->header.frame_id = "/world";
-
-  m_ctrl_pnt_cld = PointCloud::Ptr(new PointCloud);
-  m_ctrl_pnt_cld->header.frame_id = "/world";
-
 
   //Initialize the control message
   m_ref_msg.rows = 12;
@@ -44,12 +37,6 @@ UAVNF1MotionPlanner::UAVNF1MotionPlanner():
 
 UAVNF1MotionPlanner::~UAVNF1MotionPlanner()
 {
-  if (m_edt_map)
-  {
-    m_edt_map->free_device();
-    delete m_edt_map;
-  }
-
   m_pso_planner->release();
   delete m_pso_planner;
 
@@ -89,12 +76,6 @@ void UAVNF1MotionPlanner::plan_call_back(const ros::TimerEvent&)
             << "ms, cost: " << m_pso_planner->result.best_cost
             << ", collision: " << m_pso_planner->result.collision<<std::endl;
 
-//  // show the trace
-//  pcl::PointXYZ clrPa;
-//  clrPa.x = m_pso_planner->result.best_loc[0].x;
-//  clrPa.y = m_pso_planner->result.best_loc[0].y;
-//  clrPa.z = m_pso_planner->result.best_loc[0].z;
-//  m_ctrl_pnt_cld->points.push_back(clrPa);
   //------------------------------------------------------------------------
   if (m_pso_planner->result.collision)
   {
@@ -134,12 +115,6 @@ void UAVNF1MotionPlanner::plan_call_back(const ros::TimerEvent&)
     t += PSO::PSO_CTRL_DT;
     JLT::State yaw_state = yaw_traj[i++];
 
-    pcl::PointXYZ clrP;
-    clrP.x = traj_s.p.x;
-    clrP.y = traj_s.p.y;
-    clrP.z = traj_s.p.z;
-    m_traj_pnt_cld->points.push_back(clrP);
-
     ref_counter++;
     add_to_ref_msg(m_ref_msg,ref_counter,traj_s,yaw_state);
 
@@ -148,7 +123,6 @@ void UAVNF1MotionPlanner::plan_call_back(const ros::TimerEvent&)
       m_curr_ref = traj_s;
       m_head_sov.set_yaw_state(yaw_state);
     }
-
     cols++;
   }
 
@@ -158,13 +132,10 @@ void UAVNF1MotionPlanner::plan_call_back(const ros::TimerEvent&)
   m_ref_msg.data.clear();
   m_ref_msg.ids.clear();
 
-  m_traj_pub.publish(m_traj_pnt_cld);
-  m_traj_pnt_cld->clear();
-
-  m_ctrl_pub.publish(m_ctrl_pnt_cld);
-  m_ctrl_pnt_cld->clear();
-
   m_plan_cycle++;
+#ifdef SHOWPC
+  plot_trajectory(traj);
+#endif
 }
 
 

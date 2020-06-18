@@ -9,12 +9,20 @@ UAVLocalMotionPlanner::UAVLocalMotionPlanner():
 {
   m_map_sub = m_nh.subscribe("/edt_map", 1, &UAVLocalMotionPlanner::map_call_back, this);
   m_pose_sub = m_nh.subscribe("/mavros/position/local", 1, &UAVLocalMotionPlanner::vehicle_pose_call_back, this);
-
+#ifdef SHOWPC
+  m_traj_pub = m_nh.advertise<PointCloud> ("pred_traj", 1);
+  m_traj_pnt_cld = PointCloud::Ptr(new PointCloud);
+  m_traj_pnt_cld->header.frame_id = "/world";
+#endif
 }
 
 UAVLocalMotionPlanner::~UAVLocalMotionPlanner()
 {
-
+  if (m_edt_map)
+  {
+    m_edt_map->free_device();
+    delete m_edt_map;
+  }
 }
 
 void UAVLocalMotionPlanner::map_call_back(const cpc_aux_mapping::grid_map::ConstPtr &msg)
@@ -142,4 +150,20 @@ void UAVLocalMotionPlanner::add_to_ref_msg(cpc_motion_planning::ref_data& ref_ms
   ref_msg.data.push_back(yaw_state.v);
   ref_msg.data.push_back(yaw_state.a);
 }
+
+#ifdef SHOWPC
+void UAVLocalMotionPlanner::plot_trajectory(const std::vector<UAV::UAVModel::State> &traj)
+{
+  for (UAV::UAVModel::State traj_s : traj)
+  {
+    pcl::PointXYZ clrP;
+    clrP.x = traj_s.p.x;
+    clrP.y = traj_s.p.y;
+    clrP.z = traj_s.p.z;
+    m_traj_pnt_cld->points.push_back(clrP);
+  }
+  m_traj_pub.publish(m_traj_pnt_cld);
+  m_traj_pnt_cld->clear();
+}
+#endif
 

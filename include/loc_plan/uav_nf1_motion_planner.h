@@ -7,8 +7,6 @@
 
 class UAVNF1MotionPlanner : public UAVLocalMotionPlanner
 {
-  typedef pcl::PointCloud<pcl::PointXYZ> PointCloud;
-
 public:
   UAVNF1MotionPlanner();
   ~UAVNF1MotionPlanner();
@@ -30,10 +28,8 @@ private:
   ros::Timer m_planning_timer;
 
 
-  ros::Publisher m_traj_pub;
-  ros::Publisher m_ctrl_pub;
+
   ros::Publisher m_ref_pub;
-  ros::Publisher topology_paths_pub;
 
 
   bool m_goal_received;
@@ -44,7 +40,7 @@ private:
   PSO::Planner<EMERGENT_UAV_NF1> *m_emergent_planner;
 
 
-  PointCloud::Ptr m_traj_pnt_cld, m_ctrl_pnt_cld;
+
   //UAV::SingleTargetEvaluator::Target m_goal;
   UAV::UAVModel::State m_curr_ref;
   cpc_motion_planning::ref_data m_ref_msg;

@@ -18,6 +18,7 @@
 #include <cpc_motion_planning/uav/uav_jlt_control.h>
 #include <cpc_motion_planning/uav/uav_swarm.h>
 
+#define SHOWPC
 namespace UAV
 {
 enum FLY_STATUS {AT_GROUND = 0,
@@ -91,6 +92,7 @@ private:
 
 class UAVLocalMotionPlanner
 {
+    typedef pcl::PointCloud<pcl::PointXYZ> PointCloud;
 public:
   UAVLocalMotionPlanner();
   ~UAVLocalMotionPlanner();
@@ -121,20 +123,24 @@ protected:
     traj = planner->generate_trajectory();
   }
 
+#ifdef SHOWPC
+  void plot_trajectory(const std::vector<UAV::UAVModel::State> &traj);
+#endif
+
 protected:
   ros::NodeHandle m_nh;
   ros::Subscriber m_map_sub;
   ros::Subscriber m_pose_sub;
-
   geometry_msgs::PoseStamped m_pose;
   float m_stuck_pbty;
-
-
   bool m_received_map;
   bool m_pose_received;
-
   EDTMap *m_edt_map;
   UAV::FLY_STATUS m_fly_status;
+#ifdef SHOWPC
+  ros::Publisher m_traj_pub;
+  PointCloud::Ptr m_traj_pnt_cld;
+#endif
 
 };
 
