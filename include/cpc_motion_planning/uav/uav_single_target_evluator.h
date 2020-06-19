@@ -13,6 +13,10 @@ public:
   {
     UAVModel::State s;
     bool oa;
+    Target():oa(false)
+    {
+
+    }
   };
 
   SingleTargetEvaluator()

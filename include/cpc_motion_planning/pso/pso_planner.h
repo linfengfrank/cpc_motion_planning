@@ -23,11 +23,11 @@ public:
 
   }
 
-  void set_problem(const typename Model::State &s, const typename Evaluator::Target &goal)
-  {
-    m_eva.setTarget(goal);
-    m_model.set_ini_state(s);
-  }
+//  void set_problem(const typename Model::State &s, const typename Evaluator::Target &goal)
+//  {
+//    m_eva.setTarget(goal);
+//    m_model.set_ini_state(s);
+//  }
 
   std::vector<typename Model::State> generate_trajectory(const typename Swarm::Trace &ttr)
   {
