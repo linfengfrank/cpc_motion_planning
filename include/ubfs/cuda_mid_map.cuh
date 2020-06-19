@@ -6,7 +6,8 @@
 #include <thrust/host_vector.h>
 #include <thrust/device_vector.h>
 #include <cuda_geometry/cuda_edtmap.cuh>
-
+#include <ubfs/ubfs_config.h>
+#include <cfloat>
 typedef thrust::device_system_tag device_memspace;
 typedef thrust::host_system_tag host_memspace;
 
@@ -85,6 +86,7 @@ public:
     global_kt_shared[0]=0;
     overflow_shared[0]= 0;
     isend_shared[0]= false;
+    switchk_shared[0] =0;
 
 
     using thrust::raw_pointer_cast;
@@ -121,21 +123,40 @@ public:
   __device__
   float& cost(int x, int y, int z)
   {
-          return d_cost_to_go[z*m_map_size.x*m_map_size.y+y*m_map_size.x+x];
+    return d_cost_to_go[z*m_map_size.x*m_map_size.y+y*m_map_size.x+x];
   }
+
 
   __device__
   int& level(int x, int y, int z)
   {
-          return d_color[z*m_map_size.x*m_map_size.y+y*m_map_size.x+x];
+    return d_color[z*m_map_size.x*m_map_size.y+y*m_map_size.x+x];
   }
 
   __device__
   bool& isObs(int x, int y, int z)
   {
-          return d_obsflg[z*m_map_size.x*m_map_size.y+y*m_map_size.x+x];
+    return d_obsflg[z*m_map_size.x*m_map_size.y+y*m_map_size.x+x];
   }
-
+  __device__
+  float goalCost(int3 goal,float obstacle_dist=1)
+  {
+    int idx_1d =goal.z*m_map_size.x*m_map_size.y+goal.y*m_map_size.x+goal.x;
+    float dist = d_val_map[idx_1d].d;
+    dist*=grid_step;
+    // Check wheter it is on any obstacle or stays in the height range
+    if (dist <= obstacle_dist)
+    {
+      d_cost_to_go[idx_1d] = 400.0f*expf(-dist*1.5f);
+      d_obsflg[idx_1d] = true;
+    }
+    else
+    {
+      d_cost_to_go[idx_1d] = 0.0;
+      d_obsflg[idx_1d] = false;
+    }
+    return d_cost_to_go[idx_1d];
+  }
   __device__
   bool checkOccupancy(int x,int y,int z)
   {
@@ -151,31 +172,36 @@ public:
   __device__
   bool isCoordInsideLocalMap(const int3 & s) const
   {
-      if (s.x<0 || s.x>=m_map_size.x ||
-              s.y<0 || s.y>=m_map_size.y ||
-              s.z<0 || s.z>=m_map_size.z)
-      {
-          return 0;
-      }
-      else
-      {
-          return 1;
-      }
+    if (s.x<0 || s.x>=m_map_size.x ||
+        s.y<0 || s.y>=m_map_size.y ||
+        s.z<0 || s.z>=m_map_size.z)
+    {
+      return 0;
+    }
+    else
+    {
+      return 1;
+    }
   }
 
   __device__
   void setDefaut()
   {
-    CUDA_DEV_MEMSET(d_cost_to_go,0,static_cast<size_t>(m_byte_size));
-    CUDA_DEV_MEMSET(d_color,0,static_cast<size_t>(m_color_size));
+    CUDA_DEV_MEMSET(d_cost_to_go,FLT_MAX,static_cast<size_t>(m_byte_size));
+    CUDA_DEV_MEMSET(d_color,WHITE,static_cast<size_t>(m_color_size));
     CUDA_DEV_MEMSET(d_obsflg,0,static_cast<size_t>(m_flg_size));
-    CUDA_DEV_MEMSET(d_val_map,0,static_cast<size_t>(m_edt_size));
+    //    CUDA_DEV_MEMSET(d_val_map,0,static_cast<size_t>(m_edt_size));
 
+  }
+  __host__
+  void cost_d2h()
+  {
+    CUDA_MEMCPY_D2H(h_cost_to_go,d_cost_to_go,static_cast<size_t>(m_byte_size));
   }
 
 public:
   SeenDist *d_val_map;
-  float *d_cost_to_go;
+  float *d_cost_to_go, *h_cost_to_go;
   int *d_color;
   bool *d_obsflg;
   int3* d_dirs_3d;
@@ -191,8 +217,8 @@ public:
   float grid_step;
   const static int num_dirs_3d=6;
   const int3 dirs_3d[num_dirs_3d]={int3{-1, 0, 0},int3{1, 0, 0},int3{0, -1, 0},
-                                        int3{0, 1, 0},int3{0, 0, -1},int3{0, 0, 1}};
-  ubfs::ubfsGraph<int3> *ugraph;
+                                   int3{0, 1, 0},int3{0, 0, -1},int3{0, 0, 1}};
+  //  ubfs::ubfsGraph<int3> *ugraph;
 };
 
 

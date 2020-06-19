@@ -20,6 +20,9 @@
 
 typedef pcl::PointCloud<pcl::PointXYZRGB> PointCloud;
 PointCloud::Ptr pclOut (new PointCloud);
+
+typedef pcl::PointCloud<pcl::PointXYZI> IntenseCloud;
+IntenseCloud::Ptr intenseOut (new IntenseCloud);
 ros::Publisher* nf1_pub;
 ros::Publisher* pc_pub;
 ros::Publisher* mid_goal_pub;
@@ -27,6 +30,8 @@ Dijkstra *mid_map=nullptr;
 Astar *a_map=nullptr;
 
 NF1Map3D *nf1map3d =nullptr;
+float *costPc = nullptr;
+ubfs_cls *ubfssb =nullptr;
 
 float FLY_HEIGHT;
 bool first_run = true;
@@ -39,6 +44,60 @@ CUDA_GEO::pos goal;
 ros::Timer glb_plan_timer;
 cpc_motion_planning::ref_data ref;
 cpc_aux_mapping::grid_map nf1_map_msg;
+
+void pub_cudaMap(int tgt_height_coord)
+{
+  nf1map3d->cost_d2h();
+  CUDA_GEO::coord c;
+  CUDA_GEO::pos p;
+  for ( c.x=0;c.x<nf1map3d->m_map_size.x;c.x++)
+  {
+    for ( c.y=0;c.y<nf1map3d->m_map_size.y;c.y++)
+    {
+//      for ( c.z=0;c.z<nf1map3d->m_map_size.z;c.z++)
+//      {
+        c.z=tgt_height_coord;
+
+        int idx = c.z*nf1map3d->m_map_size.x*nf1map3d->m_map_size.y+
+            c.y*nf1map3d->m_map_size.x+c.x;
+        float val = nf1map3d->h_cost_to_go[idx] *15;
+        if (val==0)
+        {
+          continue;
+        }
+        if(val>255)
+          val = 255;
+        int d = static_cast<int>(val);
+
+        p = mid_map->coord2pos(c);
+        pcl::PointXYZRGB clrP;
+        clrP.x = p.x;
+        clrP.y = p.y;
+        clrP.z = p.z;
+
+        if ( d < 128)
+        {
+          clrP.b = 255-2*static_cast<unsigned char>(d);
+          clrP.g = 2*static_cast<unsigned char>(d);
+        }
+        else
+        {
+          clrP.g = 255 - 2*(static_cast<unsigned char>(d) - 128);
+          clrP.r = 2*(static_cast<unsigned char>(d)-128);
+        }
+        clrP.a = 100;
+
+        pclOut->points.push_back (clrP);
+
+//      }
+    }
+  }
+
+  pcl_conversions::toPCL(ros::Time::now(), pclOut->header.stamp);
+
+  pc_pub->publish (pclOut);
+  pclOut->clear();
+}
 //---
 void publishMap(int tgt_height_coord)
 {
@@ -116,7 +175,8 @@ void setup_map_msg(cpc_aux_mapping::grid_map &msg, GridGraph* map, bool resize)
   {
     msg.x_size = map->getMaxX();
     msg.y_size = map->getMaxY();
-    msg.z_size = 1;
+    msg.z_size = map->getMaxZ();  //1
+//    printf("max z is %d\n",msg.z_size);
     msg.payload8.resize(sizeof(float)*static_cast<unsigned int>(msg.x_size*msg.y_size*msg.z_size));
   }
 
@@ -200,24 +260,29 @@ void glb_plan(const ros::TimerEvent&)
   float length = 0.0f;
   std::vector<CUDA_GEO::coord> path = a_map->AStar2D(glb_tgt,start,false,length);
 
-//  mid_map->bfs2D(path[0]);
+  //  mid_map->bfs2D(path[0]);
 
-  setup_map_msg(nf1_map_msg,mid_map,false);
-//  copy_map_to_msg(nf1_map_msg,mid_map,tgt_height_coord);
+//  setup_map_msg(nf1_map_msg,mid_map,false);
+  //  copy_map_to_msg(nf1_map_msg,mid_map,tgt_height_coord);
 
   // cuda bfs
+
+
   int3 tgt_i3{path[0].x,path[0].y,path[0].z};
-  ubfs_sssp3d_wrapper(tgt_i3,nf1map3d);
+  ubfssb->ubfs_sssp3d_wrapper(tgt_i3,nf1map3d);
+  // setupmsg: z not 1
+  setup_map_msg(nf1_map_msg,mid_map,false);
   nf1map2msg(nf1_map_msg);
   nf1_pub->publish(nf1_map_msg);
 #ifdef SHOWPC
-  publishMap(tgt_height_coord);
+//  publishMap(tgt_height_coord);
+  pub_cudaMap(tgt_height_coord);
 #endif
 
   auto end_time = std::chrono::steady_clock::now();
-//      std::cout << "Middle planning time: "
-//                << std::chrono::duration_cast<std::chrono::milliseconds>(end_time - start_time).count()
-//                << " ms" << std::endl;
+  //      std::cout << "Middle planning time: "
+  //                << std::chrono::duration_cast<std::chrono::milliseconds>(end_time - start_time).count()
+  //                << " ms" << std::endl;
 
   first_run = false;
 }
@@ -229,6 +294,7 @@ int main(int argc, char **argv)
   int3 map_size = int3{100,100,30};
   nf1map3d =new NF1Map3D(map_size,0.2);
   nf1map3d->setup_device();
+  ubfssb = new ubfs_cls(0,nf1map3d->m_volume);
 
   pc_pub = new ros::Publisher;
   nf1_pub = new ros::Publisher;
@@ -258,6 +324,7 @@ int main(int argc, char **argv)
     delete mid_map;
     delete a_map;
   }
-   nf1map3d->free_device();
+  nf1map3d->free_device();
+
   return 0;
 }

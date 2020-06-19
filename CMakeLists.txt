@@ -1,7 +1,7 @@
 cmake_minimum_required(VERSION 2.8.3)
 project(cpc_motion_planning)
-set(ROS_BUILD_TYPE Debug)
-set(CMAKE_BUILD_TYPE Debug)
+#set(ROS_BUILD_TYPE Debug)
+#set(CMAKE_BUILD_TYPE Debug)
 ## Compile as C++11, supported in ROS Kinetic and newer
 add_compile_options(-std=c++11)
 
@@ -28,11 +28,11 @@ if(NOT CMAKE_BUILD_TYPE AND NOT CMAKE_CONFIGURATION_TYPES)
 endif()
 
 if( ${CMAKE_BUILD_TYPE} STREQUAL Release)
-    SET(CUDA_NVCC_FLAGS "-arch=sm_52;-O3;-use_fast_math" CACHE STRING "nvcc flags" FORCE)
+    SET(CUDA_NVCC_FLAGS "-arch=sm_52;-O3;-use_fast_math;-ftz=true;-prec-div=false;-prec-sqrt=false" CACHE STRING "nvcc flags" FORCE)
     message("build CUDA with -O3")
 else()
     message("build CUDA with Debug")
-    SET(CUDA_NVCC_FLAGS "-g ;-G ;-arch=sm_52" CACHE STRING "nvcc flags" FORCE)
+    SET(CUDA_NVCC_FLAGS "-g ;-G ;-arch=sm_52;-ftz=true" CACHE STRING "nvcc flags" FORCE)
     SET(CUDA_VERBOSE_BUILD ON CACHE BOOL "nvcc verbose" FORCE)
 endif()
 set(CUDA_NVCC_FLAGS ${CUDA_NVCC_FLAGS} -std=c++11)

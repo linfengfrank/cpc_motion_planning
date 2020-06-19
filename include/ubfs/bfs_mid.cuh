@@ -8,6 +8,12 @@
 #include <ubfs/timer.h>
 
 namespace ubfs {
+
+__global__
+void set_goal_cost(NF1Map3D midmap3d, int3 crd)
+{
+  midmap3d.goalCost(crd);
+}
 template <class Mtype>
 void ubfs_sssp(int3 &src, int num_dirs,const int3* dirs,
               Mtype* midmap3d,ubfsGraph<int3> &ugraph)
@@ -28,6 +34,8 @@ void ubfs_sssp(int3 &src, int num_dirs,const int3* dirs,
   int num_of_threads_per_block;
 
 
+  // set goal cost first
+  set_goal_cost<<<1,1>>>(*midmap3d,ugraph.q1_shared[0]);
   GpuTimer tm1;
   tm1.Start();
   do
@@ -69,6 +77,7 @@ void ubfs_sssp(int3 &src, int num_dirs,const int3* dirs,
         BFS_kernel_multi_blk_inGPU<int3,Mtype>
         <<< grid, threads >>>(ugraph,d_q1,d_q2, *midmap3d,
                               num_dirs,dirs,num_td, GRAY0,k);
+
         int switch_k= ugraph.switchk_shared[0];
         if(!switch_k){
           k--;
@@ -90,6 +99,8 @@ void ubfs_sssp(int3 &src, int num_dirs,const int3* dirs,
         BFS_kernel_multi_blk_inGPU<int3,Mtype>
         <<< grid, threads >>>(ugraph,d_q2,d_q1,*midmap3d,
                               num_dirs,dirs,num_td, GRAY1,k);
+        printf("bfs switchk_shared\n");
+
         int switch_k= ugraph.switchk_shared[0];
         if(!switch_k){
           k--;
@@ -101,6 +112,7 @@ void ubfs_sssp(int3 &src, int num_dirs,const int3* dirs,
       }
     }
     k++;
+
     int h_overflow= ugraph.overflow_shared[0];
     if(h_overflow) {
       printf("Error: local queue was overflow. Need to increase W_LOCAL_QUEUE\n");

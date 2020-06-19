@@ -44,7 +44,7 @@ public:
 
     if (!file.is_open())
     {
-      std::cout<<"File open failed."<<std::endl;
+      std::cout<<"File mat open failed."<<std::endl;
       file.close();
       return NULL;
     }
@@ -111,7 +111,7 @@ public:
 
     if (!file.is_open())
     {
-      std::cout<<"File open failed."<<std::endl;
+      std::cout<<"File bin open failed."<<std::endl;
       file.close();
       return;
     }
