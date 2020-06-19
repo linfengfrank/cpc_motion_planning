@@ -16,7 +16,7 @@ int main(int argc, char *argv[])
 
 
 
-  UAVMotionPlanner p;
+  UAVAstarMotionPlanner p;
   ros::spin();
 
 

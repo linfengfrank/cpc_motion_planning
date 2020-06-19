@@ -1,14 +1,14 @@
-#ifndef UAV_MOTION_PLANNER_H
-#define UAV_MOTION_PLANNER_H
+#ifndef UAV_ASTAR_MOTION_PLANNER_H
+#define UAV_ASTAR_MOTION_PLANNER_H
 #include <loc_plan/uav_local_motion_planner.h>
 
 #define SIMPLE_UAV UAV::UAVModel,UAV::UAVDPControl,UAV::SingleTargetEvaluator,UAV::UAVSwarm<1>
 #define CORRID_UAV UAV::UAVModel,UAV::UAVDPControl,UAV::CorridorEvaluator,UAV::UAVSwarm<1>
-class UAVMotionPlanner : public UAVLocalMotionPlanner
+class UAVAstarMotionPlanner : public UAVLocalMotionPlanner
 {
 public:
-  UAVMotionPlanner();
-  ~UAVMotionPlanner();
+  UAVAstarMotionPlanner();
+  ~UAVAstarMotionPlanner();
 
 protected:
   void do_at_ground();
@@ -38,4 +38,4 @@ private:
   UAVHeadingSolver m_head_sov;
 };
 
-#endif // UAV_MOTION_PLANNER_H
+#endif // UAV_ASTAR_MOTION_PLANNER_H

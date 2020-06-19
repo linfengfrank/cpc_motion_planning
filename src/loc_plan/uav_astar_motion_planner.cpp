@@ -8,15 +8,15 @@ template <typename T> int sgn(T val)
     return (T(0) < val) - (val < T(0));
 }
 
-UAVMotionPlanner::UAVMotionPlanner():
+UAVAstarMotionPlanner::UAVAstarMotionPlanner():
   UAVLocalMotionPlanner(),
   m_goal_received(false)
 {
-  m_goal_sub = m_nh.subscribe("/mid_layer/goal",1,&UAVMotionPlanner::goal_call_back, this);
+  m_goal_sub = m_nh.subscribe("/mid_layer/goal",1,&UAVAstarMotionPlanner::goal_call_back, this);
 
   m_ref_pub = m_nh.advertise<cpc_motion_planning::ref_data>("ref_traj",1);
 
-  m_planning_timer = m_nh.createTimer(ros::Duration(PSO::PSO_REPLAN_DT), &UAVMotionPlanner::plan_call_back, this);
+  m_planning_timer = m_nh.createTimer(ros::Duration(PSO::PSO_REPLAN_DT), &UAVAstarMotionPlanner::plan_call_back, this);
 
   m_pso_planner = new PSO::Planner<SIMPLE_UAV>(150,30,1);
   m_pso_planner->initialize();
@@ -27,13 +27,13 @@ UAVMotionPlanner::UAVMotionPlanner():
   m_ref_start_idx = 0;
 }
 
-UAVMotionPlanner::~UAVMotionPlanner()
+UAVAstarMotionPlanner::~UAVAstarMotionPlanner()
 {
   m_pso_planner->release();
   delete m_pso_planner;
 }
 
-void UAVMotionPlanner::plan_call_back(const ros::TimerEvent&)
+void UAVAstarMotionPlanner::plan_call_back(const ros::TimerEvent&)
 {
   run_state();
   if (m_fly_status <= UAV::AT_GROUND)
@@ -91,7 +91,7 @@ void UAVMotionPlanner::plan_call_back(const ros::TimerEvent&)
 #endif
 }
 
-void UAVMotionPlanner::goal_call_back(const geometry_msgs::PoseStamped::ConstPtr &msg)
+void UAVAstarMotionPlanner::goal_call_back(const geometry_msgs::PoseStamped::ConstPtr &msg)
 {
   m_goal_received = true;
   m_goal.s.p.x = msg->pose.position.x;
@@ -110,7 +110,7 @@ void UAVMotionPlanner::goal_call_back(const geometry_msgs::PoseStamped::ConstPtr
   }
 }
 
-void UAVMotionPlanner::do_at_ground()
+void UAVAstarMotionPlanner::do_at_ground()
 {
   if (m_pose_received && m_received_map && m_goal_received)
   {
@@ -120,7 +120,7 @@ void UAVMotionPlanner::do_at_ground()
     m_fly_status = UAV::TAKING_OFF;
   }
 }
-void UAVMotionPlanner::do_taking_off()
+void UAVAstarMotionPlanner::do_taking_off()
 {
   if (m_curr_ref.p.z >= 1.8f && fabsf(m_curr_ref.v.z)<0.3f)
   {
@@ -128,7 +128,7 @@ void UAVMotionPlanner::do_taking_off()
     m_fly_status = UAV::IN_AIR;
   }
 }
-void UAVMotionPlanner::do_in_air()
+void UAVAstarMotionPlanner::do_in_air()
 {
   if (0)
   {
