@@ -15,6 +15,8 @@ protected:
   virtual void do_at_ground();
   virtual void do_taking_off();
   virtual void do_in_air();
+  virtual void do_emergent();
+  virtual void do_braking();
 
 private:
   void plan_call_back(const ros::TimerEvent&);
@@ -47,8 +49,8 @@ private:
   int m_plan_cycle;
   int m_ref_start_idx;
   UAVHeadingSolver m_head_sov;
-
-
+  std::vector<UAV::UAVModel::State> m_traj;
+  int m_start_braking_cycle;
 };
 
 #endif // UAV_NF1_MOTION_PLANNER_H

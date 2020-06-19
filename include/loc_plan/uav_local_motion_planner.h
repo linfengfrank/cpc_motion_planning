@@ -103,9 +103,12 @@ protected:
   void run_state();
   bool is_stuck(const std::vector<UAV::UAVModel::State> &traj, std::vector<JLT::State> yaw_traj, const float &best_cost);
   void add_to_ref_msg(cpc_motion_planning::ref_data& ref_msg, int ref_counter, const UAV::UAVModel::State &traj, const JLT::State &yaw_state);
+
   virtual void do_at_ground() = 0;
   virtual void do_taking_off() = 0;
   virtual void do_in_air() = 0;
+  virtual void do_emergent() = 0;
+  virtual void do_braking() = 0;
 
   template<class Model, class Controller, class Evaluator, class Swarm>
   void calculate_trajectory(PSO::Planner<Model, Controller, Evaluator, Swarm> *planner, std::vector<UAV::UAVModel::State> &traj,

@@ -67,6 +67,16 @@ void UAVLocalMotionPlanner::run_state()
     do_in_air();
     break;
   }
+  case UAV::EMERGENT:
+  {
+    do_emergent();
+    break;
+  }
+  case UAV::BRAKING:
+  {
+    do_braking();
+    break;
+  }
   default:
     break;
   }

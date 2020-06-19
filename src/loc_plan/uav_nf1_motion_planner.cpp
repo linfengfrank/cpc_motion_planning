@@ -64,44 +64,46 @@ void UAVNF1MotionPlanner::calculate_yaw(const std::vector<UAV::UAVModel::State> 
 void UAVNF1MotionPlanner::plan_call_back(const ros::TimerEvent&)
 {
   run_state();
+
   if (m_fly_status <= UAV::AT_GROUND)
     return;
 
-  std::vector<UAV::UAVModel::State> traj;
-  auto start = std::chrono::steady_clock::now();
-  calculate_trajectory<SIMPLE_UAV_NF1>(m_pso_planner,traj,m_curr_ref,m_head_sov.get_yaw());
-  auto end = std::chrono::steady_clock::now();
-  std::cout << "local planner: "
-            << std::chrono::duration_cast<std::chrono::milliseconds>(end - start).count()
-            << "ms, cost: " << m_pso_planner->result.best_cost
-            << ", collision: " << m_pso_planner->result.collision<<std::endl;
+//  //std::vector<UAV::UAVModel::State> traj;
+//  m_traj.clear();
+//  auto start = std::chrono::steady_clock::now();
+//  calculate_trajectory<SIMPLE_UAV_NF1>(m_pso_planner,m_traj,m_curr_ref,m_head_sov.get_yaw());
+//  auto end = std::chrono::steady_clock::now();
+//  std::cout << "local planner: "
+//            << std::chrono::duration_cast<std::chrono::milliseconds>(end - start).count()
+//            << "ms, cost: " << m_pso_planner->result.best_cost
+//            << ", collision: " << m_pso_planner->result.collision<<std::endl;
 
-  //------------------------------------------------------------------------
-  if (m_pso_planner->result.collision)
-  {
-    calculate_trajectory<EMERGENT_UAV_NF1>(m_emergent_planner,traj,m_curr_ref,m_head_sov.get_yaw());
-    std::cout << "emergent planner collision: "<<m_emergent_planner->result.collision<<std::endl;
-    if(m_emergent_planner->result.collision)
-    {
-      traj.clear();
-      UAV::UAVModel::State s_tmp = m_curr_ref;
-      s_tmp.v = make_float3(0,0,0);
-      s_tmp.a = make_float3(0,0,0);
-      for (float t=0.0f; t<PSO::PSO_TOTAL_T; t+=PSO::PSO_CTRL_DT)
-      {
-        traj.push_back(s_tmp);
-      }
-    }
-    else
-    {
-      calculate_yaw(traj);
-    }
-  }
-  else
-  {
-    calculate_yaw(traj);
-  }
-  //------------------------------------------------------------------------
+//  //------------------------------------------------------------------------
+//  if (m_pso_planner->result.collision)
+//  {
+//    calculate_trajectory<EMERGENT_UAV_NF1>(m_emergent_planner,m_traj,m_curr_ref,m_head_sov.get_yaw());
+//    std::cout << "emergent planner collision: "<<m_emergent_planner->result.collision<<std::endl;
+//    if(m_emergent_planner->result.collision)
+//    {
+//      m_traj.clear();
+//      UAV::UAVModel::State s_tmp = m_curr_ref;
+//      s_tmp.v = make_float3(0,0,0);
+//      s_tmp.a = make_float3(0,0,0);
+//      for (float t=0.0f; t<PSO::PSO_TOTAL_T; t+=PSO::PSO_CTRL_DT)
+//      {
+//        m_traj.push_back(s_tmp);
+//      }
+//    }
+//    else
+//    {
+//      calculate_yaw(m_traj);
+//    }
+//  }
+//  else
+//  {
+//    calculate_yaw(m_traj);
+//  }
+//  //------------------------------------------------------------------------
 
   std::vector<JLT::State> yaw_traj = m_head_sov.generate_yaw_traj();
   // trajectory generation
@@ -110,7 +112,7 @@ void UAVNF1MotionPlanner::plan_call_back(const ros::TimerEvent&)
   int next_ref_start_idx = (m_plan_cycle+1)*PSO::PSO_REPLAN_CYCLE+PSO::PSO_PLAN_CONSUME_CYCLE;
   float t = 0.0f;
   int i=0;
-  for (UAV::UAVModel::State traj_s : traj)
+  for (UAV::UAVModel::State traj_s : m_traj)
   {
     t += PSO::PSO_CTRL_DT;
     JLT::State yaw_state = yaw_traj[i++];
@@ -134,7 +136,7 @@ void UAVNF1MotionPlanner::plan_call_back(const ros::TimerEvent&)
 
   m_plan_cycle++;
 #ifdef SHOWPC
-  plot_trajectory(traj);
+  plot_trajectory(m_traj);
 #endif
 }
 
@@ -175,6 +177,9 @@ void UAVNF1MotionPlanner::do_at_ground()
 }
 void UAVNF1MotionPlanner::do_taking_off()
 {
+  auto start = std::chrono::steady_clock::now();
+  m_traj.clear();
+  calculate_trajectory<SIMPLE_UAV_NF1>(m_pso_planner,m_traj,m_curr_ref,m_head_sov.get_yaw());
   if (m_curr_ref.p.z >= 1.8f && fabsf(m_curr_ref.v.z)<0.3f)
   {
     m_pso_planner->m_eva.m_oa = m_goal_received;
@@ -184,16 +189,72 @@ void UAVNF1MotionPlanner::do_taking_off()
     m_emergent_planner->m_eva.m_fov = m_goal_received;
     m_fly_status = UAV::IN_AIR;
   }
+  auto end = std::chrono::steady_clock::now();
+  std::cout << "local planner: "
+            << std::chrono::duration_cast<std::chrono::milliseconds>(end - start).count()
+            << "ms, cost: " << m_pso_planner->result.best_cost
+            << ", collision: " << m_pso_planner->result.collision<<std::endl;
 }
+
 void UAVNF1MotionPlanner::do_in_air()
 {
-  if (0)
+  auto start = std::chrono::steady_clock::now();
+  m_traj.clear();
+  calculate_trajectory<SIMPLE_UAV_NF1>(m_pso_planner,m_traj,m_curr_ref,m_head_sov.get_yaw());
+  if (m_pso_planner->result.collision)
   {
     m_fly_status = UAV::EMERGENT;
+    run_state();
   }
-  else if (0)
+  else
+  {
+    calculate_yaw(m_traj);
+  }
+  auto end = std::chrono::steady_clock::now();
+  std::cout << "local planner: "
+            << std::chrono::duration_cast<std::chrono::milliseconds>(end - start).count()
+            << "ms, cost: " << m_pso_planner->result.best_cost
+            << ", collision: " << m_pso_planner->result.collision<<std::endl;
+}
+
+void UAVNF1MotionPlanner::do_emergent()
+{
+  auto start = std::chrono::steady_clock::now();
+  m_traj.clear();
+  calculate_trajectory<EMERGENT_UAV_NF1>(m_emergent_planner,m_traj,m_curr_ref,m_head_sov.get_yaw());
+  if(m_emergent_planner->result.collision)
   {
     m_fly_status = UAV::BRAKING;
+    m_start_braking_cycle = m_plan_cycle;
+    run_state();
+  }
+  else
+  {
+    m_fly_status = UAV::IN_AIR;
+    calculate_yaw(m_traj);
+  }
+  auto end = std::chrono::steady_clock::now();
+  std::cout << "local planner (emergent): "
+            << std::chrono::duration_cast<std::chrono::milliseconds>(end - start).count()
+            << "ms, cost: " << m_emergent_planner->result.best_cost
+            << ", collision: " << m_emergent_planner->result.collision<<std::endl;
+}
+
+void UAVNF1MotionPlanner::do_braking()
+{
+  m_traj.clear();
+  UAV::UAVModel::State s_tmp = m_curr_ref;
+  s_tmp.v = make_float3(0,0,0);
+  s_tmp.a = make_float3(0,0,0);
+  for (float t=0.0f; t<PSO::PSO_TOTAL_T; t+=PSO::PSO_CTRL_DT)
+  {
+    m_traj.push_back(s_tmp);
+  }
+  if (m_plan_cycle - m_start_braking_cycle > 10)
+  {
+    m_fly_status = UAV::IN_AIR;
   }
 }
+
+
 

@@ -39,8 +39,6 @@ void UAVAstarMotionPlanner::plan_call_back(const ros::TimerEvent&)
   if (m_fly_status <= UAV::AT_GROUND)
     return;
 
-  UAV::UAVModel::State s = m_curr_ref;
-
   m_head_sov.cal_from_pnt(m_goal.s.p,m_curr_ref);
 
     auto start = std::chrono::steady_clock::now();
@@ -130,12 +128,14 @@ void UAVAstarMotionPlanner::do_taking_off()
 }
 void UAVAstarMotionPlanner::do_in_air()
 {
-  if (0)
-  {
-    m_fly_status = UAV::EMERGENT;
-  }
-  else if (0)
-  {
-    m_fly_status = UAV::BRAKING;
-  }
+
+}
+void UAVAstarMotionPlanner::do_emergent()
+{
+
+}
+
+void UAVAstarMotionPlanner::do_braking()
+{
+
 }
