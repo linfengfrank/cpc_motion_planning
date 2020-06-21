@@ -21,10 +21,12 @@
 typedef pcl::PointCloud<pcl::PointXYZRGB> PointCloud;
 PointCloud::Ptr pclOut (new PointCloud);
 
-typedef pcl::PointCloud<pcl::PointXYZI> IntenseCloud;
-IntenseCloud::Ptr intenseOut (new IntenseCloud);
+typedef pcl::PointCloud<pcl::PointXYZ> ObsCloud;
+ObsCloud::Ptr obsOut (new ObsCloud);
+
 ros::Publisher* nf1_pub;
 ros::Publisher* pc_pub;
+ros::Publisher* obs_pub;
 ros::Publisher* mid_goal_pub;
 Dijkstra *mid_map=nullptr;
 Astar *a_map=nullptr;
@@ -60,15 +62,18 @@ void pub_cudaMap(int tgt_height_coord)
 
         int idx = c.z*nf1map3d->m_map_size.x*nf1map3d->m_map_size.y+
             c.y*nf1map3d->m_map_size.x+c.x;
+
+        if(nf1map3d->h_cost_to_go[idx]>=FLT_MAX-1)
+          continue;
         float val = nf1map3d->h_cost_to_go[idx] *15;
-        if (val==0)
+
+        int d = static_cast<int>(val);
+        if (d==0)
         {
           continue;
         }
-        if(val>255)
-          val = 255;
-        int d = static_cast<int>(val);
-
+        if(d>255)
+          d = 255;
         p = mid_map->coord2pos(c);
         pcl::PointXYZRGB clrP;
         clrP.x = p.x;
@@ -85,7 +90,7 @@ void pub_cudaMap(int tgt_height_coord)
           clrP.g = 255 - 2*(static_cast<unsigned char>(d) - 128);
           clrP.r = 2*(static_cast<unsigned char>(d)-128);
         }
-        clrP.a = 100;
+        clrP.a = 255;
 
         pclOut->points.push_back (clrP);
 
@@ -97,6 +102,25 @@ void pub_cudaMap(int tgt_height_coord)
 
   pc_pub->publish (pclOut);
   pclOut->clear();
+
+  // publish obs bdr
+  nf1map3d->obs_dense_d2h();
+  for (int i=0;i<nf1map3d->obs_num;i++)
+  {
+    int3 obs_crd = nf1map3d->obs_dense_h[i];
+    CUDA_GEO::coord co(obs_crd.x,obs_crd.y,obs_crd.z);
+    p=mid_map->coord2pos(co);
+    pcl::PointXYZ obsP;
+    obsP.x= p.x;
+    obsP.y = p.y;
+    obsP.z = p.z;
+
+    obsOut->points.push_back(obsP);
+  }
+  pcl_conversions::toPCL(ros::Time::now(), obsOut->header.stamp);
+  obs_pub->publish( obsOut);
+  printf("obs cloud size is %d \n",obsOut->size());
+  obsOut->clear();
 }
 //---
 void publishMap(int tgt_height_coord)
@@ -228,7 +252,7 @@ void mapCallback(const cpc_aux_mapping::grid_map::ConstPtr& msg)
 
 
   // copy seendist msg to cuda
-  nf1map3d->setDefaut();
+
   CUDA_MEMCPY_H2D(nf1map3d->d_val_map,msg->payload8.data(),nf1map3d->m_edt_size);
 }
 //---
@@ -297,6 +321,7 @@ int main(int argc, char **argv)
   ubfssb = new ubfs_cls(0,nf1map3d->m_volume);
 
   pc_pub = new ros::Publisher;
+  obs_pub = new ros::Publisher;
   nf1_pub = new ros::Publisher;
   mid_goal_pub = new ros::Publisher;
   ros::NodeHandle nh;
@@ -305,10 +330,12 @@ int main(int argc, char **argv)
   ros::Subscriber glb_tgt_sub = nh.subscribe("/move_base_simple/goal", 1, &goalCallback);
 
   *pc_pub = nh.advertise<PointCloud> ("/nf1", 1);
+  *obs_pub = nh.advertise<PointCloud>("/obs_bdr",1);
   *mid_goal_pub = nh.advertise<PointCloud> ("/mid_goal", 1);
   *nf1_pub = nh.advertise<cpc_aux_mapping::grid_map>("/mid_layer/goal",1);
 
   pclOut->header.frame_id = "/world";
+  obsOut->header.frame_id = "/world";
   nh.param<float>("/nndp_cpp/fly_height",FLY_HEIGHT,2.0);
 
 
@@ -317,6 +344,7 @@ int main(int argc, char **argv)
   ros::spin();
 
   delete pc_pub;
+  delete obs_pub;
   delete nf1_pub;
 
   if (mid_map)

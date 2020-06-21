@@ -128,10 +128,12 @@ visit_free(int3 cur_buf,
     // !!if occupancy: set flag ==1
     if(local_map.checkOccupancy(nbr_buf.x,nbr_buf.y,nbr_buf.z)==true)
     {
-      local_map.isObs(nbr_buf.x,nbr_buf.y,nbr_buf.z) =true;
+      //      local_map.isObs(nbr_buf.x,nbr_buf.y,nbr_buf.z) =true;
+      local_map.set_obs(nbr_buf,true);
     }else
     {
-      local_map.isObs(nbr_buf.x,nbr_buf.y,nbr_buf.z) =false;
+      //      local_map.isObs(nbr_buf.x,nbr_buf.y,nbr_buf.z) =false;
+      //      local_map.set_obs(nbr_buf,false);
       if(origin_cost>cost)
       {
         int old_color = atomicExch(&local_map.level(nbr_buf.x,nbr_buf.y,nbr_buf.z),gray_shade);
@@ -144,6 +146,52 @@ visit_free(int3 cur_buf,
 
 
   }
+}
+
+__device__ void
+visit_obs(int3 cur_buf,
+          int index,
+          LocalQueues<int3> &local_q,
+          int *overflow,
+          NF1Map3D &local_map,
+          int num_dirs, const int3* dirs,
+          int gray_shade, float gridstep=0.2)
+{
+  local_map.level(cur_buf.x,cur_buf.y,cur_buf.z)=BLACK;// Mark this node as visited
+  float cur_cost = local_map.cost(cur_buf.x,cur_buf.y,cur_buf.z);
+  // traverse the neighbours
+  for(int i=0;i<num_dirs;i++)
+  {
+    int3 nbr_buf=cur_buf+dirs[i];
+    if(!local_map.isCoordInsideLocalMap(nbr_buf))
+      continue;
+
+    // whether to commant it out??
+//    if(local_map.level(nbr_buf.x,nbr_buf.y,nbr_buf.z)==BLACK) // visited
+//      continue;
+
+    // only bfs obs
+    if(!local_map.get_obs(nbr_buf))
+      continue;
+
+    // set obs flag to default
+    local_map.set_obs(nbr_buf,false);
+    // update nbr cost
+    float cost =cur_cost+gridstep ;
+    float origin_cost = fatomicMin(&local_map.cost(nbr_buf.x,nbr_buf.y,nbr_buf.z),cost);
+
+    if(origin_cost>cost)
+    {
+      int old_color = atomicExch(&local_map.level(nbr_buf.x,nbr_buf.y,nbr_buf.z),gray_shade);
+      if(old_color != gray_shade) {   // not in this level
+        //push to the queue
+        local_q.append(index, overflow, nbr_buf);  // push id to queue[index]
+      }
+    }
+  }
+
+
+  //  }
 }
 //-------------------------------------------------
 //This is the version for one-block situation. The propagation idea is basically the same as
@@ -163,7 +211,8 @@ BFS_in_GPU_kernel(ubfsGraphBase<Ktype> ugraph,
                   int num_dirs, const int3* dirs,
                   int no_of_nodes,
                   int gray_shade,
-                  int k)
+                  int k,
+                  bool obs_mode =false)
 {
   __shared__ LocalQueues<Ktype> local_q;
   __shared__ int prefix_q[NUM_BIN];// store number of elems of each rows
@@ -187,15 +236,10 @@ BFS_in_GPU_kernel(ubfsGraphBase<Ktype> ugraph,
       else
         pid = next_wf[tid];//read the current frontier info from last level's propagation
 
-      // Visit a node from the current frontier; update costs, colors, and
-      // output queue (only int)
-      //      visit_node(pid, threadIdx.x & MOD_OP, local_q, ugraph.overflow,g_graph_nodes,g_graph_edges,
-      //                 ugraph.colorD, ugraph.costD, gray_shade);
-
-      // visit a coord in local map
-      //      visit_coord(pid,threadIdx.x & MOD_OP,local_q,ugraph.overflow,local_map,num_dirs,dirs,gray_shade);
-      // test bfs
-      visit_free(pid,threadIdx.x & MOD_OP,local_q,ugraph.overflow,local_map,num_dirs,dirs,gray_shade);
+      if(obs_mode==false)
+        visit_free(pid,threadIdx.x & MOD_OP,local_q,ugraph.overflow,local_map,num_dirs,dirs,gray_shade);
+      else
+        visit_obs(pid,threadIdx.x & MOD_OP,local_q,ugraph.overflow,local_map,num_dirs,dirs,gray_shade);
     }
     __syncthreads();
     if(threadIdx.x == 0){
@@ -276,7 +320,8 @@ BFS_kernel_multi_blk_inGPU(ubfsGraphBase<Ktype> ugraph,
                            int num_dirs, const int3* dirs,
                            int *no_of_nodes,   //the  frontier num
                            int gray_shade,
-                           int k)
+                           int k,
+                           bool obs_mode =false)
 {
   __shared__ LocalQueues<Ktype> local_q;
   __shared__ int prefix_q[NUM_BIN];
@@ -305,17 +350,12 @@ BFS_kernel_multi_blk_inGPU(ubfsGraphBase<Ktype> ugraph,
       Ktype pid= input_queue[tid];
       //			int pid = atomicOr((int *)&input_queue[tid], 0);  //????????????????
 
-      // Visit a node from the current frontier; update costs, colors, and
-      // output queue
-      //      visit_node(pid, threadIdx.x & MOD_OP, local_q, ugraph.overflow,g_graph_nodes,g_graph_edges,
-      //                 ugraph.colorD, ugraph.costD, gray_shade);
-      // visit a coord in local map
-      //      visit_coord(pid,threadIdx.x & MOD_OP,local_q,ugraph.overflow,
-      //                  local_map,num_dirs,dirs,gray_shade);
-
-      // bfs test
-      visit_free(pid,threadIdx.x & MOD_OP,local_q,ugraph.overflow,
-                 local_map,num_dirs,dirs,gray_shade);
+      if(obs_mode==false)
+        visit_free(pid,threadIdx.x & MOD_OP,local_q,ugraph.overflow,
+                   local_map,num_dirs,dirs,gray_shade);
+      else
+        visit_obs(pid,threadIdx.x & MOD_OP,local_q,ugraph.overflow,
+                  local_map,num_dirs,dirs,gray_shade);
     }
     __syncthreads();
 
@@ -387,7 +427,8 @@ BFS_kernel(ubfsGraphBase<Ktype> ugraph,
            int num_dirs, const int3* dirs,
            int no_of_nodes,
            int gray_shade,
-           int k)
+           int k,
+           bool obs_mode =false)
 {
   __shared__ LocalQueues<Ktype> local_q;
   __shared__ int prefix_q[NUM_BIN];//the number of elementss in the w-queues ahead of
@@ -403,16 +444,12 @@ BFS_kernel(ubfsGraphBase<Ktype> ugraph,
   int tid = blockIdx.x*MAX_THREADS_PER_BLOCK + threadIdx.x;
   if( tid < no_of_nodes)
   {
-    // Visit a node from the current frontier; update costs, colors, and
-    // output queue
-    //    visit_node(q1[tid], threadIdx.x & MOD_OP, local_q, ugraph.overflow,g_graph_nodes,g_graph_edges,
-    //               ugraph.colorD, ugraph.costD, gray_shade);
-    // visit a coord in local map
-    //    visit_coord(q1[tid],threadIdx.x & MOD_OP,local_q,ugraph.overflow,
-    //                local_map,num_dirs,dirs,gray_shade);
-    // bfs test
-    visit_free(q1[tid],threadIdx.x & MOD_OP,local_q,ugraph.overflow,
-               local_map,num_dirs,dirs,gray_shade);
+    if(obs_mode==false)
+      visit_free(q1[tid],threadIdx.x & MOD_OP,local_q,ugraph.overflow,
+                 local_map,num_dirs,dirs,gray_shade);
+    else
+      visit_obs(q1[tid],threadIdx.x & MOD_OP,local_q,ugraph.overflow,
+                local_map,num_dirs,dirs,gray_shade);
   }
   __syncthreads();
 

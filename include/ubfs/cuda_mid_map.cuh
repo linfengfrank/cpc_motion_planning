@@ -8,6 +8,8 @@
 #include <cuda_geometry/cuda_edtmap.cuh>
 #include <ubfs/ubfs_config.h>
 #include <cfloat>
+
+#define EMPTY_KEY  int3{999999,999999,999999}
 typedef thrust::device_system_tag device_memspace;
 typedef thrust::host_system_tag host_memspace;
 
@@ -34,6 +36,18 @@ template <typename T>
 struct vector_type<T, device_memspace> {
   typedef thrust::device_vector<T> type;
 };
+
+
+struct EqualTo
+{
+  __device__ __host__
+  bool operator()(int3 a, int3 b) {
+    return (a.x == b.x) &&
+           (a.y == b.y) &&
+           (a.z == b.z);
+  }
+};
+
 namespace ubfs
 {
 template <class Ktype>
@@ -120,6 +134,8 @@ public:
   void free_device();
 
 
+  void setDefaut();
+
   __device__
   float& cost(int x, int y, int z)
   {
@@ -139,6 +155,21 @@ public:
     return d_obsflg[z*m_map_size.x*m_map_size.y+y*m_map_size.x+x];
   }
   __device__
+  void set_obs(int3 obs,bool isobs)
+  {
+    if(isobs)
+      d_obs[obs.z*m_map_size.x*m_map_size.y+obs.y*m_map_size.x+obs.x]=obs;
+    else
+      d_obs[obs.z*m_map_size.x*m_map_size.y+obs.y*m_map_size.x+obs.x]=EMPTY_KEY;
+  }
+  __device__
+  bool get_obs(int3 crd) // if obs, return true
+  {
+     return (crd.x != EMPTY_KEY.x) ||
+         (crd.y != EMPTY_KEY.y) ||
+         (crd.z != EMPTY_KEY.z);
+  }
+  __device__
   float goalCost(int3 goal,float obstacle_dist=1)
   {
     int idx_1d =goal.z*m_map_size.x*m_map_size.y+goal.y*m_map_size.x+goal.x;
@@ -149,11 +180,13 @@ public:
     {
       d_cost_to_go[idx_1d] = 400.0f*expf(-dist*1.5f);
       d_obsflg[idx_1d] = true;
+      d_obs[idx_1d] =goal;
     }
     else
     {
       d_cost_to_go[idx_1d] = 0.0;
       d_obsflg[idx_1d] = false;
+      d_obs[idx_1d] =EMPTY_KEY;
     }
     return d_cost_to_go[idx_1d];
   }
@@ -184,21 +217,18 @@ public:
     }
   }
 
-  __device__
-  void setDefaut()
-  {
-    CUDA_DEV_MEMSET(d_cost_to_go,FLT_MAX,static_cast<size_t>(m_byte_size));
-    CUDA_DEV_MEMSET(d_color,WHITE,static_cast<size_t>(m_color_size));
-    CUDA_DEV_MEMSET(d_obsflg,0,static_cast<size_t>(m_flg_size));
-    //    CUDA_DEV_MEMSET(d_val_map,0,static_cast<size_t>(m_edt_size));
 
-  }
   __host__
   void cost_d2h()
   {
     CUDA_MEMCPY_D2H(h_cost_to_go,d_cost_to_go,static_cast<size_t>(m_byte_size));
   }
 
+  __host__
+  void obs_dense_d2h()
+  {
+    thrust::copy(obs_vec_dense.begin(),obs_vec_dense.end(),obs_dense_h.begin());
+  }
 public:
   SeenDist *d_val_map;
   float *d_cost_to_go, *h_cost_to_go;
@@ -218,7 +248,14 @@ public:
   const static int num_dirs_3d=6;
   const int3 dirs_3d[num_dirs_3d]={int3{-1, 0, 0},int3{1, 0, 0},int3{0, -1, 0},
                                    int3{0, 1, 0},int3{0, 0, -1},int3{0, 0, 1}};
-  //  ubfs::ubfsGraph<int3> *ugraph;
+
+
+  thrust::device_vector<int3> obs_vec;
+  thrust::device_vector<int3> obs_vec_dense;
+  thrust::host_vector<int3> obs_dense_h;
+  int obs_num;
+private:
+  int3 *d_obs,*d_obs_dense;
 };
 
 

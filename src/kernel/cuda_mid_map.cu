@@ -13,6 +13,16 @@ NF1Map3D::NF1Map3D(int3 m_map_size_, float grid_step_):
 
 }
 
+void NF1Map3D::setDefaut()
+{
+  CUDA_DEV_MEMSET(d_cost_to_go,FLT_MAX,static_cast<size_t>(m_byte_size));
+  CUDA_DEV_MEMSET(d_color,WHITE,static_cast<size_t>(m_color_size));
+  CUDA_DEV_MEMSET(d_obsflg,0,static_cast<size_t>(m_flg_size));
+  //    CUDA_DEV_MEMSET(d_val_map,0,static_cast<size_t>(m_edt_size));
+    thrust::fill(obs_vec.begin(),obs_vec.end(),EMPTY_KEY);// can be deleted!!!!!
+    thrust::fill(obs_vec_dense.begin(),obs_vec_dense.end(),EMPTY_KEY);
+
+}
 void NF1Map3D::setup_device()
 {
   CUDA_ALLOC_DEV_MEM(&d_cost_to_go,static_cast<size_t>(m_byte_size));
@@ -23,6 +33,17 @@ void NF1Map3D::setup_device()
 
   CUDA_ALLOC_DEV_MEM(&d_obsflg,static_cast<size_t>(m_flg_size));
   CUDA_DEV_MEMSET(d_obsflg,0,static_cast<size_t>(m_flg_size));
+
+  obs_vec.resize(m_volume);
+  thrust::fill(obs_vec.begin(),obs_vec.end(),EMPTY_KEY);
+
+  obs_vec_dense.resize(m_volume);
+  thrust::fill(obs_vec_dense.begin(),obs_vec_dense.end(),EMPTY_KEY);
+
+  obs_dense_h.resize(m_volume);
+
+  this->d_obs =thrust::raw_pointer_cast(&obs_vec[0]);
+  this->d_obs_dense =thrust::raw_pointer_cast(&obs_vec_dense[0]);
 
   CUDA_ALLOC_DEV_MEM(&d_val_map,static_cast<size_t>(m_edt_size));
   CUDA_DEV_MEMSET(d_val_map,0,static_cast<size_t>(m_edt_size));
