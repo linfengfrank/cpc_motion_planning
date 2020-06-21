@@ -149,11 +149,11 @@ public:
     return d_color[z*m_map_size.x*m_map_size.y+y*m_map_size.x+x];
   }
 
-  __device__
-  bool& isObs(int x, int y, int z)
-  {
-    return d_obsflg[z*m_map_size.x*m_map_size.y+y*m_map_size.x+x];
-  }
+//  __device__
+//  bool& isObs(int x, int y, int z)
+//  {
+//    return d_obsflg[z*m_map_size.x*m_map_size.y+y*m_map_size.x+x];
+//  }
   __device__
   void set_obs(int3 obs,bool isobs)
   {
@@ -179,13 +179,13 @@ public:
     if (dist <= obstacle_dist)
     {
       d_cost_to_go[idx_1d] = 400.0f*expf(-dist*1.5f);
-      d_obsflg[idx_1d] = true;
+//      d_obsflg[idx_1d] = true;
       d_obs[idx_1d] =goal;
     }
     else
     {
       d_cost_to_go[idx_1d] = 0.0;
-      d_obsflg[idx_1d] = false;
+//      d_obsflg[idx_1d] = false;
       d_obs[idx_1d] =EMPTY_KEY;
     }
     return d_cost_to_go[idx_1d];
@@ -233,7 +233,7 @@ public:
   SeenDist *d_val_map;
   float *d_cost_to_go, *h_cost_to_go;
   int *d_color;
-  bool *d_obsflg;
+//  bool *d_obsflg;
   int3* d_dirs_3d;
 
   int m_edt_size;

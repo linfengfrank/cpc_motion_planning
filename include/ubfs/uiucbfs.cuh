@@ -118,8 +118,8 @@ visit_free(int3 cur_buf,
     if(!local_map.isCoordInsideLocalMap(nbr_buf))
       continue;
 
-    //    if(local_map.level(nbr_buf.x,nbr_buf.y,nbr_buf.z)==BLACK) // visited
-    //      continue;
+        if(local_map.level(nbr_buf.x,nbr_buf.y,nbr_buf.z)==BLACK) // visited
+          continue;
 
 
     // update nbr cost
@@ -167,8 +167,8 @@ visit_obs(int3 cur_buf,
       continue;
 
     // whether to commant it out??
-//    if(local_map.level(nbr_buf.x,nbr_buf.y,nbr_buf.z)==BLACK) // visited
-//      continue;
+    if(local_map.level(nbr_buf.x,nbr_buf.y,nbr_buf.z)==BLACK) // visited
+      continue;
 
     // only bfs obs
     if(!local_map.get_obs(nbr_buf))
