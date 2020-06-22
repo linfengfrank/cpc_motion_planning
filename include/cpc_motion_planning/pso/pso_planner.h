@@ -23,17 +23,6 @@ public:
 
   }
 
-//  void set_problem(const typename Model::State &s, const typename Evaluator::Target &goal)
-//  {
-//    m_eva.setTarget(goal);
-//    m_model.set_ini_state(s);
-//  }
-
-  std::vector<typename Model::State> generate_trajectory(const typename Swarm::Trace &ttr)
-  {
-    return m_ctrl_host.template generate_trajectory<Model,Swarm>(m_model,m_swarm,ttr);
-  }
-
   std::vector<typename Model::State> generate_trajectory()
   {
     return m_ctrl_host.template generate_trajectory<Model,Swarm>(m_model,m_swarm,result.best_loc);
@@ -112,7 +101,6 @@ public:
   Model m_model;
   Controller m_ctrl_dev;
   Controller m_ctrl_host;
-  bool m_on_host;
   Swarm m_swarm;
 
 };

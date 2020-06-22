@@ -94,7 +94,7 @@ int main(int argc, char *argv[])
               << "ms, cost: " << p.result.best_cost<<std::endl;
 
 
-    std::vector<UAV::UAVModel::State> traj = p.generate_trajectory(p.result.best_loc);
+    std::vector<UAV::UAVModel::State> traj = p.generate_trajectory();
 
     for (unsigned int i=0;i<5;i++)
     {
