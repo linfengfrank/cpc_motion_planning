@@ -24,6 +24,7 @@ namespace UAV
 enum FLY_STATUS {AT_GROUND = 0,
                  TAKING_OFF,
                  IN_AIR,
+                 STUCK,
                  EMERGENT,
                  BRAKING};
 }
@@ -107,6 +108,7 @@ protected:
   virtual void do_at_ground() = 0;
   virtual void do_taking_off() = 0;
   virtual void do_in_air() = 0;
+  virtual void do_stuck() = 0;
   virtual void do_emergent() = 0;
   virtual void do_braking() = 0;
 

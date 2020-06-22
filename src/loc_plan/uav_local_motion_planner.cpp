@@ -67,6 +67,11 @@ void UAVLocalMotionPlanner::run_state()
     do_in_air();
     break;
   }
+  case UAV::STUCK:
+  {
+    do_stuck();
+    break;
+  }
   case UAV::EMERGENT:
   {
     do_emergent();

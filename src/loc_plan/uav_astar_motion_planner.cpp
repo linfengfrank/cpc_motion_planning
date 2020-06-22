@@ -139,3 +139,8 @@ void UAVAstarMotionPlanner::do_braking()
 {
 
 }
+
+void UAVAstarMotionPlanner::do_stuck()
+{
+
+}

@@ -15,13 +15,13 @@ protected:
   virtual void do_at_ground();
   virtual void do_taking_off();
   virtual void do_in_air();
+  virtual void do_stuck();
   virtual void do_emergent();
   virtual void do_braking();
 
 private:
   void plan_call_back(const ros::TimerEvent&);
   void goal_call_back(const cpc_aux_mapping::grid_map::ConstPtr &msg);
-  void calculate_yaw(const std::vector<UAV::UAVModel::State> &traj);
 
 private:
 

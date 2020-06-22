@@ -14,6 +14,7 @@ protected:
   virtual void do_at_ground();
   virtual void do_taking_off();
   virtual void do_in_air();
+  virtual void do_stuck();
   virtual void do_emergent();
   virtual void do_braking();
 
