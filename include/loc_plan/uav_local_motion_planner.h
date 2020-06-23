@@ -47,7 +47,7 @@ public:
 
   }
 
-  void cal_from_pnt(const float3 &pnt, const UAV::UAVModel::State &s)
+  void cal_yaw_target(const float3 &pnt, const UAV::UAVModel::State &s)
   {
     float3 diff = pnt - s.p;
     diff.z = 0;
@@ -59,7 +59,6 @@ public:
       m_yaw_target = m_yaw_target - floorf((m_yaw_target + M_PI) / (2 * M_PI)) * 2 * M_PI;
       m_yaw_target = m_yaw_target + m_yaw_state.p;
     }
-    m_yaw_planner.solveTPBVP(m_yaw_target,0,m_yaw_state,m_yaw_limit,m_yaw_param);
   }
 
   std::vector<JLT::State> generate_yaw_traj()
@@ -67,6 +66,8 @@ public:
     std::vector<JLT::State> yaw_traj;
     float dt = PSO::PSO_CTRL_DT;
     float u_yaw;
+
+    m_yaw_planner.solveTPBVP(m_yaw_target,0,m_yaw_state,m_yaw_limit,m_yaw_param);
     for (float t=0.0f; t<PSO::PSO_TOTAL_T; t+=dt)
     {
       yaw_traj.push_back(m_yaw_planner.TPBVPRefGen(m_yaw_param,t,u_yaw));
@@ -113,14 +114,8 @@ protected:
   virtual void do_braking() = 0;
 
   template<class Model, class Controller, class Evaluator, class Swarm>
-  void calculate_trajectory(PSO::Planner<Model, Controller, Evaluator, Swarm> *planner, std::vector<UAV::UAVModel::State> &traj,
-                             const UAV::UAVModel::State &s, const float &yaw)
+  void calculate_trajectory(PSO::Planner<Model, Controller, Evaluator, Swarm> *planner, std::vector<UAV::UAVModel::State> &traj)
   {
-    // set the current initial state
-    planner->m_model.set_ini_state(s);
-    planner->m_eva.m_curr_yaw = yaw;
-    planner->m_eva.m_curr_pos = s.p;
-
     // conduct the motion planning
     planner->plan(*m_edt_map);
 

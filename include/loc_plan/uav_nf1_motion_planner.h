@@ -22,6 +22,7 @@ protected:
 private:
   void plan_call_back(const ros::TimerEvent&);
   void goal_call_back(const cpc_aux_mapping::grid_map::ConstPtr &msg);
+  void cycle_init();
 
 private:
 
@@ -50,6 +51,7 @@ private:
   int m_ref_start_idx;
   UAVHeadingSolver m_head_sov;
   std::vector<UAV::UAVModel::State> m_traj;
+  std::vector<JLT::State> m_yaw_traj;
   int m_start_braking_cycle;
 };
 

@@ -39,11 +39,16 @@ void UAVAstarMotionPlanner::plan_call_back(const ros::TimerEvent&)
   if (m_fly_status <= UAV::AT_GROUND)
     return;
 
-  m_head_sov.cal_from_pnt(m_goal.s.p,m_curr_ref);
+  m_head_sov.cal_yaw_target(m_goal.s.p,m_curr_ref);
 
     auto start = std::chrono::steady_clock::now();
   std::vector<UAV::UAVModel::State> traj;
-  calculate_trajectory<SIMPLE_UAV>(m_pso_planner,traj,m_curr_ref,m_head_sov.get_yaw());
+
+  m_pso_planner->m_model.set_ini_state(m_curr_ref);
+  m_pso_planner->m_eva.m_curr_yaw = m_head_sov.get_yaw();
+  m_pso_planner->m_eva.m_curr_pos = m_curr_ref.p;
+
+  calculate_trajectory<SIMPLE_UAV>(m_pso_planner,traj);
 
 
 
