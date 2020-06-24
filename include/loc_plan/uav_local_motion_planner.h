@@ -17,6 +17,7 @@
 #include <cpc_motion_planning/uav/uav_dp_control.h>
 #include <cpc_motion_planning/uav/uav_jlt_control.h>
 #include <cpc_motion_planning/uav/uav_swarm.h>
+#include <cpc_motion_planning/uav/uav_repulsive_field.h>
 
 #define SHOWPC
 namespace UAV

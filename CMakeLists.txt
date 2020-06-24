@@ -178,7 +178,8 @@ cuda_add_executable(${PROJECT_NAME}_nf1_node
     src/motion_planning_nf1_node.cpp
     src/loc_plan/uav_local_motion_planner.cpp
     src/loc_plan/uav_nf1_motion_planner.cpp
-    src/kernel/pso_kernels.cu)
+    src/kernel/pso_kernels.cu
+    src/kernel/repulsive_field_kernel.cu)
 
 target_link_libraries(${PROJECT_NAME}_nf1_node
     ${CUDA_curand_LIBRARY}
