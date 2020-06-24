@@ -8,7 +8,7 @@ UAVLocalMotionPlanner::UAVLocalMotionPlanner():
   m_fly_status(UAV::AT_GROUND)
 {
   m_map_sub = m_nh.subscribe("/edt_map", 1, &UAVLocalMotionPlanner::map_call_back, this);
-  m_pose_sub = m_nh.subscribe("/mavros/position/local", 1, &UAVLocalMotionPlanner::vehicle_pose_call_back, this);
+  m_pose_sub = m_nh.subscribe("/ground_truth/state", 1, &UAVLocalMotionPlanner::vehicle_pose_call_back, this);
 #ifdef SHOWPC
   m_traj_pub = m_nh.advertise<PointCloud> ("pred_traj", 1);
   m_traj_pnt_cld = PointCloud::Ptr(new PointCloud);
@@ -43,7 +43,7 @@ void UAVLocalMotionPlanner::map_call_back(const cpc_aux_mapping::grid_map::Const
   CUDA_MEMCPY_H2D(m_edt_map->m_sd_map,msg->payload8.data(),static_cast<size_t>(m_edt_map->m_byte_size));
 }
 
-void UAVLocalMotionPlanner::vehicle_pose_call_back(const geometry_msgs::PoseStamped::ConstPtr &msg)
+void UAVLocalMotionPlanner::vehicle_pose_call_back(const nav_msgs::Odometry::ConstPtr &msg)
 {
   m_pose_received = true;
   m_pose = *msg;

@@ -102,7 +102,7 @@ public:
 
 protected:
   void map_call_back(const cpc_aux_mapping::grid_map::ConstPtr &msg);
-  void vehicle_pose_call_back(const geometry_msgs::PoseStamped::ConstPtr &msg);
+  void vehicle_pose_call_back(const nav_msgs::Odometry::ConstPtr &msg);
   void cycle_process_based_on_status();
   bool is_stuck(const std::vector<UAV::UAVModel::State> &traj, std::vector<JLT::State> yaw_traj, const float &best_cost);
   void add_to_ref_msg(cpc_motion_planning::ref_data& ref_msg, int ref_counter, const UAV::UAVModel::State &traj, const JLT::State &yaw_state);
@@ -142,7 +142,7 @@ protected:
   ros::NodeHandle m_nh;
   ros::Subscriber m_map_sub;
   ros::Subscriber m_pose_sub;
-  geometry_msgs::PoseStamped m_pose;
+  nav_msgs::Odometry m_pose;
   float m_stuck_pbty;
   bool m_received_map;
   bool m_pose_received;
