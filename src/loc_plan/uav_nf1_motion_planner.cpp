@@ -227,21 +227,33 @@ void UAVNF1MotionPlanner::cycle_init()
   m_emergent_planner->m_eva.m_curr_pos = m_curr_ref.p;
 
   // Construct default trajectories for pos and yaw
-  if (m_fly_status >= UAV::TAKING_OFF && m_fly_status <= UAV::IN_AIR)
+  switch (m_fly_status) {
+  case UAV::AT_GROUND:
   {
-    m_traj = m_pso_planner->generate_trajectory();
+    generate_static_traj(m_traj, m_curr_ref);
+    break;
   }
-  else if(m_fly_status == UAV::EMERGENT)
+  case UAV::TAKING_OFF:
+  case UAV::IN_AIR:
+  {
+     m_traj = m_pso_planner->generate_trajectory();
+    break;
+  }
+  case UAV::EMERGENT:
   {
     m_traj = m_emergent_planner->generate_trajectory();
+    break;
   }
-  else if(m_fly_status == UAV::BRAKING)
+  case UAV::BRAKING:
   {
-    // Just use the old one and do nothing here
+    generate_static_traj(m_traj, m_curr_ref);
+    break;
+  }
+  default:
+    break;
   }
 
-  if (m_fly_status >= UAV::TAKING_OFF)
-    m_yaw_traj = m_head_sov.generate_yaw_traj();
+  m_yaw_traj = m_head_sov.generate_yaw_traj();
 }
 
 

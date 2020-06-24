@@ -123,6 +123,16 @@ protected:
     traj = planner->generate_trajectory();
   }
 
+  void generate_static_traj(std::vector<UAV::UAVModel::State> &traj, const UAV::UAVModel::State &s)
+  {
+    traj.clear();
+    float dt = PSO::PSO_CTRL_DT;
+    for (float t=0.0f; t<PSO::PSO_TOTAL_T; t+=dt)
+    {
+      traj.push_back(s);
+    }
+  }
+
 #ifdef SHOWPC
   void plot_trajectory(const std::vector<UAV::UAVModel::State> &traj);
 #endif

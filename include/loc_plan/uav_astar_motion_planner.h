@@ -3,6 +3,7 @@
 #include <loc_plan/uav_local_motion_planner.h>
 
 #define SIMPLE_UAV UAV::UAVModel,UAV::UAVDPControl,UAV::SingleTargetEvaluator,UAV::UAVSwarm<1>
+#define EMERGENT_UAV UAV::UAVModel,UAV::UAVJLTControl,UAV::SingleTargetEvaluator,UAV::UAVSwarm<1>
 #define CORRID_UAV UAV::UAVModel,UAV::UAVDPControl,UAV::CorridorEvaluator,UAV::UAVSwarm<1>
 class UAVAstarMotionPlanner : public UAVLocalMotionPlanner
 {
@@ -21,6 +22,7 @@ protected:
 private:
   void plan_call_back(const ros::TimerEvent&);
   void goal_call_back(const geometry_msgs::PoseStamped::ConstPtr &msg);
+  void cycle_init();
 
 private:
   ros::Subscriber m_goal_sub;
@@ -32,13 +34,16 @@ private:
   bool m_goal_received;
 
   PSO::Planner<SIMPLE_UAV> *m_pso_planner;
-
+  PSO::Planner<EMERGENT_UAV> *m_emergent_planner;
   UAV::SingleTargetEvaluator::Target m_goal;
   UAV::UAVModel::State m_curr_ref;
   cpc_motion_planning::ref_data m_ref_msg;
   int m_plan_cycle;
   int m_ref_start_idx;
   UAVHeadingSolver m_head_sov;
+  std::vector<UAV::UAVModel::State> m_traj;
+  std::vector<JLT::State> m_yaw_traj;
+  int m_start_braking_cycle;
 };
 
 #endif // UAV_ASTAR_MOTION_PLANNER_H
