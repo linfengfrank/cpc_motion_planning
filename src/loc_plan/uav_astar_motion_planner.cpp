@@ -45,7 +45,7 @@ UAVAstarMotionPlanner::~UAVAstarMotionPlanner()
 void UAVAstarMotionPlanner::plan_call_back(const ros::TimerEvent&)
 {
   cycle_init();
-  run_state();
+  cycle_process_based_on_status();
   if (m_fly_status <= UAV::AT_GROUND)
     return;
 
@@ -128,7 +128,7 @@ void UAVAstarMotionPlanner::do_in_air()
   if (m_pso_planner->result.collision)
   {
     m_fly_status = UAV::EMERGENT;
-    run_state();
+    cycle_process_based_on_status();
   }
   else
   {
@@ -150,7 +150,7 @@ void UAVAstarMotionPlanner::do_emergent()
   {
     m_fly_status = UAV::BRAKING;
     m_start_braking_cycle = m_plan_cycle;
-    run_state();
+    cycle_process_based_on_status();
   }
   else
   {
@@ -166,14 +166,10 @@ void UAVAstarMotionPlanner::do_emergent()
 
 void UAVAstarMotionPlanner::do_braking()
 {
-  m_traj.clear();
   UAV::UAVModel::State s_tmp = m_curr_ref;
   s_tmp.v = make_float3(0,0,0);
   s_tmp.a = make_float3(0,0,0);
-  for (float t=0.0f; t<PSO::PSO_TOTAL_T; t+=PSO::PSO_CTRL_DT)
-  {
-    m_traj.push_back(s_tmp);
-  }
+  generate_static_traj(m_traj, s_tmp);
   if (m_plan_cycle - m_start_braking_cycle > 10)
   {
     m_fly_status = UAV::IN_AIR;

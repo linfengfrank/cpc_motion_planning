@@ -49,7 +49,7 @@ void UAVLocalMotionPlanner::vehicle_pose_call_back(const geometry_msgs::PoseStam
   m_pose = *msg;
 }
 
-void UAVLocalMotionPlanner::run_state()
+void UAVLocalMotionPlanner::cycle_process_based_on_status()
 {
   switch (m_fly_status) {
   case UAV::AT_GROUND:
