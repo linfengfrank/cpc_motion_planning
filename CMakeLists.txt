@@ -166,7 +166,8 @@ cuda_add_executable(${PROJECT_NAME}_node
     src/motion_planning_astar_node.cpp
     src/loc_plan/uav_local_motion_planner.cpp
     src/loc_plan/uav_astar_motion_planner.cpp
-    src/kernel/pso_kernels.cu)
+    src/kernel/pso_kernels.cu
+    src/kernel/repulsive_field_kernel.cu)
 
 target_link_libraries(${PROJECT_NAME}_node
     ${CUDA_curand_LIBRARY}
@@ -190,7 +191,6 @@ target_link_libraries(${PROJECT_NAME}_nf1_node
 cuda_add_executable(${PROJECT_NAME}_corridor_node
     src/motion_planning_corridor_node.cpp
     src/loc_plan/uav_local_motion_planner.cpp
-    src/loc_plan/uav_astar_motion_planner.cpp
     src/kernel/pso_kernels.cu)
 
 target_link_libraries(${PROJECT_NAME}_corridor_node
