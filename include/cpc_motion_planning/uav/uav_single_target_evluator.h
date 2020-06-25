@@ -59,7 +59,7 @@ public:
       }
 
   #ifdef  __CUDA_ARCH__
-      float rd = map.edt_const_at(ix,iy,iz).d*0.2;
+      float rd = map.edt_const_at(ix,iy,iz).d*map.m_grid_step;
       cost += expf(-6*rd)*400;
 
       if (rd < 0.61)
@@ -103,7 +103,7 @@ public:
       }
 
   #ifdef  __CUDA_ARCH__
-      float rd = map.edt_const_at(ix,iy,iz).d*0.2;
+      float rd = map.edt_const_at(ix,iy,iz).d*map.m_grid_step;
       cost += expf(-6*rd)*400;
 
       if (rd < 0.6)
