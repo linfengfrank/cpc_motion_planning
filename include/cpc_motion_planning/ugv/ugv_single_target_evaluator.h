@@ -35,7 +35,7 @@ public:
   {
     float cost = 0;
     float2 dist_err = s.p - m_goal.s.p;
-    cost += 0.5f*sqrt(dist_err.x*dist_err.x + dist_err.y*dist_err.y) + 0.2f*sqrt(s.v*s.v + s.w*s.w);
+    cost += 0.5f*sqrt(dist_err.x*dist_err.x + dist_err.y*dist_err.y) + 0.2f*sqrt(3.0f*s.v*s.v + s.w*s.w);
 
     int ix = floor( (s.p.x - map.m_origin.x) / map.m_grid_step + 0.5);
     int iy = floor( (s.p.y - map.m_origin.y) / map.m_grid_step + 0.5);
@@ -76,7 +76,7 @@ public:
   {
     float cost = 0;
      float2 dist_err = s.p - m_goal.s.p;
-     cost += 4.0f*sqrt(dist_err.x*dist_err.x + dist_err.y*dist_err.y) + 0.2f*sqrt(s.v*s.v + s.w*s.w);
+     cost += 0.5f*sqrt(dist_err.x*dist_err.x + dist_err.y*dist_err.y) + 1.2f*sqrt(3.0f*s.v*s.v + s.w*s.w);
 
      int ix = floor( (s.p.x - map.m_origin.x) / map.m_grid_step + 0.5);
      int iy = floor( (s.p.y - map.m_origin.y) / map.m_grid_step + 0.5);
@@ -100,13 +100,13 @@ public:
 
      if (sqrt(dist_err.x*dist_err.x + dist_err.y*dist_err.y) > 1)
      {
-       cost += 4*M_PI;
+       cost += 0.5f*M_PI;
      }
      else
      {
        float yaw_diff = s.theta - m_goal.s.theta;
        yaw_diff = yaw_diff - floor((yaw_diff + M_PI) / (2 * M_PI)) * 2 * M_PI;
-       cost += 4*fabs(yaw_diff);
+       cost += 0.5f*fabs(yaw_diff);
      }
 
      return  cost;
