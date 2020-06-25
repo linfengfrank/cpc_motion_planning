@@ -85,6 +85,11 @@ public:
   {
     return m_yaw_state.p;
   }
+
+  float get_yaw_target()
+  {
+    return m_yaw_target;
+  }
 private:
   JLT m_yaw_planner;
   JLT::State m_yaw_state;
@@ -132,6 +137,20 @@ protected:
     {
       traj.push_back(s);
     }
+  }
+
+  UAV::UAVModel::State odom2state(const nav_msgs::Odometry &odom)
+  {
+    UAV::UAVModel::State state;
+    state.p.x = odom.pose.pose.position.x;
+    state.p.y = odom.pose.pose.position.y;
+    state.p.z = odom.pose.pose.position.z;
+
+    state.v.x = odom.twist.twist.linear.x;
+    state.v.y = odom.twist.twist.linear.y;
+    state.v.z = odom.twist.twist.linear.z;
+
+    return state;
   }
 
 #ifdef SHOWPC

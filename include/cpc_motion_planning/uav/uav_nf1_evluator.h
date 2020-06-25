@@ -67,7 +67,7 @@ public:
         collision = true;
       }
 
-      if (!map.edt_const_at(ix,iy,iz).s)
+      if (m_fov && !map.edt_const_at(ix,iy,iz).s)
           cost += 100;
   #endif
     }
@@ -125,7 +125,7 @@ public:
       if (rd < 0.6)
         cost += 100;
 
-      if (!map.edt_const_at(ix,iy,iz).s)
+      if (m_fov && !map.edt_const_at(ix,iy,iz).s)
           cost += 100;
   #endif
     }

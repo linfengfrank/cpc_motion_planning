@@ -173,6 +173,7 @@ void UAVNF1MotionPlanner::do_emergent()
   {
     m_fly_status = UAV::BRAKING;
     m_start_braking_cycle = m_plan_cycle;
+    m_curr_ref = odom2state(m_pose);
     cycle_process_based_on_status();
   }
   else
@@ -188,15 +189,18 @@ void UAVNF1MotionPlanner::do_emergent()
 
 void UAVNF1MotionPlanner::do_braking()
 {
-  UAV::UAVModel::State s_tmp = m_curr_ref;
-  s_tmp.v = make_float3(0,0,0);
-  s_tmp.a = make_float3(0,0,0);
-  generate_static_traj(m_traj, s_tmp);
-
-  if (m_plan_cycle - m_start_braking_cycle > 10)
+  auto start = std::chrono::steady_clock::now();
+  m_rep_filed.generate_repulse_traj(m_traj, *m_edt_map, m_curr_ref);
+  if (m_plan_cycle - m_start_braking_cycle > 20)
   {
     m_fly_status = UAV::IN_AIR;
   }
+  auto end = std::chrono::steady_clock::now();
+  std::cout << "local planner (braking): "
+            << std::chrono::duration_cast<std::chrono::milliseconds>(end - start).count()
+            << "ms, cost: " << m_emergent_planner->result.best_cost
+            << ", collision: " << m_emergent_planner->result.collision<<std::endl;
+
 }
 
 void UAVNF1MotionPlanner::do_stuck()
@@ -207,6 +211,8 @@ void UAVNF1MotionPlanner::do_stuck()
   m_pso_planner->plan(*m_edt_map);
   m_pso_planner->m_eva.m_fov = old_redord;
 
+  std::cout<<"guiding target: "<<m_pso_planner->result.best_loc[0].x<<" "<<m_pso_planner->result.best_loc[0].y<<std::endl;
+  std::cout<<"yaw target: "<<m_head_sov.get_yaw_target()<<std::endl;
   m_head_sov.cal_yaw_target(m_pso_planner->result.best_loc[0], m_curr_ref);
   m_yaw_traj = m_head_sov.generate_yaw_traj();
   m_fly_status = UAV::IN_AIR;
