@@ -46,6 +46,11 @@ public:
   }
 
   __host__ __device__
+  void set_var(const float3 &v) {
+      var = v;
+  }
+
+  __host__ __device__
   State get_ini_state()
   {
     return m_s_ini;
@@ -71,6 +76,7 @@ public:
   }
 
   State m_s_ini;
+  float3 var;
 
 };
 }
