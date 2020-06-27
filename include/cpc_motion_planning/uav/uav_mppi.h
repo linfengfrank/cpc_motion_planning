@@ -98,6 +98,22 @@ namespace UAV
                 }
                 return square;
             }
+
+            //---
+            __device__ __host__
+            void print() {
+                for (unsigned int i=0;i<STEP;i++) {
+                    printf("[%d]: %.2f, %.2f, %.2f\n",i,site[i].x,site[i].y,site[i].z);
+                }
+            }
+
+            __device__ __host__
+            void shift_update(float3 rand_u) {
+                for (unsigned int i=0;i<STEP-1;i++) {
+                    site[i]=site[i+1];
+                }
+                site[STEP-1] = rand_u;
+            }
         };
 
         struct IntegralPath{
@@ -108,7 +124,7 @@ namespace UAV
             float weight;
         };
 
-        UAVMppi() {
+        UAVMppi(float _lambda): lambda(_lambda) {
             steps = STEP;
             step_dt = MPPI::MPPI_TOTAL_T/static_cast<float>(steps);
         }
@@ -118,7 +134,7 @@ namespace UAV
         }
 
         __device__
-        void random_sample_du(IntegralPath &intepath, float3 var) {
+        void random_sample_du(IntegralPath &intepath, float3 var, float3 limit) {
             for (int i = 0 ; i < STEP; i++) {
                 float r = MPPI::rand_float_gen(&(intepath.rs), -1.0, 1.0);
                 intepath.du.site[i].x = var.x * r;
@@ -127,6 +143,10 @@ namespace UAV
                 r = MPPI::rand_float_gen(&(intepath.rs), -1.0, 1.0);
                 intepath.du.site[i].z = var.z * r;
                 intepath.u.site[i] = initial_ctrl_seq->site[i] + intepath.du.site[i];
+                MPPI::bound_between(intepath.u.site[i].x, -limit.x, limit.x);
+                MPPI::bound_between(intepath.u.site[i].y, -limit.y, limit.y);
+                MPPI::bound_between(intepath.u.site[i].z, -limit.z, limit.z);
+                intepath.du.site[i] = intepath.u.site[i] - initial_ctrl_seq->site[i];
             }
         }
 
@@ -134,7 +154,7 @@ namespace UAV
         float control_cost(const Trace& cs, const float3& var) {
             float cost = 0.0;
             for (int i = 0; i < steps; i++) {
-                float3 delta_u = (*initial_ctrl_seq)[i] - (*nominal_ctrl_seq)[i];
+                float3 delta_u = initial_ctrl_seq->site[i] - nominal_ctrl_seq->site[i];
                 cost += delta_u.x * cs[i].x / var.x;
                 cost += delta_u.y * cs[i].y / var.y;
                 cost += delta_u.z * cs[i].z / var.z;

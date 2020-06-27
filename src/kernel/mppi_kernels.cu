@@ -1,6 +1,8 @@
 #include <cpc_motion_planning/mppi/mppi_kernels.cuh>
 #include <cuda_geometry/helper_math.h>
 
+//#define VISUAL_DEBUG
+
 namespace MPPI {
     // ------------- kernel function ---------- //
     template <class PICore>
@@ -15,13 +17,16 @@ namespace MPPI {
     void integral_paths_kernel(EDTMap map, Evaluator eva, Model m, Controller ctrl, PICore core) {
         int idx = threadIdx.x+blockDim.x*blockIdx.x;
 
-        core.random_sample_du(core.intepaths[idx], m.var);
+        core.random_sample_du(core.intepaths[idx], m.var, m.limits);
 
         float cost = ctrl.template simulate_evaluate<Model, Evaluator, PICore>(map, eva, m, core,
                 core.intepaths[idx].u, core.intepaths[idx].collision);
 
-        cost += core.control_cost(core.intepaths[idx].u, m.var);
-
+        float ctrl_cost = core.control_cost(core.intepaths[idx].u, m.var);
+#ifdef VISUAL_DEBUG
+        printf("[%d] cost: %.2f, ctrl_cost: %.2f\n",idx, cost, ctrl_cost);
+#endif
+        cost += ctrl_cost;
         core.costs[idx] = cost;
     }
 
@@ -30,7 +35,11 @@ namespace MPPI {
     void calculate_exp_kernel(PICore core, int baseline_id) {
         int idx = threadIdx.x+blockDim.x*blockIdx.x;
 
-        core.exp_costs[idx] = exp(-(core.costs[idx] - core.costs[baseline_id])/core.lambda);
+        core.exp_costs[idx] = exp(-(core.costs[idx] - core.costs[baseline_id])/(core.lambda+0.001f)); // add eps for safety
+#ifdef VISUAL_DEBUG
+        printf("[%d] cost: %.2f, baseline_id: %d, min_cost:%.2f\n", idx, core.costs[idx], baseline_id, core.costs[baseline_id]);
+        printf("[%d] exp_cost: %.2f\n", idx, core.exp_costs[idx]);
+#endif
     }
 
     template <class PICore>

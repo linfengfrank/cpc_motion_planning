@@ -50,6 +50,11 @@ public:
       var = v;
   }
 
+    __host__ __device__
+    void set_limits(const float3 &l) {
+        limits = l;
+    }
+
   __host__ __device__
   State get_ini_state()
   {
@@ -77,6 +82,7 @@ public:
 
   State m_s_ini;
   float3 var;
+  float3 limits;
 
 };
 }

@@ -8,7 +8,7 @@ namespace MPPI {
     template<class Model, class Controller, class Evaluator, class  PICore>
     class Planner {
     public:
-        Planner(int num_of_sampling = 2560) {
+        Planner(int num_of_sampling = 2560, float lambda = 1.0): m_core(PICore(lambda)) {
             m_core.intepath_size = num_of_sampling;
         }
 
@@ -23,22 +23,33 @@ namespace MPPI {
             cublasStatus_t cbls_stt;
 
             setup_random_sampling<PICore>(m_core);
+//            cudaDeviceSynchronize();
 
             integral_paths<Model, Controller, Evaluator, PICore>(map, m_eva, m_model, m_ctrl_dev, m_core);
+//            cudaDeviceSynchronize();
 
             int min_cost_idx = -1;
             cbls_stt = cublasIsamin(m_cbls_hdl, m_core.intepath_size, m_core.costs, 1, &min_cost_idx);
 
             if (min_cost_idx != -1) {
-                calculate_exp<PICore>(m_core, min_cost_idx);
+
+                float min_cost = 0;
+                CUDA_MEMCPY_D2H(&min_cost , m_core.costs+min_cost_idx-1, sizeof(float));
+                printf("min_cost: %.2f\n", min_cost);
+
+                calculate_exp<PICore>(m_core, min_cost_idx-1);
+//                cudaDeviceSynchronize();
                 float eta = 0;
                 cbls_stt = cublasSasum(m_cbls_hdl, m_core.intepath_size, m_core.exp_costs, 1, &eta);
+                printf("eta: %.2f\n", eta);
                 if (eta > 0.0) {
                     calculate_weighted_update<PICore>(m_core, eta);
+//                    cudaDeviceSynchronize();
                 }
             }
 
-            CUDA_MEMCPY_D2H(&result, m_core.initial_ctrl, sizeof(typename PICore::Trace));
+            CUDA_MEMCPY_D2H(&result, m_core.initial_ctrl_seq, sizeof(typename PICore::Trace));
+//            result.print();
             cudaDeviceSynchronize();
         }
 

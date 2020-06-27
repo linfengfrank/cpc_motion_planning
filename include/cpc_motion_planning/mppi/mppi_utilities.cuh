@@ -4,7 +4,7 @@
 #include <cuda_math/cuda_matrix.cuh>
 namespace MPPI
 {
-    const float MPPI_TOTAL_T = 3.5f;
+    const float MPPI_TOTAL_T = 4.0f;
     const float MPPI_SIM_DT = 0.1f;
     const float MPPI_CTRL_DT = 0.05f;
 
@@ -16,7 +16,7 @@ namespace MPPI
 #else
         float myrandf = 0.0;
 #endif
-        myrandf *= (max - min + 0.999999f);
+        myrandf *= (max - min);// + 0.999999f);
         myrandf += min;
         return myrandf;
     }

@@ -41,16 +41,26 @@ namespace UAV {
                 if (i > core.steps - 1)
                     i = core.steps - 1;
 
+//                printf("[%.2f] u: %.2f %.2f %.2f\n", t, ttr.site[curr_site_idx-1].x,
+//                        ttr.site[curr_site_idx-1].y,
+//                       ttr.site[curr_site_idx-1].z
+//                );
+
+//                printf("t: %.2f, u_id: %d\n", t, curr_site_idx);
                 float propagate_dt = dt;
                 if (i > curr_site_idx) {
                     curr_site_idx = i;
                     propagate_dt = t - curr_site_idx*core.step_dt;
                     float previous_propagate_dt = dt - propagate_dt;
-                    if (curr_site_idx > 0)
+                    if (curr_site_idx > 0) {
+//                        printf("prev_dt: %.2f, u_id: %d\n", previous_propagate_dt, curr_site_idx-1);
                         m.model_forward(s, ttr.site[curr_site_idx-1], previous_propagate_dt);
+                    }
                 }
+//                printf("propa_dt: %.2f, u_id: %d\n", propagate_dt, curr_site_idx);
                 m.model_forward(s, ttr.site[curr_site_idx], propagate_dt);
 
+//                printf("[%.2f] s: %.2f %.2f %.2f\n", t, s.p.x, s.p.y, s.p.z);
                 cost += eva.process_cost(s, map, t, collision);
             }
             cost += eva.final_cost(s, map);
