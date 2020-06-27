@@ -131,8 +131,22 @@ namespace UAV
         }
 
         __device__
-        void set_nominal_path(const Trace& n_path) {
-            nominal_path = n_path;
+        float control_cost(const Trace& cs, const float3& var) {
+            float cost = 0.0;
+            for (int i = 0; i < steps; i++) {
+                float3 delta_u = (*initial_ctrl_seq)[i] - (*nominal_ctrl_seq)[i];
+                cost += delta_u.x * cs[i].x / var.x;
+                cost += delta_u.y * cs[i].y / var.y;
+                cost += delta_u.z * cs[i].z / var.z;
+            }
+            cost *= lambda;
+            return cost;
+        }
+
+        __host__
+        void set_nominal_and_initial_cs(Trace n_cs, Trace i_cs) {
+            CUDA_MEMCPY_H2D(nominal_ctrl_seq, &n_cs, sizeof(Trace));
+            CUDA_MEMCPY_H2D(initial_ctrl_seq, &i_cs, sizeof(Trace));
         }
 
         // --- elements
@@ -142,6 +156,8 @@ namespace UAV
         Trace *initial_ctrl_seq; // 1 size of Trace
 
         float *costs; // N_sample size of float
+
+        float *contrl_costs; // N_sample size of float
 
         float *exp_costs; // N_sample size of float
 

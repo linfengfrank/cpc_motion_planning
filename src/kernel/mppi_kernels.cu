@@ -20,15 +20,17 @@ namespace MPPI {
         float cost = ctrl.template simulate_evaluate<Model, Evaluator, PICore>(map, eva, m, core,
                 core.intepaths[idx].u, core.intepaths[idx].collision);
 
-        core.cost[idx] = cost;
+        cost += core.control_cost(core.intepaths[idx].u, m.var);
+
+        core.costs[idx] = cost;
     }
 
     template <class PICore>
     __global__
-    void calculate_exp_kernel(PICore core, float baseline) {
+    void calculate_exp_kernel(PICore core, int baseline_id) {
         int idx = threadIdx.x+blockDim.x*blockIdx.x;
 
-        core.exp_costs[idx] = exp(-(core.costs[idx] - baseline)/core.lambda);
+        core.exp_costs[idx] = exp(-(core.costs[idx] - core.costs[baseline_id])/core.lambda);
     }
 
     template <class PICore>
@@ -55,8 +57,8 @@ namespace MPPI {
     }
 
     template <class PICore>
-    void calculate_exp(const PICore &core, float baseline) {
-        calculate_exp_kernel<PICore><<<1, core.intepath_size>>>(core, baseline);
+    void calculate_exp(const PICore &core, int baseline_id) {
+        calculate_exp_kernel<PICore><<<1, core.intepath_size>>>(core, baseline_id);
     }
 
     template<class PICore>
@@ -72,9 +74,9 @@ namespace MPPI {
         (const EDTMap&, const E&, const M&, const C&, const P&);
 
 #define INST_calculate_exp(P) template void MPPI::calculate_exp< P > \
-        (const P&, float);
+        (const P&, int);
 
-#define INST_calculate_weighted_update(P) template void MPPI::INST_calculate_weighted_update< P > \
+#define INST_calculate_weighted_update(P) template void MPPI::calculate_weighted_update< P > \
         (const P&, float);
 
 #define INST_group(M,C,E,P)  INST_setup_random_sampling(P) \

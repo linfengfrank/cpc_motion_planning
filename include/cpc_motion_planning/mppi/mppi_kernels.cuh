@@ -1,6 +1,9 @@
 #ifndef MPPI_KERNELS_CUH
 #define MPPI_KERNELS_CUH
 #include <cpc_motion_planning/uav/uav_model.h>
+#include <cpc_motion_planning/uav/uav_mppi.h>
+#include <cpc_motion_planning/uav/uav_simple_control.h>
+#include <cpc_motion_planning/uav/uav_single_target_evluator.h>
 #include <cuda_geometry/cuda_edtmap.cuh>
 #include <cuda_geometry/cuda_nf1map.cuh>
 #include "cublas_v2.h"
@@ -16,7 +19,7 @@ namespace MPPI
     // --- do cublasIsamin to find the minimum cost
 
     template<class PICore>
-    void calculate_exp(const PICore &core, float baseline);
+    void calculate_exp(const PICore &core, int baseline_id);
     // --- output: exp terms for paths
 
     // --- do cublasSasum to get eta

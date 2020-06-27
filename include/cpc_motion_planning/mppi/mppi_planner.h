@@ -22,6 +22,22 @@ namespace MPPI {
         void plan(const EDTMap &map) {
             cublasStatus_t cbls_stt;
 
+            setup_random_sampling<PICore>(m_core);
+
+            integral_paths<Model, Controller, Evaluator, PICore>(map, m_eva, m_model, m_ctrl_dev, m_core);
+
+            int min_cost_idx = -1;
+            cbls_stt = cublasIsamin(m_cbls_hdl, m_core.intepath_size, m_core.costs, 1, &min_cost_idx);
+
+            if (min_cost_idx != -1) {
+                calculate_exp<PICore>(m_core, min_cost_idx);
+                float eta = 0;
+                cbls_stt = cublasSasum(m_cbls_hdl, m_core.intepath_size, m_core.exp_costs, 1, &eta);
+                if (eta > 0.0) {
+                    calculate_weighted_update<PICore>(m_core, eta);
+                }
+            }
+
             CUDA_MEMCPY_D2H(&result, m_core.initial_ctrl, sizeof(typename PICore::Trace));
             cudaDeviceSynchronize();
         }
@@ -54,12 +70,11 @@ namespace MPPI {
 
             CUDA_ALLOC_DEV_MEM(&m_core.exp_costs, m_core.intepath_size* sizeof(float));
 
-            setup_random_sampling<PICore>(m_core);
 
             cublasCreate(&m_cbls_hdl);
         }
 
-        void delete_particles() {
+        void delete_sample_seed() {
             CUDA_FREE_DEV_MEM(m_core.intepaths);
             CUDA_FREE_DEV_MEM(m_core.nominal_ctrl_seq);
             CUDA_FREE_DEV_MEM(m_core.initial_ctrl_seq);
