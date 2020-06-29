@@ -208,9 +208,39 @@ public:
     return cost;
   }
 
+    template<class Model, class Swarm>
+    __host__ __device__
+    std::vector<typename Model::State> generate_trajectory(Model &m, const Swarm &sw, const typename Swarm::Trace &ttr)
+    {
+        std::vector<typename Model::State> traj;
+        typename Model::State s = m.get_ini_state();
+        float3 trans = make_float3(s.p.x,s.p.y,m_theta);
+        int curr_site_idx = -1;
+        float start_time = 0.0f;
+        float dt = PSO::PSO_CTRL_DT;
+        float3 u;
+        for (float t=0.0f; t<PSO::PSO_TOTAL_T; t+=dt)
+        {
+            int i = static_cast<int>(floor(t/sw.step_dt));
+            if (i > sw.steps - 1)
+                i = sw.steps - 1;
+
+            if (i > curr_site_idx)
+            {
+                curr_site_idx = i;
+                start_time = t;
+                set_ini_state(transform(s,trans));
+                jlt_generate(transform(ttr[curr_site_idx],trans));
+            }
+
+            get_trajectory(s,t+dt-start_time,u);
+        }
+        return traj;
+    }
+
   template<class Model, class Swarm>
   __host__ __device__
-  std::vector<typename Model::State> generate_trajectory(Model &m, const Swarm &sw, const typename Swarm::Trace &ttr)
+  std::vector<typename Model::State> generate_trajectory(Model &m, const Swarm &sw, const typename Swarm::Trace &ttr, float start_t = 0)
   {
     std::vector<typename Model::State> traj;
     typename Model::State s = m.get_ini_state();
@@ -234,7 +264,9 @@ public:
       }
 
       get_trajectory(s,t+dt-start_time,u);
-      traj.push_back(transform_back(s,trans));
+      if (t > start_t) {
+          traj.push_back(transform_back(s,trans));
+      }
     }
     return traj;
   }

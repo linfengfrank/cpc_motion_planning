@@ -127,6 +127,14 @@ namespace UAV
         UAVMppi(float _lambda): lambda(_lambda) {
             steps = STEP;
             step_dt = MPPI::MPPI_TOTAL_T/static_cast<float>(steps);
+            /* min delta cost;
+             * if the delta cost of all sampling trajectories is less then this, we treat them achieve a optimal solution */
+            delta_cost_limits.x = 3;
+            /* max delta cost;
+             * if the delta cost of trajectory is great then this, we treat that sample is invalid; */
+            delta_cost_limits.y = 100.0;
+            /* standard cost; */
+            delta_cost_limits.z = 20.0;
         }
 
         ~UAVMppi() {
@@ -177,10 +185,11 @@ namespace UAV
 
         float *costs; // N_sample size of float
 
-        float *contrl_costs; // N_sample size of float
+        float *ctrl_costs; // N_sample size of float
 
         float *exp_costs; // N_sample size of float
 
+        float3 delta_cost_limits;
         int intepath_size; // number of samples
         int steps;
         float step_dt;

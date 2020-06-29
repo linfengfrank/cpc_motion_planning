@@ -19,7 +19,7 @@ namespace MPPI
     // --- do cublasIsamin to find the minimum cost
 
     template<class PICore>
-    void calculate_exp(const PICore &core, int baseline_id);
+    void calculate_exp(const PICore &core, int baseline_id, float scale);
     // --- output: exp terms for paths
 
     // --- do cublasSasum to get eta

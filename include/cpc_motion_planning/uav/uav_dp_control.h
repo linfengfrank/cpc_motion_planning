@@ -93,7 +93,7 @@ public:
 
   template<class Model, class Swarm>
   __host__ __device__
-  std::vector<typename Model::State> generate_trajectory(Model &m, const Swarm &sw, const typename Swarm::Trace &ttr)
+  std::vector<typename Model::State> generate_trajectory(Model &m, const Swarm &sw, const typename Swarm::Trace &ttr, float start_t = 0)
   {
     std::vector<typename Model::State> traj;
     typename Model::State s = m.get_ini_state();
@@ -106,7 +106,9 @@ public:
 
       float3 u = dp_control(s, ttr[i]);
       m.model_forward(s,u,dt);
-      traj.push_back(s);
+      if (t > start_t) {
+          traj.push_back(s);
+      }
     }
     return traj;
   }

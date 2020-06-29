@@ -23,9 +23,9 @@ public:
 
   }
 
-  std::vector<typename Model::State> generate_trajectory()
+  std::vector<typename Model::State> generate_trajectory(float start_t = 0)
   {
-    return m_ctrl_host.template generate_trajectory<Model,Swarm>(m_model,m_swarm,result.best_loc);
+    return m_ctrl_host.template generate_trajectory<Model,Swarm>(m_model,m_swarm,result.best_loc, start_t);
   }
 
   void plan(const EDTMap &map)

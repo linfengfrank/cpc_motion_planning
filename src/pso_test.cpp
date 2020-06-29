@@ -2,18 +2,16 @@
 #include <iostream>
 #include <cuda_geometry/cuda_geometry.cuh>
 #include <cuda_math/cuda_matrix.cuh>
-#include <cpc_motion_planning/mppi/mppi_planner.h>
+#include <cpc_motion_planning/pso/pso_planner.h>
 #include <cpc_motion_planning/cuda_matrix_factory.h>
 #include <cpc_motion_planning/uav/uav_model.h>
 #include <chrono>
 
-#define MPPI_STEP 35
-typedef UAV::UAVMppi<MPPI_STEP>::Trace CtrlSeq;
-typedef MPPI::Planner<UAV::UAVModel, UAV::UAVSIMPLEControl, UAV::SingleTargetEvaluator, UAV::UAVMppi<MPPI_STEP>> Planner;
+typedef PSO::Planner<UAV::UAVModel, UAV::UAVJLTControl, UAV::SingleTargetEvaluator, UAV::UAVSwarm<2>> Planner;
 Planner *planner;
 
 int main(int argc, char **argv) {
-    ros::init(argc, argv, "mppi_test");
+    ros::init(argc, argv, "pso_test");
     ros::NodeHandle nh;
 
     /* initial state */
@@ -29,11 +27,16 @@ int main(int argc, char **argv) {
     target_state.oa = false;
 
     /* planner initial */
-    planner = new Planner(2560, 1);
+    planner = new Planner();
     planner->m_model.set_ini_state(initial_state);
     planner->m_model.set_var(sample_var);
     planner->m_model.set_limits(ctrl_limits);
     planner->m_eva.setTarget(target_state);
+    float2 v_limit = make_float2(1.0, 0.5);
+    float2 a_limit = make_float2(2.0, 1.0);
+    float2 j_limit = make_float2(1.5, 1.5);
+    planner->m_ctrl_dev.set_limit(v_limit, a_limit, j_limit);
+    planner->m_ctrl_host.set_limit(v_limit, a_limit, j_limit);
     planner->initialize();
 
     /* fake map */
@@ -42,51 +45,32 @@ int main(int argc, char **argv) {
     EDTMap m_edt_map(origin,0.2,edt_map_size);
     m_edt_map.setup_device();
 
-//    /* simulator */
-//    UAV::UAVModel simulator;
-//    UAV::UAVModel::State sim_state = initial_state;
-//    simulator.set_ini_state(sim_state);
-    CtrlSeq n_cs;
-    planner->m_core.set_nominal_and_initial_cs(n_cs, n_cs);
     planner->plan(m_edt_map);
-    float dt = MPPI::MPPI_CTRL_DT;
+    planner->release();
+    float dt = PSO::PSO_CTRL_DT;
     float start_t = 0;
+    float count_propagate_t = 0;
 
-    for (float t = 0; t < 10.0; t += dt) {
+    for (float t=0; t<10.0; t+=dt) {
         std::vector<UAV::UAVModel::State> traj = planner->generate_trajectory(start_t);
         printf("p: %.4f, %.4f, %.4f\n", traj[0].p.x, traj[0].p.y, traj[0].p.z);
         printf("v: %.4f, %.4f, %.4f\n", traj[0].v.x, traj[0].v.y, traj[0].v.z);
         printf("a: %.4f, %.4f, %.4f\n", traj[0].a.x, traj[0].a.y, traj[0].a.z);
         start_t += dt;
-        if (planner->shift_update(dt)) {
+        count_propagate_t += dt;
+        while (count_propagate_t > planner->m_swarm.step_dt) {
+            count_propagate_t -= planner->m_swarm.step_dt;
             start_t = 0;
             ros::Time t1 = ros::Time::now();
             planner->m_model.set_ini_state(traj[0]);
-            planner->m_core.set_nominal_and_initial_cs(n_cs, planner->result);
+            planner->initialize();
             planner->plan(m_edt_map);
+            planner->release();
             ROS_INFO("cal time: %.2f", (ros::Time::now() - t1).toSec() * 1000.0);
         }
-
-//        float3 sim_u = planner->result.site[0];
-//        float3 rand_u = make_float3(0,0,0);
-//        planner->result.shift_update(rand_u);
-//        CtrlSeq n_cs;
-//        planner->m_core.set_nominal_and_initial_cs(n_cs, planner->result);
-//        ROS_INFO("cal time: %.2f", (ros::Time::now() - t1).toSec() * 1000.0);
-//
-//        /* simulator propagation */
-//        printf("sim_u: %.2f, %.2f, %.2f\n", sim_u.x, sim_u.y, sim_u.z);
-//        simulator.model_forward(sim_state, sim_u, planner->m_core.step_dt);
-//        simulator.set_ini_state(sim_state);
-//        printf("p: %.2f, %.2f, %.2f\n", sim_state.p.x, sim_state.p.y, sim_state.p.z);
-//        printf("v: %.2f, %.2f, %.2f\n", sim_state.v.x, sim_state.v.y, sim_state.v.z);
-//        printf("a: %.2f, %.2f, %.2f\n", sim_state.a.x, sim_state.a.y, sim_state.a.z);
-//
-//        planner->m_model.set_ini_state(sim_state);
     }
 
     ros::spin();
-    planner->release();
     std::cout << "finish" << std::endl;
     return 0;
 }

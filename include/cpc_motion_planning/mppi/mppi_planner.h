@@ -10,14 +10,27 @@ namespace MPPI {
     public:
         Planner(int num_of_sampling = 2560, float lambda = 1.0): m_core(PICore(lambda)) {
             m_core.intepath_size = num_of_sampling;
+            count_propagate_t = 0.0f;
         }
 
         ~Planner() {
         }
 
-//        std::vector<typename Model::State> generate_trajectory() {
-//            return
-//        }
+        std::vector<typename Model::State> generate_trajectory(float start_t = 0) {
+            return m_ctrl_host.template generate_trajectory<Model, PICore>(m_model, m_core, result, start_t);
+        }
+
+        bool shift_update(float dt) {
+            bool updated = false;
+            count_propagate_t += dt;
+            while (count_propagate_t > m_core.step_dt) {
+                count_propagate_t -= m_core.step_dt;
+                float3 rand_u = make_float3(0,0,0);
+                result.shift_update(rand_u);
+                updated = true;
+            }
+            return updated;
+        }
 
         void plan(const EDTMap &map) {
             cublasStatus_t cbls_stt;
@@ -30,18 +43,23 @@ namespace MPPI {
 
             int min_cost_idx = -1;
             cbls_stt = cublasIsamin(m_cbls_hdl, m_core.intepath_size, m_core.costs, 1, &min_cost_idx);
+            int max_cost_idx = -1;
+            cbls_stt = cublasIsamax(m_cbls_hdl, m_core.intepath_size, m_core.costs, 1, &max_cost_idx);
 
-            if (min_cost_idx != -1) {
+            if (min_cost_idx != -1 && max_cost_idx != -1) {
 
-                float min_cost = 0;
+                float min_cost, max_cost;
                 CUDA_MEMCPY_D2H(&min_cost , m_core.costs+min_cost_idx-1, sizeof(float));
-                printf("min_cost: %.2f\n", min_cost);
-
-                calculate_exp<PICore>(m_core, min_cost_idx-1);
+                CUDA_MEMCPY_D2H(&max_cost , m_core.costs+max_cost_idx-1, sizeof(float));
+                printf("min_cost: %.2f,  max_cost: %.2f\n", min_cost, max_cost);
+                float scale = m_core.delta_cost_limits.z / fminf(fmaxf(max_cost - min_cost, m_core.delta_cost_limits.x),
+                        m_core.delta_cost_limits.y);
+                printf("scale: %.2f\n", scale);
+                calculate_exp<PICore>(m_core, min_cost_idx-1, scale);
 //                cudaDeviceSynchronize();
                 float eta = 0;
                 cbls_stt = cublasSasum(m_cbls_hdl, m_core.intepath_size, m_core.exp_costs, 1, &eta);
-                printf("eta: %.2f\n", eta);
+                printf("eta: %.6f\n", eta);
                 if (eta > 0.0) {
                     calculate_weighted_update<PICore>(m_core, eta);
 //                    cudaDeviceSynchronize();
@@ -77,6 +95,7 @@ namespace MPPI {
 
 //            std::vector<float> costs(m_core.intepath_size, 0.0f);
             CUDA_ALLOC_DEV_MEM(&m_core.costs, m_core.intepath_size* sizeof(float));
+            CUDA_ALLOC_DEV_MEM(&m_core.ctrl_costs, m_core.intepath_size* sizeof(float));
 //            CUDA_MEMCPY_H2D(m_core.costs, costs.data(), m_core.intepath_size* sizeof(float));
 
             CUDA_ALLOC_DEV_MEM(&m_core.exp_costs, m_core.intepath_size* sizeof(float));
@@ -97,6 +116,7 @@ namespace MPPI {
     public:
         cublasHandle_t m_cbls_hdl;
         typename PICore::Trace result;
+        float count_propagate_t;
         Evaluator m_eva;
         Model m_model;
         Controller m_ctrl_dev;
