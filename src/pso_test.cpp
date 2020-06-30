@@ -7,7 +7,7 @@
 #include <cpc_motion_planning/uav/uav_model.h>
 #include <chrono>
 
-typedef PSO::Planner<UAV::UAVModel, UAV::UAVJLTControl, UAV::SingleTargetEvaluator, UAV::UAVSwarm<2>> Planner;
+typedef PSO::Planner<UAV::UAVModel, UAV::UAVJLTControl, UAV::SingleTargetEvaluator, UAV::UAVSwarm<1>> Planner;
 Planner *planner;
 
 int main(int argc, char **argv) {
@@ -27,7 +27,7 @@ int main(int argc, char **argv) {
     target_state.oa = false;
 
     /* planner initial */
-    planner = new Planner();
+    planner = new Planner(50, 20, 4);
     planner->m_model.set_ini_state(initial_state);
     planner->m_model.set_var(sample_var);
     planner->m_model.set_limits(ctrl_limits);
@@ -51,18 +51,23 @@ int main(int argc, char **argv) {
     float start_t = 0;
     float count_propagate_t = 0;
 
+    UAV::UAVModel::State s;
+
     for (float t=0; t<10.0; t+=dt) {
         std::vector<UAV::UAVModel::State> traj = planner->generate_trajectory(start_t);
-        printf("p: %.4f, %.4f, %.4f\n", traj[0].p.x, traj[0].p.y, traj[0].p.z);
-        printf("v: %.4f, %.4f, %.4f\n", traj[0].v.x, traj[0].v.y, traj[0].v.z);
-        printf("a: %.4f, %.4f, %.4f\n", traj[0].a.x, traj[0].a.y, traj[0].a.z);
+        if (traj.size() > 0) {
+            s = traj[0];
+        }
+        printf("p: %.4f, %.4f, %.4f\n", s.p.x, s.p.y, s.p.z);
+        printf("v: %.4f, %.4f, %.4f\n", s.v.x, s.v.y, s.v.z);
+        printf("a: %.4f, %.4f, %.4f\n", s.a.x, s.a.y, s.a.z);
         start_t += dt;
         count_propagate_t += dt;
-        while (count_propagate_t > planner->m_swarm.step_dt) {
+        if (count_propagate_t > planner->m_swarm.step_dt || traj.size() == 0) {
             count_propagate_t -= planner->m_swarm.step_dt;
             start_t = 0;
             ros::Time t1 = ros::Time::now();
-            planner->m_model.set_ini_state(traj[0]);
+            planner->m_model.set_ini_state(s);
             planner->initialize();
             planner->plan(m_edt_map);
             planner->release();

@@ -45,6 +45,10 @@ public:
 
         int best_idx = -1;
         cbls_stt = cublasIsamin(m_cbls_hdl,m_swarm.ptcl_size,m_best_values,1,&best_idx);
+//
+//        float min_cost = 0;
+//        CUDA_MEMCPY_D2H(&min_cost,m_best_values+best_idx-1,sizeof(float));
+//        std::cout << "iter: " << i+1 << " min cost: " << min_cost << std::endl;
 
         if(best_idx != -1)
         {

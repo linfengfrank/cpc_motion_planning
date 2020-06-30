@@ -28,8 +28,19 @@ namespace UAV {
 
         }
 
+
         template<class Model, class PICore>
-        __host__ __device__
+        __device__
+        void propagate_sample_trajectory(Model &m, const PICore &core, const typename PICore::Trace &ttr, float3* rs) {
+            typename Model::State s = m.get_ini_state();
+            for (int i = 0; i < core.steps; i++) {
+                m.model_forward(s, ttr.site[i], core.step_dt);
+                *(rs+i) = s.p;
+            }
+        }
+
+        template<class Model, class PICore>
+        __host__
         std::vector<typename Model::State> generate_trajectory(Model &m, const PICore &core, const typename PICore::Trace &ttr, float start_t=0) {
             std::vector<typename Model::State> traj;
             typename Model::State s = m.get_ini_state();

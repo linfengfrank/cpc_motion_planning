@@ -6,7 +6,7 @@ namespace MPPI
 {
     const float MPPI_TOTAL_T = 4.0f;
     const float MPPI_SIM_DT = 0.1f;
-    const float MPPI_CTRL_DT = 0.01f;
+    const float MPPI_CTRL_DT = 0.05f;
 
     __host__ __device__ __forceinline__
     float rand_float_gen(curandState *rs, float min, float max)

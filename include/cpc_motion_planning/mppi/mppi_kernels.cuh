@@ -28,5 +28,8 @@ namespace MPPI
     void calculate_weighted_update(const PICore &core, float eta);
     // --- output: weights for paths
 
+    template<class PICore, class Controller, class Model>
+    void visualize_samples(const PICore &core, const Controller &ctrl, const Model &model, int visual_num);
+
 }
 #endif

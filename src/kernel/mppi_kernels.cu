@@ -60,6 +60,21 @@ namespace MPPI {
             }
         }
     }
+
+    template<class PICore, class Controller, class Model>
+    __global__
+    void visualize_samples_kernel(PICore core, Controller ctrl, Model model, int visual_num) {
+        int idx = threadIdx.x+blockDim.x*blockIdx.x;
+        if (idx < visual_num) { //-1
+            ctrl.template propagate_sample_trajectory<Model, PICore>(model, core, core.intepaths[idx].u,
+                    &core.sample_states[idx*core.steps]);
+//        } else if (idx == visual_num-1) {
+//            ctrl.template propagate_sample_trajectory<Model, PICore>(model, core, core.initial_ctrl_seq[0],
+//                    &core.sample_states[idx*core.steps]);
+        }
+    }
+
+
     // ------------- launch function ---------- //
     template <class PICore>
     void setup_random_sampling(const PICore &core) {
@@ -82,6 +97,12 @@ namespace MPPI {
     void calculate_weighted_update(const PICore &core, float eta) {
         calculate_weighted_update_kernal<PICore><<<1, core.steps>>>(core, eta);
     }
+
+    template<class PICore, class Controller, class Model>
+    void visualize_samples(const PICore &core, const Controller &ctrl, const Model &model, int visual_num) {
+        visualize_samples_kernel<PICore, Controller, Model><<<(visual_num + BDIM_X -1 ), BDIM_X >>>(core, ctrl,
+                model, visual_num);
+    }
 }
 
 #define INST_setup_random_sampling(P) template void MPPI::setup_random_sampling< P > \
@@ -96,10 +117,14 @@ namespace MPPI {
 #define INST_calculate_weighted_update(P) template void MPPI::calculate_weighted_update< P > \
         (const P&, float);
 
+#define INST_visualize_samples(P,C,M) template void MPPI::visualize_samples< P,C,M > \
+        (const P&, const C&, const M&, int);
+
 #define INST_group(M,C,E,P)  INST_setup_random_sampling(P) \
      INST_integral_paths(M,C,E,P) \
      INST_calculate_exp(P) \
-     INST_calculate_weighted_update(P)
+     INST_calculate_weighted_update(P) \
+     INST_visualize_samples(P,C,M)
 
      INST_group(UAV::UAVModel, UAV::UAVSIMPLEControl, UAV::SingleTargetEvaluator, UAV::UAVMppi<35>);
     INST_group(UAV::UAVModel, UAV::UAVSIMPLEControl, UAV::SingleTargetEvaluator, UAV::UAVMppi<15>);

@@ -189,6 +189,8 @@ namespace UAV
 
         float *exp_costs; // N_sample size of float
 
+        float3 *sample_states; // N_visual * Steps
+
         float3 delta_cost_limits;
         int intepath_size; // number of samples
         int steps;
