@@ -162,13 +162,13 @@ public:
     else
       d_obs[obs.z*m_map_size.x*m_map_size.y+obs.y*m_map_size.x+obs.x]=EMPTY_KEY;
   }
-  __device__
-  bool get_obs(int3 crd) // if obs, return true
-  {
-     return (crd.x != EMPTY_KEY.x) ||
-         (crd.y != EMPTY_KEY.y) ||
-         (crd.z != EMPTY_KEY.z);
-  }
+//  __device__
+//  bool get_obs(int3 crd) // if obs, return true
+//  {
+//     return (crd.x != EMPTY_KEY.x) ||
+//         (crd.y != EMPTY_KEY.y) ||
+//         (crd.z != EMPTY_KEY.z);
+//  }
   __device__
   float goalCost(int3 goal,float obstacle_dist=1)
   {

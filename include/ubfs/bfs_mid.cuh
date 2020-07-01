@@ -128,9 +128,10 @@ template <class Mtype>
 void ubfs_wave(thrust::device_vector<int3> & obs_vec, int nNodes,int num_dirs,const int3* dirs,
               Mtype* midmap3d,ubfsGraph<int3> &ugraph)
 {
-  int3 * d_q1= thrust::raw_pointer_cast(&obs_vec[0]);
+  int3 * d_q1= thrust::raw_pointer_cast(&ugraph.q1_shared[0]);
   int3 * d_q2= thrust::raw_pointer_cast(&ugraph.q2_shared[0]);
-
+  // copy obs to queue!
+  thrust::copy(obs_vec.begin(),obs_vec.begin()+nNodes,ugraph.q1_shared.begin());
   ugraph.tail_shared[0]= nNodes;
   //whether or not to adjust "k", see comment on "BFS_kernel_multi_blk_inGPU" for more details
   int * num_td;//number of threads
@@ -143,7 +144,6 @@ void ubfs_wave(thrust::device_vector<int3> & obs_vec, int nNodes,int num_dirs,co
   int num_of_threads_per_block;
 
 
-  // set goal cost first
   GpuTimer tm1;
   tm1.Start();
   do
@@ -228,7 +228,7 @@ void ubfs_wave(thrust::device_vector<int3> & obs_vec, int nNodes,int num_dirs,co
 
   } while(1);
   tm1.Stop();
-  std::cout<<"<<<<- OBS-BFS total time is "<<float(tm1.Elapsed())<<" ms"<<std::endl;
+  std::cout<<"<<<<- OBS-BFS total time is "<<float(tm1.Elapsed())<<" ms>>>>"<<std::endl;
 }
 
 }

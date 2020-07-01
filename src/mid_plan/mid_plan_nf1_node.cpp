@@ -103,24 +103,24 @@ void pub_cudaMap(int tgt_height_coord)
   pc_pub->publish (pclOut);
   pclOut->clear();
 
-  // publish obs bdr
-  nf1map3d->obs_dense_d2h();
-  for (int i=0;i<nf1map3d->obs_num;i++)
-  {
-    int3 obs_crd = nf1map3d->obs_dense_h[i];
-    CUDA_GEO::coord co(obs_crd.x,obs_crd.y,obs_crd.z);
-    p=mid_map->coord2pos(co);
-    pcl::PointXYZ obsP;
-    obsP.x= p.x;
-    obsP.y = p.y;
-    obsP.z = p.z;
+//  // publish obs bdr
+//  nf1map3d->obs_dense_d2h();
+//  for (int i=0;i<nf1map3d->obs_num;i++)
+//  {
+//    int3 obs_crd = nf1map3d->obs_dense_h[i];
+//    CUDA_GEO::coord co(obs_crd.x,obs_crd.y,obs_crd.z);
+//    p=mid_map->coord2pos(co);
+//    pcl::PointXYZ obsP;
+//    obsP.x= p.x;
+//    obsP.y = p.y;
+//    obsP.z = p.z;
 
-    obsOut->points.push_back(obsP);
-  }
-  pcl_conversions::toPCL(ros::Time::now(), obsOut->header.stamp);
-  obs_pub->publish( obsOut);
-  printf("obs cloud size is %d \n",obsOut->size());
-  obsOut->clear();
+//    obsOut->points.push_back(obsP);
+//  }
+//  pcl_conversions::toPCL(ros::Time::now(), obsOut->header.stamp);
+//  obs_pub->publish( obsOut);
+//  printf("obs cloud size is %d \n",obsOut->size());
+//  obsOut->clear();
 }
 //---
 void publishMap(int tgt_height_coord)
@@ -339,7 +339,7 @@ int main(int argc, char **argv)
   nh.param<float>("/nndp_cpp/fly_height",FLY_HEIGHT,2.0);
 
 
-  glb_plan_timer = nh.createTimer(ros::Duration(0.333), glb_plan);
+  glb_plan_timer = nh.createTimer(ros::Duration(1), glb_plan);
 
   ros::spin();
 
