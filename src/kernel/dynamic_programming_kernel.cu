@@ -70,6 +70,66 @@ void test(VoidPtrCarrier data)
   //printf("%f\n",val);
 }
 
+//---
+template<typename action>
+__global__
+void test_vel(VoidPtrCarrier data)
+{
+  CUDA_MAT::Matrix<2,action> *S_A = static_cast<CUDA_MAT::Matrix<2,action>*>(data[0]);
+  CUDA_MAT::Matrix<2,float> *S_old = static_cast<CUDA_MAT::Matrix<2,float>*>(data[1]);
+  CUDA_MAT::Matrix<2,float> *S_new = static_cast<CUDA_MAT::Matrix<2,float>*>(data[2]);
+
+  CUDA_MAT::Vecf *bin_v = static_cast<CUDA_MAT::Vecf*>(data[3]);
+  CUDA_MAT::Vecf *bin_a = static_cast<CUDA_MAT::Vecf*>(data[4]);
+
+  float s_curr[2];
+  s_curr[0] =  UAV::vel_gen_val(blockIdx.x);
+  s_curr[1] =  UAV::acc_gen_val(blockIdx.y);
+
+
+  float val;
+  float s_next[2];
+  float val_min = 1e6;
+  //float jerk;
+  action best_action;
+  bool updated = false;
+
+  for (float jerk=-5;jerk<5.1;jerk+=0.2)
+  {
+      s_next[0] = s_curr[0] + s_curr[1]*DT + 0.5*jerk*DT*DT;
+      s_next[1] = s_curr[1] + jerk*DT;
+
+      val = CUDA_MAT::get_value_2(s_next,*S_old, *bin_v, *bin_a);
+      val += 2*jerk*jerk;
+      val += 2*s_curr[0]*s_curr[0] + 0.5*s_curr[1]*s_curr[1];
+      if (s_curr[1] - 3.0 > 0)
+        val += (20+80*(s_curr[1] - 3.0));
+
+      if (s_curr[1] < -3.0)
+        val += (20+80*(-s_curr[1] - 3.0));
+
+
+      if (fabs(s_curr[0]) > 0.25 || fabs(s_curr[1]) > 0.25)
+      {
+        val += 24;
+      }
+
+      if (val < val_min)
+      {
+        updated = true;
+        val_min = val;
+        best_action.jerk = jerk;
+      }
+  }
+
+  CUDA_MAT::mat2_get_val<float>(blockIdx.x,blockIdx.y,*S_new) = val_min;
+
+  if (updated)
+    CUDA_MAT::mat2_get_val<action>(blockIdx.x,blockIdx.y,*S_A) = best_action;
+
+  //printf("%f\n",val);
+}
+//---
 template<typename action>
 void program(VoidPtrCarrier ptr_car, size_t *bin_size)
 {
@@ -106,8 +166,54 @@ void program(VoidPtrCarrier ptr_car, size_t *bin_size)
     cudaDeviceSynchronize();
   }
 }
+
+
+//---
+
+template<typename action>
+void program_vel(VoidPtrCarrier ptr_car, size_t* bin_size)
+{
+  dim3 grid_size;
+  grid_size.x = bin_size[0];
+  grid_size.y = bin_size[1];
+  grid_size.z = 1;
+
+  dim3 block_size;
+  block_size.x = 1;
+  block_size.y = 1;
+  block_size.z = 1;
+
+
+
+  for (int i=0; i<100; i++)
+  {
+    printf("Iteration %d\n",i);
+    if (i % 2 == 0)
+    {
+      void* tmp = ptr_car[2];
+      ptr_car[2] = ptr_car[1];
+      ptr_car[1] = tmp;
+      test_vel<action><<<grid_size,block_size>>>(ptr_car);
+    }
+    else
+    {
+      void* tmp = ptr_car[2];
+      ptr_car[2] = ptr_car[1];
+      ptr_car[1] = tmp;
+      test_vel<action><<<grid_size,block_size>>>(ptr_car);
+    }
+
+    cudaDeviceSynchronize();
+  }
+}
+
+
+
 }
 template void GPU_DP::program< UAV::UAVModel::Input > \
+(VoidPtrCarrier, size_t*);
+
+template void GPU_DP::program_vel< UAV::UAVModel::Input > \
 (VoidPtrCarrier, size_t*);
 
 
