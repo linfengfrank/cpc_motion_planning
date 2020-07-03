@@ -1,6 +1,6 @@
 #ifndef UAV_SINGLE_TARGET_EVLUATOR_H
 #define UAV_SINGLE_TARGET_EVLUATOR_H
-#include <cpc_motion_planning/uav/uav_model.h>
+#include <cpc_motion_planning/uav/model/uav_model.h>
 #include <cpc_motion_planning/dynamic_programming.cuh>
 #include <cuda_geometry/cuda_edtmap.cuh>
 namespace UAV

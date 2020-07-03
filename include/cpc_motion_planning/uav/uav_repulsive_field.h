@@ -1,7 +1,7 @@
 #ifndef UAV_REPULSIVE_FIELD_H
 #define UAV_REPULSIVE_FIELD_H
 #include <cuda_geometry/cuda_edtmap.cuh>
-#include <cpc_motion_planning/uav/uav_model.h>
+#include <cpc_motion_planning/uav/model/uav_model.h>
 #include <vector>
 namespace UAV
 {

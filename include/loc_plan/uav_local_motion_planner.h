@@ -13,10 +13,10 @@
 #include <geometry_msgs/PoseStamped.h>
 #include <cpc_motion_planning/ref_data.h>
 #include <cpc_motion_planning/JLT.h>
-#include <cpc_motion_planning/uav/uav_single_target_evluator.h>
-#include <cpc_motion_planning/uav/uav_dp_control.h>
-#include <cpc_motion_planning/uav/uav_jlt_control.h>
-#include <cpc_motion_planning/uav/uav_swarm.h>
+#include <cpc_motion_planning/uav/evaluator/uav_single_target_evluator.h>
+#include <cpc_motion_planning/uav/controller/uav_dp_control.h>
+#include <cpc_motion_planning/uav/controller/uav_jlt_control.h>
+#include <cpc_motion_planning/uav/swarm/uav_swarm.h>
 #include <cpc_motion_planning/uav/uav_repulsive_field.h>
 
 #define SHOWPC

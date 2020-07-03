@@ -2,7 +2,7 @@
 #define UAV_SWARM_H
 #include <curand_kernel.h>
 #include <cuda_math/cuda_matrix.cuh>
-#include <cpc_motion_planning/uav/uav_model.h>
+#include <cpc_motion_planning/uav/model/uav_model.h>
 namespace  UAV
 {
 template <int STEP>

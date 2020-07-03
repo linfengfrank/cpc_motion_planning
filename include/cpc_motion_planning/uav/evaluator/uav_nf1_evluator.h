@@ -1,6 +1,6 @@
 #ifndef UAV_NF1_EVLUATOR_H
 #define UAV_NF1_EVLUATOR_H
-#include <cpc_motion_planning/uav/uav_model.h>
+#include <cpc_motion_planning/uav/model/uav_model.h>
 #include <cpc_motion_planning/dynamic_programming.cuh>
 #include <cuda_geometry/cuda_nf1map.cuh>
 #include <cuda_geometry/cuda_edtmap.cuh>

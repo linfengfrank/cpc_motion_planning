@@ -1,7 +1,7 @@
 #ifndef UAV_DP_CONTROL_H
 #define UAV_DP_CONTROL_H
 #include <cpc_motion_planning/pso/pso_utilities.cuh>
-#include <cpc_motion_planning/uav/uav_model.h>
+#include <cpc_motion_planning/uav/model/uav_model.h>
 #include <cpc_motion_planning/dynamic_programming.cuh>
 #include <cuda_geometry/cuda_edtmap.cuh>
 #include <cpc_motion_planning/cuda_matrix_factory.h>
