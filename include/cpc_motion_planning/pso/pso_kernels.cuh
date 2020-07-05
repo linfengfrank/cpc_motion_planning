@@ -2,7 +2,9 @@
 #define PSO_KERNELS_CUH
 #include <cpc_motion_planning/uav/model/uav_model.h>
 #include <cpc_motion_planning/uav/controller/uav_dp_control.h>
+#include <cpc_motion_planning/uav/controller/uav_dp_vel_control.h>
 #include <cpc_motion_planning/uav/swarm/uav_swarm.h>
+#include <cpc_motion_planning/uav/swarm/uav_vel_swarm.h>
 #include <cpc_motion_planning/uav/evaluator/uav_single_target_evluator.h>
 #include <cpc_motion_planning/uav/evaluator/uav_nf1_evluator.h>
 #include <cpc_motion_planning/uav/evaluator/uav_corridor_nf2_evaluator.h>
