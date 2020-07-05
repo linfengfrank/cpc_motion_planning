@@ -188,6 +188,19 @@ target_link_libraries(${PROJECT_NAME}_nf1_node
     ${CUDA_LIBRARIES}
     ${catkin_LIBRARIES})
 
+cuda_add_executable(${PROJECT_NAME}_vel_node
+    src/motion_planning_vel_node.cpp
+    src/loc_plan/uav_local_motion_planner.cpp
+    src/loc_plan/uav_vel_motion_planner.cpp
+    src/kernel/pso_kernels.cu
+    src/kernel/repulsive_field_kernel.cu)
+
+target_link_libraries(${PROJECT_NAME}_vel_node
+    ${CUDA_curand_LIBRARY}
+    ${CUDA_cublas_LIBRARY}
+    ${CUDA_LIBRARIES}
+    ${catkin_LIBRARIES})
+
 cuda_add_executable(${PROJECT_NAME}_corridor_node
     src/motion_planning_corridor_node.cpp
     src/loc_plan/uav_local_motion_planner.cpp
