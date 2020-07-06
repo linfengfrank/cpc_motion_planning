@@ -163,7 +163,7 @@ target_link_libraries(dynamic_programming
     ${catkin_LIBRARIES})
 
 cuda_add_executable(${PROJECT_NAME}_node
-    src/motion_planning_astar_node.cpp
+    src/loc_plan/astar_loc_planner_node.cpp
     src/loc_plan/uav_base_local_planner.cpp
     src/loc_plan/uav_astar_local_planner.cpp
     src/kernel/pso_kernels.cu
@@ -176,7 +176,7 @@ target_link_libraries(${PROJECT_NAME}_node
     ${catkin_LIBRARIES})
 
 cuda_add_executable(${PROJECT_NAME}_nf1_node
-    src/motion_planning_nf1_node.cpp
+    src/loc_plan/nf1_loc_planner_node.cpp
     src/loc_plan/uav_base_local_planner.cpp
     src/loc_plan/uav_nf1_local_planner.cpp
     src/kernel/pso_kernels.cu
@@ -189,7 +189,7 @@ target_link_libraries(${PROJECT_NAME}_nf1_node
     ${catkin_LIBRARIES})
 
 cuda_add_executable(${PROJECT_NAME}_vel_node
-    src/motion_planning_vel_node.cpp
+    src/loc_plan/velocity_loc_planner_node.cpp
     src/loc_plan/uav_base_local_planner.cpp
     src/loc_plan/uav_vel_local_planner.cpp
     src/kernel/pso_kernels.cu
@@ -202,7 +202,7 @@ target_link_libraries(${PROJECT_NAME}_vel_node
     ${catkin_LIBRARIES})
 
 cuda_add_executable(${PROJECT_NAME}_corridor_node
-    src/motion_planning_corridor_node.cpp
+    src/loc_plan/corridor_loc_planner_node.cpp
     src/loc_plan/uav_base_local_planner.cpp
     src/kernel/pso_kernels.cu)
 
@@ -215,7 +215,7 @@ target_link_libraries(${PROJECT_NAME}_corridor_node
 cuda_add_executable(${PROJECT_NAME}_glb_plan_node
     src/mid_plan/grid_graph.cpp
     src/mid_plan/a_star.cpp
-    src/mid_plan/mid_plan_astar_node.cpp)
+    src/mid_plan/astar_mid_planner_node.cpp)
 
 target_link_libraries(${PROJECT_NAME}_glb_plan_node
     ${CUDA_curand_LIBRARY}
@@ -227,7 +227,7 @@ cuda_add_executable(${PROJECT_NAME}_nf1_plan_node
     src/mid_plan/grid_graph.cpp
     src/mid_plan/dijkstra.cpp
     src/mid_plan/a_star.cpp
-    src/mid_plan/mid_plan_nf1_node.cpp)
+    src/mid_plan/nf1_mid_planner_node.cpp)
 
 target_link_libraries(${PROJECT_NAME}_nf1_plan_node
     ${CUDA_curand_LIBRARY}
