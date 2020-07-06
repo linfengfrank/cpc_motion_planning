@@ -1,15 +1,15 @@
-#ifndef UAV_VEL_MOTION_PLANNER_H
-#define UAV_VEL_MOTION_PLANNER_H
-#include <loc_plan/uav_local_motion_planner.h>
+#ifndef UAV_ASTAR_MOTION_PLANNER_H
+#define UAV_ASTAR_MOTION_PLANNER_H
+#include <loc_plan/uav_base_local_planner.h>
 
-#define VEL_UAV UAV::UAVModel,UAV::UAVDPControl,UAV::SingleTargetEvaluator,UAV::UAVSwarm<2>
+#define SIMPLE_UAV UAV::UAVModel,UAV::UAVDPControl,UAV::SingleTargetEvaluator,UAV::UAVSwarm<1>
 #define EMERGENT_UAV UAV::UAVModel,UAV::UAVJLTControl,UAV::SingleTargetEvaluator,UAV::UAVSwarm<1>
-
-class UAVVelMotionPlanner : public UAVLocalMotionPlanner
+#define CORRID_UAV UAV::UAVModel,UAV::UAVDPControl,UAV::CorridorEvaluator,UAV::UAVSwarm<1>
+class UAVAstarMotionPlanner : public UAVLocalMotionPlanner
 {
 public:
-  UAVVelMotionPlanner();
-  ~UAVVelMotionPlanner();
+  UAVAstarMotionPlanner();
+  ~UAVAstarMotionPlanner();
 
 protected:
   virtual void do_at_ground();
@@ -33,7 +33,7 @@ private:
 
   bool m_goal_received;
 
-  PSO::Planner<VEL_UAV> *m_pso_planner;
+  PSO::Planner<SIMPLE_UAV> *m_pso_planner;
   PSO::Planner<EMERGENT_UAV> *m_emergent_planner;
   UAV::SingleTargetEvaluator::Target m_goal;
   UAV::UAVModel::State m_curr_ref;
@@ -46,4 +46,5 @@ private:
   int m_start_braking_cycle;
   UAV::UAVRepulsiveField m_rep_filed;
 };
-#endif // UAV_VEL_MOTION_PLANNER_H
+
+#endif // UAV_ASTAR_MOTION_PLANNER_H

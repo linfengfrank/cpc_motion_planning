@@ -1,4 +1,4 @@
-#include "loc_plan/uav_astar_motion_planner.h"
+#include <loc_plan/uav_vel_local_planner.h>
 #include "tf/tf.h"
 #include <chrono>
 #include <std_srvs/Empty.h>
@@ -8,17 +8,17 @@ template <typename T> int sgn(T val)
     return (T(0) < val) - (val < T(0));
 }
 
-UAVAstarMotionPlanner::UAVAstarMotionPlanner():
+UAVVelMotionPlanner::UAVVelMotionPlanner():
   UAVLocalMotionPlanner(),
   m_goal_received(false)
 {
-  m_goal_sub = m_nh.subscribe("/mid_layer/goal",1,&UAVAstarMotionPlanner::goal_call_back, this);
+  m_goal_sub = m_nh.subscribe("/mid_layer/goal",1,&UAVVelMotionPlanner::goal_call_back, this);
 
   m_ref_pub = m_nh.advertise<cpc_motion_planning::ref_data>("ref_traj",1);
 
-  m_planning_timer = m_nh.createTimer(ros::Duration(PSO::PSO_REPLAN_DT), &UAVAstarMotionPlanner::plan_call_back, this);
+  m_planning_timer = m_nh.createTimer(ros::Duration(PSO::PSO_REPLAN_DT), &UAVVelMotionPlanner::plan_call_back, this);
 
-  m_pso_planner = new PSO::Planner<SIMPLE_UAV>(150,30,1);
+  m_pso_planner = new PSO::Planner<VEL_UAV>(150,30,1);
   m_pso_planner->initialize();
 
   m_emergent_planner = new PSO::Planner<EMERGENT_UAV>(50,20,1);
@@ -33,7 +33,7 @@ UAVAstarMotionPlanner::UAVAstarMotionPlanner():
   m_ref_start_idx = 0;
 }
 
-UAVAstarMotionPlanner::~UAVAstarMotionPlanner()
+UAVVelMotionPlanner::~UAVVelMotionPlanner()
 {
   m_pso_planner->release();
   delete m_pso_planner;
@@ -42,7 +42,7 @@ UAVAstarMotionPlanner::~UAVAstarMotionPlanner()
   delete m_emergent_planner;
 }
 
-void UAVAstarMotionPlanner::plan_call_back(const ros::TimerEvent&)
+void UAVVelMotionPlanner::plan_call_back(const ros::TimerEvent&)
 {
   cycle_init();
   cycle_process_based_on_status();
@@ -84,7 +84,7 @@ void UAVAstarMotionPlanner::plan_call_back(const ros::TimerEvent&)
 #endif
 }
 
-void UAVAstarMotionPlanner::goal_call_back(const geometry_msgs::PoseStamped::ConstPtr &msg)
+void UAVVelMotionPlanner::goal_call_back(const geometry_msgs::PoseStamped::ConstPtr &msg)
 {
   m_goal_received = true;
   m_goal.s.p.x = msg->pose.position.x;
@@ -94,7 +94,7 @@ void UAVAstarMotionPlanner::goal_call_back(const geometry_msgs::PoseStamped::Con
   m_emergent_planner->m_eva.setTarget(m_goal);
 }
 
-void UAVAstarMotionPlanner::do_at_ground()
+void UAVVelMotionPlanner::do_at_ground()
 {
   if (m_pose_received && m_received_map && m_goal_received)
   {
@@ -104,10 +104,10 @@ void UAVAstarMotionPlanner::do_at_ground()
     m_fly_status = UAV::TAKING_OFF;
   }
 }
-void UAVAstarMotionPlanner::do_taking_off()
+void UAVVelMotionPlanner::do_taking_off()
 {
   auto start = std::chrono::steady_clock::now();
-  calculate_trajectory<SIMPLE_UAV>(m_pso_planner,m_traj);
+  calculate_trajectory<VEL_UAV>(m_pso_planner,m_traj);
   if (m_curr_ref.p.z >= 1.8f && fabsf(m_curr_ref.v.z)<0.3f)
   {
     m_goal.oa = m_goal_received;
@@ -121,10 +121,10 @@ void UAVAstarMotionPlanner::do_taking_off()
             << "ms, cost: " << m_pso_planner->result.best_cost
             << ", collision: " << m_pso_planner->result.collision<<std::endl;
 }
-void UAVAstarMotionPlanner::do_in_air()
+void UAVVelMotionPlanner::do_in_air()
 {
   auto start = std::chrono::steady_clock::now();
-  calculate_trajectory<SIMPLE_UAV>(m_pso_planner,m_traj);
+  calculate_trajectory<VEL_UAV>(m_pso_planner,m_traj);
   if (m_pso_planner->result.collision)
   {
     m_fly_status = UAV::EMERGENT;
@@ -142,7 +142,7 @@ void UAVAstarMotionPlanner::do_in_air()
             << ", collision: " << m_pso_planner->result.collision<<std::endl;
 
 }
-void UAVAstarMotionPlanner::do_emergent()
+void UAVVelMotionPlanner::do_emergent()
 {
   auto start = std::chrono::steady_clock::now();
   calculate_trajectory<EMERGENT_UAV>(m_emergent_planner,m_traj);
@@ -165,7 +165,7 @@ void UAVAstarMotionPlanner::do_emergent()
 
 }
 
-void UAVAstarMotionPlanner::do_braking()
+void UAVVelMotionPlanner::do_braking()
 {
   auto start = std::chrono::steady_clock::now();
   m_rep_filed.generate_repulse_traj(m_traj, *m_edt_map, m_curr_ref);
@@ -180,12 +180,12 @@ void UAVAstarMotionPlanner::do_braking()
             << ", collision: " << m_emergent_planner->result.collision<<std::endl;
 }
 
-void UAVAstarMotionPlanner::do_stuck()
+void UAVVelMotionPlanner::do_stuck()
 {
 
 }
 
-void UAVAstarMotionPlanner::cycle_init()
+void UAVVelMotionPlanner::cycle_init()
 {
   // Set the initial states for all planners
   m_pso_planner->m_model.set_ini_state(m_curr_ref);

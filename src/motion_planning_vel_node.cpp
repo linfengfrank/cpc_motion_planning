@@ -1,7 +1,7 @@
 #ifndef MOTION_PLANNING_VEL_NODE_CPP
 #define MOTION_PLANNING_VEL_NODE_CPP
 #include <ros/ros.h>
-#include <loc_plan/uav_vel_motion_planner.h>
+#include <loc_plan/uav_vel_local_planner.h>
 #include <chrono>
 
 float RandomFloat(float a, float b) {

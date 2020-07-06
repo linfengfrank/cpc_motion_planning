@@ -1,4 +1,4 @@
-#include <loc_plan/uav_local_motion_planner.h>
+#include <loc_plan/uav_base_local_planner.h>
 
 UAVLocalMotionPlanner::UAVLocalMotionPlanner():
   m_stuck_pbty(0.0f),
