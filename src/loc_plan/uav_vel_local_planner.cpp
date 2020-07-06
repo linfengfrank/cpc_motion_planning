@@ -84,14 +84,13 @@ void UAVVelMotionPlanner::plan_call_back(const ros::TimerEvent&)
 #endif
 }
 
-void UAVVelMotionPlanner::goal_call_back(const geometry_msgs::PoseStamped::ConstPtr &msg)
+void UAVVelMotionPlanner::goal_call_back(const geometry_msgs::TwistStamped::ConstPtr &msg)
 {
   m_goal_received = true;
-  m_goal.s.p.x = msg->pose.position.x;
-  m_goal.s.p.y = msg->pose.position.y;
-  m_goal.s.p.z = msg->pose.position.z;
+  m_goal.v.x = msg->twist.linear.x;
+  m_goal.v.y = msg->twist.linear.y;
+  m_goal.v.z = msg->twist.linear.z;
   m_pso_planner->m_eva.setTarget(m_goal);
-  m_emergent_planner->m_eva.setTarget(m_goal);
 }
 
 void UAVVelMotionPlanner::do_at_ground()
@@ -111,8 +110,8 @@ void UAVVelMotionPlanner::do_taking_off()
   if (m_curr_ref.p.z >= 1.8f && fabsf(m_curr_ref.v.z)<0.3f)
   {
     m_goal.oa = m_goal_received;
+    m_e_goal.oa = m_goal_received;
     m_pso_planner->m_eva.setTarget(m_goal);
-    m_emergent_planner->m_eva.setTarget(m_goal);
     m_fly_status = UAV::IN_AIR;
   }
   auto end = std::chrono::steady_clock::now();
@@ -132,7 +131,7 @@ void UAVVelMotionPlanner::do_in_air()
   }
   else
   {
-    m_head_sov.cal_yaw_target(m_goal.s.p,m_curr_ref);
+    m_head_sov.cal_yaw_target_from_vel(m_goal.v,m_curr_ref);
     m_yaw_traj = m_head_sov.generate_yaw_traj();
   }
   auto end = std::chrono::steady_clock::now();
@@ -195,6 +194,9 @@ void UAVVelMotionPlanner::cycle_init()
   m_emergent_planner->m_model.set_ini_state(m_curr_ref);
   m_emergent_planner->m_eva.m_curr_yaw = m_head_sov.get_yaw();
   m_emergent_planner->m_eva.m_curr_pos = m_curr_ref.p;
+
+  m_e_goal.s = m_curr_ref;
+  m_emergent_planner->m_eva.setTarget(m_e_goal);
 
   // Construct default trajectories for pos and yaw
   switch (m_fly_status) {

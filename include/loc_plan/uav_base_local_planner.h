@@ -13,7 +13,7 @@
 #include <geometry_msgs/PoseStamped.h>
 #include <cpc_motion_planning/ref_data.h>
 #include <cpc_motion_planning/JLT.h>
-#include <cpc_motion_planning/uav/evaluator/uav_single_target_evluator.h>
+#include <cpc_motion_planning/uav/evaluator/uav_single_target_evaluator.h>
 #include <cpc_motion_planning/uav/controller/uav_dp_control.h>
 #include <cpc_motion_planning/uav/controller/uav_jlt_control.h>
 #include <cpc_motion_planning/uav/swarm/uav_swarm.h>
@@ -56,6 +56,19 @@ public:
     if (dist > 0.5f)
     {
       m_yaw_target = atan2f(diff.y,diff.x);
+      m_yaw_target = m_yaw_target - m_yaw_state.p;
+      m_yaw_target = m_yaw_target - floorf((m_yaw_target + M_PI) / (2 * M_PI)) * 2 * M_PI;
+      m_yaw_target = m_yaw_target + m_yaw_state.p;
+    }
+  }
+
+  void cal_yaw_target_from_vel(float3 vel, const UAV::UAVModel::State &s)
+  {
+    vel.z = 0;
+    float n_vel = sqrtf(dot(vel,vel));
+    if (n_vel > 0.5f)
+    {
+      m_yaw_target = atan2f(vel.y,vel.x);
       m_yaw_target = m_yaw_target - m_yaw_state.p;
       m_yaw_target = m_yaw_target - floorf((m_yaw_target + M_PI) / (2 * M_PI)) * 2 * M_PI;
       m_yaw_target = m_yaw_target + m_yaw_state.p;

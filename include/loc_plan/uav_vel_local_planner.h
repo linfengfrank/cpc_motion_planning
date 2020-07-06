@@ -1,8 +1,8 @@
 #ifndef UAV_VEL_MOTION_PLANNER_H
 #define UAV_VEL_MOTION_PLANNER_H
 #include <loc_plan/uav_base_local_planner.h>
-
-#define VEL_UAV UAV::UAVModel,UAV::UAVDPControl,UAV::SingleTargetEvaluator,UAV::UAVSwarm<2>
+#include <geometry_msgs/TwistStamped.h>
+#define VEL_UAV UAV::UAVModel,UAV::UAVDPVelControl,UAV::VelocityEvaluator,UAV::UAVVelSwarm<2>
 #define EMERGENT_UAV UAV::UAVModel,UAV::UAVJLTControl,UAV::SingleTargetEvaluator,UAV::UAVSwarm<1>
 
 class UAVVelMotionPlanner : public UAVLocalMotionPlanner
@@ -21,7 +21,7 @@ protected:
 
 private:
   void plan_call_back(const ros::TimerEvent&);
-  void goal_call_back(const geometry_msgs::PoseStamped::ConstPtr &msg);
+  void goal_call_back(const geometry_msgs::TwistStamped::ConstPtr &msg);
   void cycle_init();
 
 private:
@@ -35,7 +35,8 @@ private:
 
   PSO::Planner<VEL_UAV> *m_pso_planner;
   PSO::Planner<EMERGENT_UAV> *m_emergent_planner;
-  UAV::SingleTargetEvaluator::Target m_goal;
+  UAV::VelocityEvaluator::Target m_goal;
+  UAV::SingleTargetEvaluator::Target m_e_goal;
   UAV::UAVModel::State m_curr_ref;
   cpc_motion_planning::ref_data m_ref_msg;
   int m_plan_cycle;
