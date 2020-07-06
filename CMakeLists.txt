@@ -162,78 +162,106 @@ target_link_libraries(dynamic_programming
     ${CUDA_LIBRARIES}
     ${catkin_LIBRARIES})
 
-cuda_add_executable(${PROJECT_NAME}_node
+#################################################
+## 1: Astar (point guided) mode
+#################################################
+cuda_add_executable(astar_loc_planning_node
     src/loc_plan/astar_loc_planner_node.cpp
     src/loc_plan/uav_base_local_planner.cpp
     src/loc_plan/uav_astar_local_planner.cpp
     src/kernel/pso_kernels.cu
     src/kernel/repulsive_field_kernel.cu)
 
-target_link_libraries(${PROJECT_NAME}_node
+target_link_libraries(astar_loc_planning_node
     ${CUDA_curand_LIBRARY}
     ${CUDA_cublas_LIBRARY}
     ${CUDA_LIBRARIES}
     ${catkin_LIBRARIES})
 
-cuda_add_executable(${PROJECT_NAME}_nf1_node
+add_dependencies(astar_loc_planning_node ${${PROJECT_NAME}_EXPORTED_TARGETS} ${catkin_EXPORTED_TARGETS})
+
+cuda_add_executable(astar_mid_planning_node
+    src/mid_plan/grid_graph.cpp
+    src/mid_plan/a_star.cpp
+    src/mid_plan/astar_mid_planner_node.cpp)
+
+target_link_libraries(astar_mid_planning_node
+    ${CUDA_curand_LIBRARY}
+    ${CUDA_cublas_LIBRARY}
+    ${CUDA_LIBRARIES}
+    ${catkin_LIBRARIES})
+
+add_dependencies(astar_mid_planning_node ${${PROJECT_NAME}_EXPORTED_TARGETS} ${catkin_EXPORTED_TARGETS})
+
+#################################################
+## 2: NF1 mode
+#################################################
+cuda_add_executable(nf1_loc_planning_node
     src/loc_plan/nf1_loc_planner_node.cpp
     src/loc_plan/uav_base_local_planner.cpp
     src/loc_plan/uav_nf1_local_planner.cpp
     src/kernel/pso_kernels.cu
     src/kernel/repulsive_field_kernel.cu)
 
-target_link_libraries(${PROJECT_NAME}_nf1_node
+target_link_libraries(nf1_loc_planning_node
     ${CUDA_curand_LIBRARY}
     ${CUDA_cublas_LIBRARY}
     ${CUDA_LIBRARIES}
     ${catkin_LIBRARIES})
 
-cuda_add_executable(${PROJECT_NAME}_vel_node
+add_dependencies(nf1_loc_planning_node ${${PROJECT_NAME}_EXPORTED_TARGETS} ${catkin_EXPORTED_TARGETS})
+
+cuda_add_executable(nf1_mid_planning_node
+    src/mid_plan/grid_graph.cpp
+    src/mid_plan/dijkstra.cpp
+    src/mid_plan/a_star.cpp
+    src/mid_plan/nf1_mid_planner_node.cpp)
+
+target_link_libraries(nf1_mid_planning_node
+    ${CUDA_curand_LIBRARY}
+    ${CUDA_cublas_LIBRARY}
+    ${CUDA_LIBRARIES}
+    ${catkin_LIBRARIES})
+
+add_dependencies(nf1_mid_planning_node ${${PROJECT_NAME}_EXPORTED_TARGETS} ${catkin_EXPORTED_TARGETS})
+
+#################################################
+## 3: Velocity (with Astar mid planner) mode
+#################################################
+cuda_add_executable(velocity_loc_planning_node
     src/loc_plan/velocity_loc_planner_node.cpp
     src/loc_plan/uav_base_local_planner.cpp
     src/loc_plan/uav_vel_local_planner.cpp
     src/kernel/pso_kernels.cu
     src/kernel/repulsive_field_kernel.cu)
 
-target_link_libraries(${PROJECT_NAME}_vel_node
+target_link_libraries(velocity_loc_planning_node
     ${CUDA_curand_LIBRARY}
     ${CUDA_cublas_LIBRARY}
     ${CUDA_LIBRARIES}
     ${catkin_LIBRARIES})
 
-cuda_add_executable(${PROJECT_NAME}_corridor_node
+add_dependencies(velocity_loc_planning_node ${${PROJECT_NAME}_EXPORTED_TARGETS} ${catkin_EXPORTED_TARGETS})
+
+#################################################
+## 4: Corridor mode
+#################################################
+cuda_add_executable(corridor_loc_planning_node
     src/loc_plan/corridor_loc_planner_node.cpp
     src/loc_plan/uav_base_local_planner.cpp
     src/kernel/pso_kernels.cu)
 
-target_link_libraries(${PROJECT_NAME}_corridor_node
+target_link_libraries(corridor_loc_planning_node
     ${CUDA_curand_LIBRARY}
     ${CUDA_cublas_LIBRARY}
     ${CUDA_LIBRARIES}
     ${catkin_LIBRARIES})
 
-cuda_add_executable(${PROJECT_NAME}_glb_plan_node
-    src/mid_plan/grid_graph.cpp
-    src/mid_plan/a_star.cpp
-    src/mid_plan/astar_mid_planner_node.cpp)
+add_dependencies(corridor_loc_planning_node ${${PROJECT_NAME}_EXPORTED_TARGETS} ${catkin_EXPORTED_TARGETS})
 
-target_link_libraries(${PROJECT_NAME}_glb_plan_node
-    ${CUDA_curand_LIBRARY}
-    ${CUDA_cublas_LIBRARY}
-    ${CUDA_LIBRARIES}
-    ${catkin_LIBRARIES})
 
-cuda_add_executable(${PROJECT_NAME}_nf1_plan_node
-    src/mid_plan/grid_graph.cpp
-    src/mid_plan/dijkstra.cpp
-    src/mid_plan/a_star.cpp
-    src/mid_plan/nf1_mid_planner_node.cpp)
 
-target_link_libraries(${PROJECT_NAME}_nf1_plan_node
-    ${CUDA_curand_LIBRARY}
-    ${CUDA_cublas_LIBRARY}
-    ${CUDA_LIBRARIES}
-    ${catkin_LIBRARIES})
+
 
 ## Rename C++ executable without prefix
 ## The above recommended prefix causes long target names, the following renames the
@@ -243,9 +271,9 @@ target_link_libraries(${PROJECT_NAME}_nf1_plan_node
 
 ## Add cmake target dependencies of the executable
 ## same as for the library above
-add_dependencies(${PROJECT_NAME}_node ${${PROJECT_NAME}_EXPORTED_TARGETS} ${catkin_EXPORTED_TARGETS})
-add_dependencies(${PROJECT_NAME}_nf1_node ${${PROJECT_NAME}_EXPORTED_TARGETS} ${catkin_EXPORTED_TARGETS})
-add_dependencies(${PROJECT_NAME}_glb_plan_node ${${PROJECT_NAME}_EXPORTED_TARGETS} ${catkin_EXPORTED_TARGETS})
+
+
+
 ## Specify libraries to link a library or executable target against
 # target_link_libraries(${PROJECT_NAME}_node
 #   ${catkin_LIBRARIES}

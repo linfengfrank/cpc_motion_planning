@@ -1,8 +1,8 @@
 <?xml version="1.0"?>
 <launch>
 <include file="$(find cpc_reference_publisher)/launch/ref_pub.launch"/>
-<node pkg="cpc_motion_planning" type="cpc_motion_planning_vel_node" name="cpc_motion_planning_vel_node" output="screen">
+<node pkg="cpc_motion_planning" type="velocity_loc_planning_node" name="velocity_loc_planning_node" output="screen">
 </node>
-<node pkg="cpc_motion_planning" type="cpc_motion_planning_glb_plan_node" name="cpc_motion_planning_glb_plan_node" output="screen">
+<node pkg="cpc_motion_planning" type="astar_mid_planning_node" name="astar_mid_planning_node" output="screen">
 </node>
 </launch>
