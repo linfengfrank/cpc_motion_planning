@@ -2,6 +2,7 @@
 #define UAV_VEL_MOTION_PLANNER_H
 #include <loc_plan/uav_base_local_planner.h>
 #include <geometry_msgs/TwistStamped.h>
+#include <sensor_msgs/Joy.h>
 #define VEL_UAV UAV::UAVModel,UAV::UAVDPVelControl,UAV::VelocityEvaluator,UAV::UAVVelSwarm<2>
 #define EMERGENT_UAV UAV::UAVModel,UAV::UAVJLTControl,UAV::SingleTargetEvaluator,UAV::UAVSwarm<1>
 
@@ -22,10 +23,11 @@ protected:
 private:
   void plan_call_back(const ros::TimerEvent&);
   void goal_call_back(const geometry_msgs::TwistStamped::ConstPtr &msg);
+  void joystick_call_back(const sensor_msgs::Joy::ConstPtr &msg);
   void cycle_init();
 
 private:
-  ros::Subscriber m_goal_sub;
+  ros::Subscriber m_goal_sub, m_joystick_sub;
   ros::Timer m_planning_timer;
 
   ros::Publisher m_ref_pub;

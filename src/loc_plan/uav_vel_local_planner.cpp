@@ -12,8 +12,8 @@ UAVVelMotionPlanner::UAVVelMotionPlanner():
   UAVLocalMotionPlanner(),
   m_goal_received(false)
 {
-  m_goal_sub = m_nh.subscribe("/mid_layer/goal",1,&UAVVelMotionPlanner::goal_call_back, this);
-
+  m_goal_sub = m_nh.subscribe("/velocity_target", 1, &UAVVelMotionPlanner::goal_call_back, this);
+  m_joystick_sub = m_nh.subscribe("/joy", 1, &UAVVelMotionPlanner::joystick_call_back, this);
   m_ref_pub = m_nh.advertise<cpc_motion_planning::ref_data>("ref_traj",1);
 
   m_planning_timer = m_nh.createTimer(ros::Duration(PSO::PSO_REPLAN_DT), &UAVVelMotionPlanner::plan_call_back, this);
@@ -90,6 +90,15 @@ void UAVVelMotionPlanner::goal_call_back(const geometry_msgs::TwistStamped::Cons
   m_goal.v.x = msg->twist.linear.x;
   m_goal.v.y = msg->twist.linear.y;
   m_goal.v.z = msg->twist.linear.z;
+  m_pso_planner->m_eva.setTarget(m_goal);
+}
+
+void UAVVelMotionPlanner::joystick_call_back(const sensor_msgs::Joy::ConstPtr &msg)
+{
+  m_goal_received = true;
+  m_goal.v.x = msg->axes[1]*5.0f;
+  m_goal.v.y = msg->axes[0]*5.0f;
+  m_goal.v.z = -msg->buttons[6] + msg->buttons[7];
   m_pso_planner->m_eva.setTarget(m_goal);
 }
 
