@@ -1,7 +1,7 @@
 #ifndef DYNAMIC_PROGRAMMING_H
 #define DYNAMIC_PROGRAMMING_H
 #include <cuda_math/cuda_matrix.cuh>
-#include <cpc_motion_planning/ugv/ugv_model.h>
+#include <cpc_motion_planning/ugv/model/ugv_model.h>
 struct VoidPtrCarrier
 {
   void * m_ptr[8];

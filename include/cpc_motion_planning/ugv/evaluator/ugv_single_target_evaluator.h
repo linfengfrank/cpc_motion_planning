@@ -1,7 +1,7 @@
 #ifndef UGV_SINGLE_TARGET_EVALUATOR_H
 #define UGV_SINGLE_TARGET_EVALUATOR_H
 
-#include <cpc_motion_planning/ugv/ugv_model.h>
+#include <cpc_motion_planning/ugv/model/ugv_model.h>
 #include <cpc_motion_planning/dynamic_programming.cuh>
 namespace UGV
 {

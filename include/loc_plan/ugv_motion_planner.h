@@ -11,10 +11,10 @@
 #include <geometry_msgs/PoseStamped.h>
 #include <cpc_motion_planning/ref_data.h>
 #include <cpc_motion_planning/JLT.h>
-#include <cpc_motion_planning/ugv/ugv_single_target_evaluator.h>
-#include <cpc_motion_planning/ugv/ugv_dp_control.h>
-#include <cpc_motion_planning/ugv/ugv_jlt_control.h>
-#include <cpc_motion_planning/ugv/ugv_swarm.h>
+#include <cpc_motion_planning/ugv/evaluator/ugv_single_target_evaluator.h>
+#include <cpc_motion_planning/ugv/controller/ugv_dp_control.h>
+#include <cpc_motion_planning/ugv/controller/ugv_jlt_control.h>
+#include <cpc_motion_planning/ugv/swarm/ugv_swarm.h>
 
 #define SIMPLE_UGV UGV::UGVModel,UGV::UGVDPControl,UGV::SingleTargetEvaluator,UGV::UGVSwarm<2>
 class UGVMotionPlanner
@@ -50,7 +50,6 @@ private:
   bool m_goal_received;
   EDTMap *m_edt_map;
   PSO::Planner<SIMPLE_UGV> *m_pso_planner;
-  PSO::Planner<SIMPLE_UGV> *m_display_planner;
   PointCloud::Ptr m_traj_pnt_cld;
   UGV::SingleTargetEvaluator::Target m_goal;
   float m_ref_v, m_ref_w;

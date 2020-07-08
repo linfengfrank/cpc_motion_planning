@@ -6,7 +6,7 @@
 #include <fstream>
 #include <cpc_motion_planning/cuda_matrix_factory.h>
 #include <chrono>
-#include <cpc_motion_planning/ugv/ugv_model.h>
+#include <cpc_motion_planning/ugv/model/ugv_model.h>
 
 int main(int argc, char **argv)
 {

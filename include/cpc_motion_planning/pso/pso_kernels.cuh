@@ -1,10 +1,10 @@
 #ifndef PSO_KERNELS_CUH
 #define PSO_KERNELS_CUH
-#include <cpc_motion_planning/ugv/ugv_model.h>
-#include <cpc_motion_planning/ugv/ugv_dp_control.h>
-#include <cpc_motion_planning/ugv/ugv_jlt_control.h>
-#include <cpc_motion_planning/ugv/ugv_swarm.h>
-#include <cpc_motion_planning/ugv/ugv_single_target_evaluator.h>
+#include <cpc_motion_planning/ugv/model/ugv_model.h>
+#include <cpc_motion_planning/ugv/controller/ugv_dp_control.h>
+#include <cpc_motion_planning/ugv/controller/ugv_jlt_control.h>
+#include <cpc_motion_planning/ugv/swarm/ugv_swarm.h>
+#include <cpc_motion_planning/ugv/evaluator/ugv_single_target_evaluator.h>
 #include <cuda_geometry/cuda_edtmap.cuh>
 #include "cublas_v2.h"
 namespace PSO

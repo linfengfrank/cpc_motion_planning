@@ -3,7 +3,7 @@
 
 #include <curand_kernel.h>
 #include <cuda_math/cuda_matrix.cuh>
-#include <cpc_motion_planning/ugv/ugv_model.h>
+#include <cpc_motion_planning/ugv/model/ugv_model.h>
 namespace UGV
 {
 template <int STEP>

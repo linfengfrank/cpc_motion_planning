@@ -1,7 +1,7 @@
 #ifndef UGV_DP_CONTROL_H
 #define UGV_DP_CONTROL_H
 #include <cpc_motion_planning/pso/pso_utilities.cuh>
-#include <cpc_motion_planning/ugv/ugv_model.h>
+#include <cpc_motion_planning/ugv/model/ugv_model.h>
 #include <cpc_motion_planning/dynamic_programming.cuh>
 #include <cuda_geometry/cuda_edtmap.cuh>
 #include <cpc_motion_planning/cuda_matrix_factory.h>

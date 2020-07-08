@@ -13,8 +13,7 @@ public:
   Planner(int num_of_ptcls=50, int num_of_epoches=20, int num_of_episodes=4):
     m_num_of_epoches(num_of_epoches),
     m_num_of_episodes(num_of_episodes),
-    m_first_time(true),
-    m_on_host(false)
+    m_first_time(true)
   {
     m_swarm.ptcl_size = num_of_ptcls;
   }
@@ -24,15 +23,9 @@ public:
 
   }
 
-  void set_problem(const typename Model::State &s, const typename Evaluator::Target &goal)
+  std::vector<typename Model::State> generate_trajectory()
   {
-    m_eva.setTarget(goal);
-    m_model.set_ini_state(s);
-  }
-
-  std::vector<typename Model::State> generate_trajectory(const typename Swarm::Trace &ttr)
-  {
-    return m_dp_ctrl.template generate_trajectory<Model,Swarm>(m_model,m_swarm,ttr);
+    return m_ctrl_host.template generate_trajectory<Model,Swarm>(m_model,m_swarm,result.best_loc);
   }
 
   void plan(const EDTMap &map)
@@ -42,12 +35,12 @@ public:
 
     for (int ctt = 0; ctt <m_num_of_episodes; ctt ++)
     {
-      initialize_particles<Model, Controller, Evaluator, Swarm>(m_first_time, map, m_eva,m_model,m_dp_ctrl,m_swarm);
+      initialize_particles<Model, Controller, Evaluator, Swarm>(m_first_time, map, m_eva,m_model,m_ctrl_dev,m_swarm);
       m_first_time = false;
       for (int i=0;i<m_num_of_epoches;i++)
       {
         float weight = 0.95-(0.95-0.4)/static_cast<float>(m_num_of_epoches)*static_cast<float>(i);
-        iterate_particles<Model, Controller, Evaluator,Swarm>(weight, map, m_eva,m_model,m_dp_ctrl,m_swarm);
+        iterate_particles<Model, Controller, Evaluator,Swarm>(weight, map, m_eva,m_model,m_ctrl_dev,m_swarm);
         copy_best_values<Swarm>(m_best_values,m_swarm);
 
         int best_idx = -1;
@@ -64,23 +57,18 @@ public:
     cudaDeviceSynchronize();
   }
 
-  void initialize(bool on_host = false)
+  void initialize()
   {
-    m_on_host = on_host;
-    if (!m_on_host)
-    {
-      create_particles();
-    }
-    m_dp_ctrl.load_data(m_factory,m_on_host);
+    create_particles();
+    m_ctrl_dev.load_data(m_factory,false);
+    m_ctrl_host.load_data(m_factory,true);
   }
 
   void release()
   {
-    if (!m_on_host)
-    {
-      delete_particles();
-    }
-    m_dp_ctrl.release_data(m_factory,m_on_host);
+    delete_particles();
+    m_ctrl_dev.release_data(m_factory,false);
+    m_ctrl_host.release_data(m_factory,true);
   }
 
   void create_particles()
@@ -111,8 +99,8 @@ public:
   bool m_first_time;
   Evaluator m_eva;
   Model m_model;
-  Controller m_dp_ctrl;
-  bool m_on_host;
+  Controller m_ctrl_dev;
+  Controller m_ctrl_host;
   Swarm m_swarm;
 
 };

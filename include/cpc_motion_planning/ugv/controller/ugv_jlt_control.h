@@ -1,7 +1,7 @@
 #ifndef UGV_JLT_CONTROL_H
 #define UGV_JLT_CONTROL_H
 #include <cpc_motion_planning/pso/pso_utilities.cuh>
-#include <cpc_motion_planning/ugv/ugv_model.h>
+#include <cpc_motion_planning/ugv/model/ugv_model.h>
 #include <cuda_geometry/cuda_edtmap.cuh>
 #include <cpc_motion_planning/cuda_matrix_factory.h>
 #include <cpc_motion_planning/JLT.h>

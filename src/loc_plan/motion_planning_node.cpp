@@ -1,5 +1,5 @@
 #include <ros/ros.h>
-#include <cpc_motion_planning/ugv_motion_planner.h>
+#include <loc_plan/ugv_motion_planner.h>
 #include <chrono>
 
 float RandomFloat(float a, float b) {

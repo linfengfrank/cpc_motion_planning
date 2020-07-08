@@ -1,4 +1,4 @@
-#include "cpc_motion_planning/ugv_motion_planner.h"
+#include "loc_plan/ugv_motion_planner.h"
 #include "tf/tf.h"
 #include <chrono>
 
@@ -25,10 +25,8 @@ UGVMotionPlanner::UGVMotionPlanner():
   m_planning_timer = m_nh.createTimer(ros::Duration(PSO::PSO_REPLAN_DT), &UGVMotionPlanner::plan_call_back, this);
 
   m_pso_planner = new PSO::Planner<SIMPLE_UGV>(120,40,1);
-  m_pso_planner->initialize(false);
+  m_pso_planner->initialize();
 
-  m_display_planner = new PSO::Planner<SIMPLE_UGV>(1,1,1);
-  m_display_planner->initialize(true);
   m_traj_pnt_cld = PointCloud::Ptr(new PointCloud);
   m_traj_pnt_cld->header.frame_id = "/world";
 
@@ -53,9 +51,6 @@ UGVMotionPlanner::~UGVMotionPlanner()
 
   m_pso_planner->release();
   delete m_pso_planner;
-
-  m_display_planner->release();
-  delete m_display_planner;
 }
 
 void UGVMotionPlanner::plan_call_back(const ros::TimerEvent&)
@@ -119,8 +114,9 @@ void UGVMotionPlanner::plan_call_back(const ros::TimerEvent&)
   //  yaw_diff = yaw_diff - floor((yaw_diff + M_PI) / (2 * M_PI)) * 2 * M_PI;
 
 
-  m_pso_planner->set_problem(s,m_goal);
-  m_display_planner->set_problem(s,m_goal);
+
+  m_pso_planner->m_model.set_ini_state(s);
+  m_pso_planner->m_eva.setTarget(m_goal);
   auto start = std::chrono::steady_clock::now();
   m_pso_planner->plan(*m_edt_map);
   auto end = std::chrono::steady_clock::now();
@@ -132,7 +128,7 @@ void UGVMotionPlanner::plan_call_back(const ros::TimerEvent&)
   std::cout<<"v,w err: "<<v_err<<", "<<w_err<<std::endl;
   std::cout<<"--------------"<<std::endl;
 
-  std::vector<UGV::UGVModel::State> traj = m_display_planner->generate_trajectory(m_pso_planner->result.best_loc);
+  std::vector<UGV::UGVModel::State> traj = m_pso_planner->generate_trajectory();
 
   int cols = 0;
   int ref_counter = m_ref_start_idx;
