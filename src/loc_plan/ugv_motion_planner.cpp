@@ -66,12 +66,16 @@ void UGVMotionPlanner::plan_call_back(const ros::TimerEvent&)
                    m_slam_odo.pose.pose.orientation.w);
   tf::Matrix3x3 m(q);
   m.getRPY(phi, theta, psi);
-
+#ifdef PRED_STATE
+  ros::Time curr_t = ros::Time::now();
+  UGV::UGVModel::State s = predict_state(m_slam_odo,psi,m_ref_start_idx);
+#else
   UGV::UGVModel::State s;
   s.p.x = m_slam_odo.pose.pose.position.x;
   s.p.y = m_slam_odo.pose.pose.position.y;
   s.s = 0;
   s.theta = psi;
+#endif
 
 
   float v_err = m_ref_v-m_raw_odo.twist.twist.linear.x;
@@ -161,6 +165,9 @@ void UGVMotionPlanner::plan_call_back(const ros::TimerEvent&)
 
   m_ref_msg.cols = cols;
   m_ref_pub.publish(m_ref_msg);
+#ifdef PRED_STATE
+  update_reference_log(m_ref_msg,curr_t);
+#endif
   m_ref_msg.data.clear();
   m_ref_msg.ids.clear();
 
