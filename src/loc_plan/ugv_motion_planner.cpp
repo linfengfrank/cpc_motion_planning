@@ -124,9 +124,10 @@ void UGVMotionPlanner::plan_call_back(const ros::TimerEvent&)
   auto start = std::chrono::steady_clock::now();
   m_pso_planner->plan(*m_edt_map);
   auto end = std::chrono::steady_clock::now();
-  std::cout << "Consumed: "
+  std::cout << "local planner: "
             << std::chrono::duration_cast<std::chrono::milliseconds>(end - start).count()
-            << "ms" << std::endl;
+            << "ms, " << m_pso_planner->result.best_cost
+            << ", collision: " << m_pso_planner->result.collision<<std::endl;
 
   std::cout<<s.p.x<<" "<<s.p.y<<" "<<s.s<<" "<<s.theta<<" "<<s.v<<" "<<s.w<<" "<<std::endl;
   std::cout<<"v,w err: "<<v_err<<", "<<w_err<<std::endl;
@@ -144,7 +145,7 @@ void UGVMotionPlanner::plan_call_back(const ros::TimerEvent&)
     pcl::PointXYZ clrP;
     clrP.x = traj_s.p.x;
     clrP.y = traj_s.p.y;
-    clrP.z = 0.2f;
+    clrP.z = 0.0f;
     m_traj_pnt_cld->points.push_back(clrP);
 
     ref_counter++;

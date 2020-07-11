@@ -31,7 +31,7 @@ public:
   }
 
   __host__ __device__
-  float process_cost(const UGVModel::State &s, const EDTMap &map) const
+  float process_cost(const UGVModel::State &s, const EDTMap &map, const float &time, bool &collision) const
   {
     float cost = 0;
     float2 dist_err = s.p - m_goal.s.p;
@@ -39,7 +39,7 @@ public:
 
     int ix = floor( (s.p.x - map.m_origin.x) / map.m_grid_step + 0.5);
     int iy = floor( (s.p.y - map.m_origin.y) / map.m_grid_step + 0.5);
-    int iz = floor( (0.35 - map.m_origin.z) / map.m_grid_step + 0.5);
+    int iz = floor( (0 - map.m_origin.z) / map.m_grid_step + 0.5);
 
     if (ix<0 || ix>=map.m_map_size.x ||
             iy<0 || iy>=map.m_map_size.y ||
@@ -53,8 +53,13 @@ public:
     float rd = map.edt_const_at(ix,iy,iz).d*0.2;
     cost += exp(-4.5f*rd)*400;
 
-    if (rd < 1.0)
+    if (rd < 0.71)
       cost += 100;
+
+    if (rd < 0.51)
+    {
+      collision = true;
+    }
   #endif
 
     if (sqrt(dist_err.x*dist_err.x + dist_err.y*dist_err.y) > 1)
@@ -80,7 +85,7 @@ public:
 
      int ix = floor( (s.p.x - map.m_origin.x) / map.m_grid_step + 0.5);
      int iy = floor( (s.p.y - map.m_origin.y) / map.m_grid_step + 0.5);
-     int iz = floor( (0.35 - map.m_origin.z) / map.m_grid_step + 0.5);
+     int iz = floor( (0 - map.m_origin.z) / map.m_grid_step + 0.5);
 
      if (ix<0 || ix>=map.m_map_size.x ||
              iy<0 || iy>=map.m_map_size.y ||
@@ -94,7 +99,7 @@ public:
      float rd = map.edt_const_at(ix,iy,iz).d*0.2;
      cost += exp(-4.5f*rd)*400;
 
-     if (rd < 1.0)
+     if (rd < 0.71)
        cost += 100;
    #endif
 
