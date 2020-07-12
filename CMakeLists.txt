@@ -161,8 +161,8 @@ target_link_libraries(dynamic_programming
     ${catkin_LIBRARIES})
 
 cuda_add_executable(${PROJECT_NAME}_node
-    src/loc_plan/motion_planning_node.cpp
-    src/loc_plan/ugv_motion_planner.cpp
+    src/loc_plan/sigtgt_loc_planner_node.cpp
+    src/loc_plan/ugv_sigtgt_local_planner.cpp
     src/loc_plan/ugv_base_local_planner.cpp
     src/kernel/pso_kernels.cu)
 

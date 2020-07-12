@@ -1,4 +1,4 @@
-#include "loc_plan/ugv_motion_planner.h"
+#include "loc_plan/ugv_sigtgt_local_planner.h"
 #include "tf/tf.h"
 #include <chrono>
 
@@ -7,15 +7,15 @@ template <typename T> int sgn(T val)
     return (T(0) < val) - (val < T(0));
 }
 
-UGVMotionPlanner::UGVMotionPlanner():
+UGVSigTgtMotionPlanner::UGVSigTgtMotionPlanner():
   m_goal_received(false)
 {
-  m_goal_sub = m_nh.subscribe("/move_base_simple/goal",1,&UGVMotionPlanner::goal_call_back, this);
+  m_goal_sub = m_nh.subscribe("/move_base_simple/goal",1,&UGVSigTgtMotionPlanner::goal_call_back, this);
 
 
   m_ref_pub = m_nh.advertise<cpc_motion_planning::ref_data>("ref_traj",1);
 
-  m_planning_timer = m_nh.createTimer(ros::Duration(PSO::PSO_REPLAN_DT), &UGVMotionPlanner::plan_call_back, this);
+  m_planning_timer = m_nh.createTimer(ros::Duration(PSO::PSO_REPLAN_DT), &UGVSigTgtMotionPlanner::plan_call_back, this);
 
   m_pso_planner = new PSO::Planner<SIMPLE_UGV>(120,40,1);
   m_pso_planner->initialize();
@@ -34,7 +34,7 @@ UGVMotionPlanner::UGVMotionPlanner():
   m_ref_start_idx = 0;
 }
 
-UGVMotionPlanner::~UGVMotionPlanner()
+UGVSigTgtMotionPlanner::~UGVSigTgtMotionPlanner()
 {
 
 
@@ -42,7 +42,7 @@ UGVMotionPlanner::~UGVMotionPlanner()
   delete m_pso_planner;
 }
 
-void UGVMotionPlanner::plan_call_back(const ros::TimerEvent&)
+void UGVSigTgtMotionPlanner::plan_call_back(const ros::TimerEvent&)
 {
   if (!m_slam_odo_received || !m_raw_odo_received || !m_received_map || !m_goal_received)
     return;
@@ -169,7 +169,7 @@ void UGVMotionPlanner::plan_call_back(const ros::TimerEvent&)
 
 
 
-void UGVMotionPlanner::goal_call_back(const geometry_msgs::PoseStamped::ConstPtr &msg)
+void UGVSigTgtMotionPlanner::goal_call_back(const geometry_msgs::PoseStamped::ConstPtr &msg)
 {
   m_goal_received = true;
   m_goal.s.p.x = msg->pose.position.x;

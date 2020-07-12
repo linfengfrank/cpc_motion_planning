@@ -3,11 +3,11 @@
 #include <loc_plan/ugv_base_local_planner.h>
 
 #define SIMPLE_UGV UGV::UGVModel,UGV::UGVDPControl,UGV::SingleTargetEvaluator,UGV::UGVSwarm<2>
-class UGVMotionPlanner : public UGVLocalMotionPlanner
+class UGVSigTgtMotionPlanner : public UGVLocalMotionPlanner
 {
 public:
-  UGVMotionPlanner();
-  ~UGVMotionPlanner();
+  UGVSigTgtMotionPlanner();
+  ~UGVSigTgtMotionPlanner();
 
 private:
   void plan_call_back(const ros::TimerEvent&);
