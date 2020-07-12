@@ -52,71 +52,22 @@ protected:
   void slam_odo_call_back(const nav_msgs::Odometry::ConstPtr &msg);
 
 #ifdef PRED_STATE
-  void load_into_queue(const cpc_motion_planning::ref_data &ref, const ros::Time &curr_t)
-  {
-    for (int i=0; i<ref.cols; i++)
-    {
-      CmdLog tmp;
-      tmp.t = curr_t + ros::Duration((i+1)*PSO::PSO_CTRL_DT);
-
-      tmp.id = ref.ids[i];
-      tmp.v = ref.data[i*ref.rows];
-      tmp.w = ref.data[i*ref.rows + 1];
-      //std::cout<<"id: "<<ref.ids[i]<<", "<<tmp.t<<std::endl;
-      m_cmd_q.push_back(tmp);
-    }
-  }
-
-  void update_reference_log(const cpc_motion_planning::ref_data &ref, const ros::Time &curr_t)
-  {
-    if(m_cmd_q.empty())
-    {
-      load_into_queue(ref, curr_t);
-    }
-    else
-    {
-      int diff = ref.ids[0] - m_cmd_q.front().id;
-      while(static_cast<int>(m_cmd_q.size()) > diff && !m_cmd_q.empty())
-      {
-        m_cmd_q.pop_back();
-      }
-      load_into_queue(ref, curr_t);
-    }
-  }
-
-  UGV::UGVModel::State predict_state(const nav_msgs::Odometry &odom, const double &psi, const int &ref_start_idx)
-  {
-    UGV::UGVModel::State s;
-    s.p.x = odom.pose.pose.position.x;
-    s.p.y = odom.pose.pose.position.y;
-    s.s = 0;
-    s.theta = psi;
-    // Find the most related cmd
-
-    while (m_cmd_q.size()>0)
-    {
-      if (m_cmd_q.front().t.toSec() <= odom.header.stamp.toSec())
-        m_cmd_q.pop_front();
-      else
-        break;
-    }
-
-    for (const CmdLog &tmp : m_cmd_q)
-    {
-      if (tmp.id < ref_start_idx)
-      {
-        s.p.x = s.p.x + tmp.v*cos(s.theta)*PSO::PSO_CTRL_DT;
-        s.p.y = s.p.y + tmp.v*sin(s.theta)*PSO::PSO_CTRL_DT;
-        s.theta = s.theta + tmp.w*PSO::PSO_CTRL_DT;
-      }
-      else
-      {
-        break;
-      }
-    }
-    return s;
-  }
+  void load_into_queue(const cpc_motion_planning::ref_data &ref, const ros::Time &curr_t);
 #endif
+  void update_reference_log(const cpc_motion_planning::ref_data &ref, const ros::Time &curr_t);
+  UGV::UGVModel::State predict_state(const nav_msgs::Odometry &odom, const double &psi, const int &ref_start_idx);
+
+
+  template<class Model, class Controller, class Evaluator, class Swarm>
+  void calculate_trajectory(PSO::Planner<Model, Controller, Evaluator, Swarm> *planner, std::vector<UGV::UGVModel::State> &traj)
+  {
+    // conduct the motion planning
+    planner->plan(*m_edt_map);
+
+    // generate the trajectory
+    traj = planner->generate_trajectory();
+  }
+
 
 protected:
   ros::NodeHandle m_nh;

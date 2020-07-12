@@ -55,16 +55,8 @@ void UGVSigTgtMotionPlanner::plan_call_back(const ros::TimerEvent&)
                    m_slam_odo.pose.pose.orientation.w);
   tf::Matrix3x3 m(q);
   m.getRPY(phi, theta, psi);
-#ifdef PRED_STATE
   ros::Time curr_t = ros::Time::now();
   UGV::UGVModel::State s = predict_state(m_slam_odo,psi,m_ref_start_idx);
-#else
-  UGV::UGVModel::State s;
-  s.p.x = m_slam_odo.pose.pose.position.x;
-  s.p.y = m_slam_odo.pose.pose.position.y;
-  s.s = 0;
-  s.theta = psi;
-#endif
 
 
   float v_err = m_ref_v-m_raw_odo.twist.twist.linear.x;
@@ -110,8 +102,10 @@ void UGVSigTgtMotionPlanner::plan_call_back(const ros::TimerEvent&)
 
   m_pso_planner->m_model.set_ini_state(s);
   m_pso_planner->m_eva.setTarget(m_goal);
+
   auto start = std::chrono::steady_clock::now();
-  m_pso_planner->plan(*m_edt_map);
+  std::vector<UGV::UGVModel::State> traj;
+  calculate_trajectory<SIMPLE_UGV>(m_pso_planner, traj);
   auto end = std::chrono::steady_clock::now();
   std::cout << "local planner: "
             << std::chrono::duration_cast<std::chrono::milliseconds>(end - start).count()
@@ -122,7 +116,7 @@ void UGVSigTgtMotionPlanner::plan_call_back(const ros::TimerEvent&)
   std::cout<<"v,w err: "<<v_err<<", "<<w_err<<std::endl;
   std::cout<<"--------------"<<std::endl;
 
-  std::vector<UGV::UGVModel::State> traj = m_pso_planner->generate_trajectory();
+
 
   int cols = 0;
   int ref_counter = m_ref_start_idx;
@@ -155,9 +149,8 @@ void UGVSigTgtMotionPlanner::plan_call_back(const ros::TimerEvent&)
 
   m_ref_msg.cols = cols;
   m_ref_pub.publish(m_ref_msg);
-#ifdef PRED_STATE
   update_reference_log(m_ref_msg,curr_t);
-#endif
+
   m_ref_msg.data.clear();
   m_ref_msg.ids.clear();
 
