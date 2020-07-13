@@ -116,7 +116,7 @@ class UAVLocalMotionPlanner
     typedef pcl::PointCloud<pcl::PointXYZ> PointCloud;
 public:
   UAVLocalMotionPlanner();
-  ~UAVLocalMotionPlanner();
+  virtual ~UAVLocalMotionPlanner();
 
 protected:
   void map_call_back(const cpc_aux_mapping::grid_map::ConstPtr &msg);
