@@ -19,6 +19,7 @@ protected:
 private:
   void plan_call_back(const ros::TimerEvent&);
   void goal_call_back(const geometry_msgs::PoseStamped::ConstPtr &msg);
+  void cycle_init();
 
 private:
   ros::Subscriber m_goal_sub;
@@ -32,6 +33,8 @@ private:
   int m_v_err_reset_ctt, m_w_err_reset_ctt;
   int m_plan_cycle;
   int m_ref_start_idx;
+  std::vector<UGV::UGVModel::State> m_traj;
+  bool cycle_initialized;
 };
 
 #endif // UGV_MOTION_PLANNER_H
