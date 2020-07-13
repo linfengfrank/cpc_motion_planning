@@ -125,16 +125,8 @@ void UGVSigTgtMotionPlanner::plan_call_back(const ros::TimerEvent&)
 
   for (UGV::UGVModel::State traj_s : traj)
   {
-    pcl::PointXYZ clrP;
-    clrP.x = traj_s.p.x;
-    clrP.y = traj_s.p.y;
-    clrP.z = 0.0f;
-    m_traj_pnt_cld->points.push_back(clrP);
-
     ref_counter++;
-    m_ref_msg.ids.push_back(ref_counter);
-    m_ref_msg.data.push_back(traj_s.v);
-    m_ref_msg.data.push_back(traj_s.w);
+    add_to_ref_msg(m_ref_msg,ref_counter,traj_s);
 
     if (ref_counter == next_ref_start_idx)
     {
@@ -153,10 +145,9 @@ void UGVSigTgtMotionPlanner::plan_call_back(const ros::TimerEvent&)
 
   m_ref_msg.data.clear();
   m_ref_msg.ids.clear();
-
-  m_traj_pub.publish(m_traj_pnt_cld);
-  m_traj_pnt_cld->clear();
-
+#ifdef SHOW_PC
+  plot_trajectory(traj);
+#endif
   m_plan_cycle++;
 }
 

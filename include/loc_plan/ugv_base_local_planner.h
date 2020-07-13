@@ -18,6 +18,7 @@
 #include <deque>
 
 #define PRED_STATE
+#define SHOW_PC
 namespace UGV
 {
 enum STATUS {
@@ -57,6 +58,7 @@ protected:
   void update_reference_log(const cpc_motion_planning::ref_data &ref, const ros::Time &curr_t);
   UGV::UGVModel::State predict_state(const nav_msgs::Odometry &odom, const double &psi, const int &ref_start_idx);
 
+  void add_to_ref_msg(cpc_motion_planning::ref_data& ref_msg, int ref_counter, const UGV::UGVModel::State &traj);
 
   template<class Model, class Controller, class Evaluator, class Swarm>
   void calculate_trajectory(PSO::Planner<Model, Controller, Evaluator, Swarm> *planner, std::vector<UGV::UGVModel::State> &traj)
@@ -68,13 +70,15 @@ protected:
     traj = planner->generate_trajectory();
   }
 
+#ifdef SHOW_PC
+  void plot_trajectory(const std::vector<UGV::UGVModel::State> &traj);
+#endif
 
 protected:
   ros::NodeHandle m_nh;
   ros::Subscriber m_map_sub;
   ros::Subscriber m_raw_odom_sub;
   ros::Subscriber m_slam_odom_sub;
-  ros::Publisher m_traj_pub;
   nav_msgs::Odometry m_raw_odo, m_slam_odo;
 
   bool m_received_map;
@@ -82,7 +86,10 @@ protected:
   bool m_slam_odo_received;
 
   EDTMap *m_edt_map;
+#ifdef SHOW_PC
+  ros::Publisher m_traj_pub;
   PointCloud::Ptr m_traj_pnt_cld;
+#endif
 
 #ifdef PRED_STATE
   std::deque<CmdLog> m_cmd_q;

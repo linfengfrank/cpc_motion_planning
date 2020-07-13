@@ -123,3 +123,25 @@ void UGVLocalMotionPlanner::load_into_queue(const cpc_motion_planning::ref_data 
 }
 #endif
 
+void UGVLocalMotionPlanner::add_to_ref_msg(cpc_motion_planning::ref_data& ref_msg, int ref_counter, const UGV::UGVModel::State &traj_s)
+{
+  ref_msg.ids.push_back(ref_counter);
+  ref_msg.data.push_back(traj_s.v);
+  ref_msg.data.push_back(traj_s.w);
+}
+
+#ifdef SHOW_PC
+void UGVLocalMotionPlanner::plot_trajectory(const std::vector<UGV::UGVModel::State> &traj)
+{
+  for (UGV::UGVModel::State traj_s : traj)
+  {
+    pcl::PointXYZ clrP;
+    clrP.x = traj_s.p.x;
+    clrP.y = traj_s.p.y;
+    clrP.z = 0;
+    m_traj_pnt_cld->points.push_back(clrP);
+  }
+  m_traj_pub.publish(m_traj_pnt_cld);
+  m_traj_pnt_cld->clear();
+}
+#endif
