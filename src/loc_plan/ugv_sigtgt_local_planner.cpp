@@ -169,6 +169,26 @@ void UGVSigTgtMotionPlanner::goal_call_back(const geometry_msgs::PoseStamped::Co
   m.getRPY(phi, theta, psi);
 
 
-
   m_goal.s.theta = psi;
+}
+
+void UGVSigTgtMotionPlanner::do_start()
+{
+
+}
+void UGVSigTgtMotionPlanner::do_normal()
+{
+
+}
+void UGVSigTgtMotionPlanner::do_stuck()
+{
+
+}
+void UGVSigTgtMotionPlanner::do_emergent()
+{
+
+}
+void UGVSigTgtMotionPlanner::do_braking()
+{
+
 }

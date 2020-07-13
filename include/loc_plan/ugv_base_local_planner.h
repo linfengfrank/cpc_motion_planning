@@ -22,7 +22,8 @@
 namespace UGV
 {
 enum STATUS {
-  NORMAL = 0,
+  START = 0,
+  NORMAL,
   STUCK,
   EMERGENT,
   BRAKING};
@@ -45,7 +46,7 @@ public:
 
 public:
   UGVLocalMotionPlanner();
-  ~UGVLocalMotionPlanner();
+  virtual ~UGVLocalMotionPlanner();
 
 protected:
   void map_call_back(const cpc_aux_mapping::grid_map::ConstPtr &msg);
@@ -74,6 +75,13 @@ protected:
   void plot_trajectory(const std::vector<UGV::UGVModel::State> &traj);
 #endif
 
+  void cycle_process_based_on_status();
+  virtual void do_start() = 0;
+  virtual void do_normal() = 0;
+  virtual void do_stuck() = 0;
+  virtual void do_emergent() = 0;
+  virtual void do_braking() = 0;
+
 protected:
   ros::NodeHandle m_nh;
   ros::Subscriber m_map_sub;
@@ -95,6 +103,7 @@ protected:
   std::deque<CmdLog> m_cmd_q;
 #endif
 
+  UGV::STATUS m_status;
 };
 
 #endif // UGV_BASE_LOCAL_PLANNER_H

@@ -4,7 +4,8 @@ UGVLocalMotionPlanner::UGVLocalMotionPlanner():
   m_received_map(false),
   m_raw_odo_received(false),
   m_slam_odo_received(false),
-    m_edt_map(nullptr)
+  m_edt_map(nullptr),
+  m_status(UGV::START)
 {
   m_map_sub = m_nh.subscribe("/edt_map", 1, &UGVLocalMotionPlanner::map_call_back, this);
   m_raw_odom_sub = m_nh.subscribe("/raw_odom", 1, &UGVLocalMotionPlanner::raw_odo_call_back, this);
@@ -145,3 +146,34 @@ void UGVLocalMotionPlanner::plot_trajectory(const std::vector<UGV::UGVModel::Sta
   m_traj_pnt_cld->clear();
 }
 #endif
+
+void UGVLocalMotionPlanner::cycle_process_based_on_status()
+{
+  switch (m_status) {
+  case UGV::START:
+  {
+    do_start();
+    break;
+  }
+  case UGV::NORMAL:
+  {
+    do_normal();
+    break;
+  }
+  case UGV::STUCK:
+  {
+    do_stuck();
+    break;
+  }
+  case UGV::EMERGENT:
+  {
+    do_emergent();
+    break;
+  }
+  case UGV::BRAKING:
+  {
+    do_braking();
+    break;
+  }
+  }
+}

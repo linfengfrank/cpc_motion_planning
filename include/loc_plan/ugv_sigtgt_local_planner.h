@@ -9,6 +9,13 @@ public:
   UGVSigTgtMotionPlanner();
   ~UGVSigTgtMotionPlanner();
 
+protected:
+  virtual void do_start();
+  virtual void do_normal();
+  virtual void do_stuck();
+  virtual void do_emergent();
+  virtual void do_braking();
+
 private:
   void plan_call_back(const ros::TimerEvent&);
   void goal_call_back(const geometry_msgs::PoseStamped::ConstPtr &msg);
