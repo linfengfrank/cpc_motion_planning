@@ -3,6 +3,7 @@
 
 #include <cpc_motion_planning/ugv/model/ugv_model.h>
 #include <cpc_motion_planning/dynamic_programming.cuh>
+#include <cuda_geometry/cuda_edtmap.cuh>
 namespace UGV
 {
 class SingleTargetEvaluator
@@ -50,13 +51,13 @@ public:
     }
 
   #ifdef  __CUDA_ARCH__
-    float rd = map.edt_const_at(ix,iy,iz).d*0.2;
+    float rd = map.edt_const_at(ix,iy,iz).d * map.m_grid_step;
     cost += exp(-4.5f*rd)*400;
 
     if (rd < 0.71)
       cost += 100;
 
-    if (rd < 0.51)
+    if (rd < 0.31 && time < 1.5)
     {
       collision = true;
     }
@@ -96,7 +97,7 @@ public:
      }
 
    #ifdef  __CUDA_ARCH__
-     float rd = map.edt_const_at(ix,iy,iz).d*0.2;
+     float rd = map.edt_const_at(ix,iy,iz).d*map.m_grid_step;
      cost += exp(-4.5f*rd)*400;
 
      if (rd < 0.71)

@@ -10,7 +10,7 @@ template <typename T> int sgn(T val)
 UGVSigTgtMotionPlanner::UGVSigTgtMotionPlanner():
   m_goal_received(false),
   cycle_initialized(false),
-  m_start_cycle(0)
+  m_braking_start_cycle(0)
 {
   m_goal_sub = m_nh.subscribe("/move_base_simple/goal",1,&UGVSigTgtMotionPlanner::goal_call_back, this);
 
@@ -120,30 +120,30 @@ void UGVSigTgtMotionPlanner::do_normal()
 
   calculate_trajectory<SIMPLE_UGV>(m_pso_planner, m_traj);
 
-  auto end = std::chrono::steady_clock::now();
-  std::cout << "local planner (NORMAL): "
-            << std::chrono::duration_cast<std::chrono::milliseconds>(end - start).count()
-            << "ms, " << m_pso_planner->result.best_cost
-            << ", collision: " << m_pso_planner->result.collision<<std::endl;
-
   if (m_pso_planner->result.collision)
   {
-//    m_status = UGV::BRAKING;
-//    cycle_process_based_on_status();
+    m_braking_start_cycle = m_plan_cycle;
+    m_status = UGV::BRAKING;
+    cycle_process_based_on_status();
   }
   else
   {
     if(is_stuck(m_traj,m_pso_planner->result.best_cost))
     {
       m_status = UGV::STUCK;
-      m_start_cycle = m_plan_cycle;
     }
   }
+  auto end = std::chrono::steady_clock::now();
+  std::cout << "local planner (NORMAL): "
+            << std::chrono::duration_cast<std::chrono::milliseconds>(end - start).count()
+            << "ms, " << m_pso_planner->result.best_cost
+            << ", collision: " << m_pso_planner->result.collision<<std::endl;
 }
 //---
 void UGVSigTgtMotionPlanner::do_stuck()
 {
   cycle_init();
+  auto start = std::chrono::steady_clock::now();
   m_traj.clear();
   float dt = PSO::PSO_CTRL_DT;;
   for (float t=0.0f; t<PSO::PSO_TOTAL_T; t+=dt)
@@ -161,6 +161,11 @@ void UGVSigTgtMotionPlanner::do_stuck()
     m_status = UGV::NORMAL;
     m_traj = tmp_traj;
   }
+  auto end = std::chrono::steady_clock::now();
+  std::cout << "local planner (STUCK): "
+            << std::chrono::duration_cast<std::chrono::milliseconds>(end - start).count()
+            << "ms, " << m_pso_planner->result.best_cost
+            << ", collision: " << m_pso_planner->result.collision<<std::endl;
 }
 //---
 void UGVSigTgtMotionPlanner::do_emergent()
@@ -171,6 +176,25 @@ void UGVSigTgtMotionPlanner::do_emergent()
 void UGVSigTgtMotionPlanner::do_braking()
 {
   cycle_init();
+  auto start = std::chrono::steady_clock::now();
+  m_traj.clear();
+  float dt = PSO::PSO_CTRL_DT;;
+  for (float t=0.0f; t<PSO::PSO_TOTAL_T; t+=dt)
+  {
+    UGV::UGVModel::State s;
+    s.v = 0;
+    s.w = 0;
+    m_traj.push_back(s);
+  }
+  if (m_plan_cycle - m_braking_start_cycle >= 10)
+  {
+     m_status = UGV::NORMAL;
+  }
+  auto end = std::chrono::steady_clock::now();
+  std::cout << "local planner (BRAKING): "
+            << std::chrono::duration_cast<std::chrono::milliseconds>(end - start).count()
+            << "ms, " << m_pso_planner->result.best_cost
+            << ", collision: " << m_pso_planner->result.collision<<std::endl;
 }
 
 void UGVSigTgtMotionPlanner::cycle_init()
