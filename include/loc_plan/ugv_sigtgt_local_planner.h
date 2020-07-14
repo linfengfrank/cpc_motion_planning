@@ -35,6 +35,7 @@ private:
   int m_ref_start_idx;
   std::vector<UGV::UGVModel::State> m_traj;
   bool cycle_initialized;
+  int m_start_cycle;
 };
 
 #endif // UGV_MOTION_PLANNER_H

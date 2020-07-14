@@ -5,7 +5,8 @@ UGVLocalMotionPlanner::UGVLocalMotionPlanner():
   m_raw_odo_received(false),
   m_slam_odo_received(false),
   m_edt_map(nullptr),
-  m_status(UGV::START)
+  m_status(UGV::START),
+  m_stuck_pbty(0.0f)
 {
   m_map_sub = m_nh.subscribe("/edt_map", 1, &UGVLocalMotionPlanner::map_call_back, this);
   m_raw_odom_sub = m_nh.subscribe("/raw_odom", 1, &UGVLocalMotionPlanner::raw_odo_call_back, this);
@@ -176,4 +177,64 @@ void UGVLocalMotionPlanner::cycle_process_based_on_status()
     break;
   }
   }
+}
+
+bool UGVLocalMotionPlanner::is_stuck(const std::vector<UGV::UGVModel::State> &traj, const float &best_cost)
+{
+  // update stuck probability
+  if (is_stuck_instant(traj,best_cost))
+      m_stuck_pbty +=0.15f;
+  else
+      m_stuck_pbty *=0.8f;
+
+  if (m_stuck_pbty > 1)
+  {
+      m_stuck_pbty = 0;
+      return true;
+  }
+  else
+  {
+      return false;
+  }
+}
+
+bool UGVLocalMotionPlanner::is_stuck_instant(const std::vector<UGV::UGVModel::State> &traj, const float &best_cost)
+{
+  if (m_status <= UGV::START)
+      return false;
+
+  bool far_from_tgt = false;
+  bool no_turning = false;
+  bool no_moving_intention = false;
+
+  // check is it far from target
+  // TODO: make a better checking condition
+  if (best_cost > 10)
+      far_from_tgt = true;
+
+  // check whether the vehicle is about to move
+  float max_dist = 0;
+  float dist;
+  UGV::UGVModel::State ini_s = traj[0];
+  float2 p_shift = make_float2(0,0);
+  float max_turn = 0;
+  float turn;
+  for (UGV::UGVModel::State s : traj)
+  {
+      p_shift = ini_s.p - s.p;
+      dist = sqrtf(dot(p_shift,p_shift));
+      if (dist > max_dist)
+          max_dist = dist;
+
+      turn = fabsf(s.theta - ini_s.theta);
+      if (turn > max_turn)
+          max_turn = turn;
+  }
+  if (max_dist < 0.4f)
+      no_moving_intention = true;
+
+  if (max_turn < 0.25f)
+    no_turning = true;
+
+  return far_from_tgt && no_turning && no_moving_intention;
 }

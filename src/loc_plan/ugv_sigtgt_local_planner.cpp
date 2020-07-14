@@ -9,7 +9,8 @@ template <typename T> int sgn(T val)
 
 UGVSigTgtMotionPlanner::UGVSigTgtMotionPlanner():
   m_goal_received(false),
-  cycle_initialized(false)
+  cycle_initialized(false),
+  m_start_cycle(0)
 {
   m_goal_sub = m_nh.subscribe("/move_base_simple/goal",1,&UGVSigTgtMotionPlanner::goal_call_back, this);
 
@@ -132,13 +133,34 @@ void UGVSigTgtMotionPlanner::do_normal()
   }
   else
   {
-    // doing nothing at this moment
+    if(is_stuck(m_traj,m_pso_planner->result.best_cost))
+    {
+      m_status = UGV::STUCK;
+      m_start_cycle = m_plan_cycle;
+    }
   }
 }
 //---
 void UGVSigTgtMotionPlanner::do_stuck()
 {
   cycle_init();
+  m_traj.clear();
+  float dt = PSO::PSO_CTRL_DT;;
+  for (float t=0.0f; t<PSO::PSO_TOTAL_T; t+=dt)
+  {
+    UGV::UGVModel::State s;
+    s.v = 0;
+    s.w = 0.5;
+    m_traj.push_back(s);
+  }
+
+  std::vector<UGV::UGVModel::State> tmp_traj;
+  calculate_trajectory<SIMPLE_UGV>(m_pso_planner, tmp_traj);
+  if(!is_stuck_instant(tmp_traj,m_pso_planner->result.best_cost))
+  {
+    m_status = UGV::NORMAL;
+    m_traj = tmp_traj;
+  }
 }
 //---
 void UGVSigTgtMotionPlanner::do_emergent()
