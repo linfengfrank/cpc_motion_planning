@@ -72,6 +72,14 @@ public:
     s.w = s.w + u.y*dt;
   }
 
+  __host__ __device__
+  void calculate_bounding_centres(const State &s, float2 &c_r, float2 &c_f)
+  {
+    float2 uni_dir = make_float2(cosf(s.theta),sinf(s.theta));
+    c_f = s.p + 0.25f*uni_dir;
+    c_r = s.p - 0.25f*uni_dir;
+  }
+
   State m_s_ini;
 
 };
