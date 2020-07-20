@@ -1,34 +1,33 @@
-#ifndef UGV_SINGLE_TARGET_EVALUATOR_H
-#define UGV_SINGLE_TARGET_EVALUATOR_H
-
+#ifndef UGV_REF_TRAJ_EVALUATOR_H
+#define UGV_REF_TRAJ_EVALUATOR_H
 #include <cpc_motion_planning/ugv/model/ugv_model.h>
 #include <cpc_motion_planning/dynamic_programming.cuh>
 #include <cuda_geometry/cuda_edtmap.cuh>
 namespace UGV
 {
-class SingleTargetEvaluator
+class RefTrajEvaluator
 {
 public:
 
-  struct Target
+  struct Ref
   {
-    UGVModel::State s;
+    float3 tarj[20];
   };
 
-  SingleTargetEvaluator()
+  RefTrajEvaluator()
   {
 
   }
 
-  ~SingleTargetEvaluator()
+  ~RefTrajEvaluator()
   {
 
   }
 
   __host__ __device__
-  void setTarget(const Target &goal)
+  void setTarget(const Ref &ref)
   {
-    m_goal = goal;
+    m_ref = ref;
   }
 
   __host__ __device__
@@ -72,31 +71,28 @@ public:
   __host__ __device__
   float process_cost(const UGVModel::State &s, const EDTMap &map, const float &time, bool &collision) const
   {
-    float cost = 0;
-    float2 dist_err = s.p - m_goal.s.p;
-    cost += 0.5f*sqrt(dist_err.x*dist_err.x + dist_err.y*dist_err.y) + 0.2f*sqrt(3.0f*s.v*s.v + s.w*s.w);
+    int idx = min(20,floorf(time/0.2f + 0.5f));
+    float3 tgt = m_ref.tarj[idx];
 
+    // Velocity cost
+    float cost = 0.2f*sqrt(3.0f*s.v*s.v + s.w*s.w);
 
+    // Horizontal dist cost
+    cost += 0.5f*sqrt((s.p.x-tgt.x)*(s.p.x-tgt.x)+(s.p.y-tgt.y)*(s.p.y-tgt.y));
+
+    // Yaw cost
+    float yaw_diff = s.theta - tgt.z;
+    yaw_diff = yaw_diff - floor((yaw_diff + M_PI) / (2 * M_PI)) * 2 * M_PI;
+    cost += 0.5f*fabs(yaw_diff);
+
+    // Collision cost
     float rd = getMinDist(s,map);
     cost += exp(-9.5f*rd)*400;
-
     if (rd < 0.31)
       cost += 100;
-
     if (rd < 0.11 && time < 1.5)
     {
       collision = true;
-    }
-
-    if (sqrt(dist_err.x*dist_err.x + dist_err.y*dist_err.y) > 0.3)
-    {
-      cost += 0.5f*M_PI;
-    }
-    else
-    {
-      float yaw_diff = s.theta - m_goal.s.theta;
-      yaw_diff = yaw_diff - floor((yaw_diff + M_PI) / (2 * M_PI)) * 2 * M_PI;
-      cost += 0.5f*fabs(yaw_diff);
     }
 
     return  cost;
@@ -143,8 +139,7 @@ public:
      return  cost;
   }
 
-  Target m_goal;
+  Ref m_ref;
 };
 }
-
-#endif // UGV_SINGLE_TARGET_EVALUATOR_H
+#endif // UGV_REF_TRAJ_EVALUATOR_H
