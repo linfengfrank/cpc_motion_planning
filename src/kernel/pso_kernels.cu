@@ -130,9 +130,26 @@ void copy_best_values(float *best_values, const Swarm &sw)
 
 INST_group(UGV::UGVModel, UGV::UGVDPControl, UGV::SingleTargetEvaluator, UGV::UGVSwarm<1>);
 INST_group(UGV::UGVModel, UGV::UGVDPControl, UGV::SingleTargetEvaluator, UGV::UGVSwarm<2>);
+INST_group(UGV::UGVModel, UGV::UGVDPControl, UGV::SingleTargetEvaluator, UGV::UGVSwarm<3>);
+INST_group(UGV::UGVModel, UGV::UGVDPControl, UGV::SingleTargetEvaluator, UGV::UGVSwarm<4>);
 
 INST_initialize_particles(UGV::UGVModel, UGV::UGVJLTControl, UGV::SingleTargetEvaluator, UGV::UGVSwarm<1>);
 INST_iterate_particles(UGV::UGVModel, UGV::UGVJLTControl, UGV::SingleTargetEvaluator, UGV::UGVSwarm<1>);
 
 INST_initialize_particles(UGV::UGVModel, UGV::UGVJLTControl, UGV::SingleTargetEvaluator, UGV::UGVSwarm<2>);
 INST_iterate_particles(UGV::UGVModel, UGV::UGVJLTControl, UGV::SingleTargetEvaluator, UGV::UGVSwarm<2>);
+
+INST_initialize_particles(UGV::UGVModel, UGV::UGVDPControl, UGV::CorridorEvaluator, UGV::UGVSwarm<2>);
+INST_iterate_particles(UGV::UGVModel, UGV::UGVDPControl, UGV::CorridorEvaluator, UGV::UGVSwarm<2>);
+
+INST_initialize_particles(UGV::UGVModel, UGV::UGVDPControl, UGV::RefTrajEvaluator, UGV::UGVSwarm<2>);
+INST_iterate_particles(UGV::UGVModel, UGV::UGVDPControl, UGV::RefTrajEvaluator, UGV::UGVSwarm<2>);
+
+INST_initialize_particles(UGV::UGVModel, UGV::UGVDPControl, UGV::CorridorEvaluator, UGV::UGVSwarm<3>);
+INST_iterate_particles(UGV::UGVModel, UGV::UGVDPControl, UGV::CorridorEvaluator, UGV::UGVSwarm<3>);
+
+INST_initialize_particles(UGV::UGVModel, UGV::UGVDPControl, UGV::RefTrajEvaluator, UGV::UGVSwarm<3>);
+INST_iterate_particles(UGV::UGVModel, UGV::UGVDPControl, UGV::RefTrajEvaluator, UGV::UGVSwarm<3>);
+
+INST_initialize_particles(UGV::UGVModel, UGV::UGVDPControl, UGV::RefTrajEvaluator, UGV::UGVSwarm<4>);
+INST_iterate_particles(UGV::UGVModel, UGV::UGVDPControl, UGV::RefTrajEvaluator, UGV::UGVSwarm<4>);

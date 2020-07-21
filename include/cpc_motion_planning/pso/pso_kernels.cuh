@@ -5,6 +5,8 @@
 #include <cpc_motion_planning/ugv/controller/ugv_jlt_control.h>
 #include <cpc_motion_planning/ugv/swarm/ugv_swarm.h>
 #include <cpc_motion_planning/ugv/evaluator/ugv_single_target_evaluator.h>
+#include <cpc_motion_planning/ugv/evaluator/ugv_corridor_evaluator.h>
+#include <cpc_motion_planning/ugv/evaluator/ugv_ref_traj_evaluator.h>
 #include <cuda_geometry/cuda_edtmap.cuh>
 #include "cublas_v2.h"
 namespace PSO

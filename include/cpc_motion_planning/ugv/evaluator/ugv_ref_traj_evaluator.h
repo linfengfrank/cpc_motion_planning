@@ -11,7 +11,7 @@ public:
 
   struct Ref
   {
-    float3 tarj[20];
+    float3 tarj[41];
   };
 
   RefTrajEvaluator()
@@ -25,7 +25,7 @@ public:
   }
 
   __host__ __device__
-  void setTarget(const Ref &ref)
+  void setRef(const Ref &ref)
   {
     m_ref = ref;
   }
@@ -71,7 +71,7 @@ public:
   __host__ __device__
   float process_cost(const UGVModel::State &s, const EDTMap &map, const float &time, bool &collision) const
   {
-    int idx = min(20,floorf(time/0.2f + 0.5f));
+    int idx = min(40, static_cast<int>(floorf(time/0.1f + 0.5f)));
     float3 tgt = m_ref.tarj[idx];
 
     // Velocity cost
@@ -83,7 +83,7 @@ public:
     // Yaw cost
     float yaw_diff = s.theta - tgt.z;
     yaw_diff = yaw_diff - floor((yaw_diff + M_PI) / (2 * M_PI)) * 2 * M_PI;
-    cost += 0.5f*fabs(yaw_diff);
+    cost += 0.2f*fabs(yaw_diff);
 
     // Collision cost
     float rd = getMinDist(s,map);
@@ -101,40 +101,28 @@ public:
   __host__ __device__
   float final_cost(const UGVModel::State &s, const EDTMap &map) const
   {
+    float3 tgt = m_ref.tarj[20];
+
+    // Velocity cost
     float cost = 0;
-//     float2 dist_err = s.p - m_goal.s.p;
-//     cost += 0.5f*sqrt(dist_err.x*dist_err.x + dist_err.y*dist_err.y) + 1.2f*sqrt(3.0f*s.v*s.v + s.w*s.w);
 
-//     int ix = floor( (s.p.x - map.m_origin.x) / map.m_grid_step + 0.5);
-//     int iy = floor( (s.p.y - map.m_origin.y) / map.m_grid_step + 0.5);
-//     int iz = floor( (0 - map.m_origin.z) / map.m_grid_step + 0.5);
+//    // Horizontal dist cost
+//    cost += 2.5f*sqrt((s.p.x-tgt.x)*(s.p.x-tgt.x)+(s.p.y-tgt.y)*(s.p.y-tgt.y));
 
-//     if (ix<0 || ix>=map.m_map_size.x ||
-//             iy<0 || iy>=map.m_map_size.y ||
-//             iz<0 || iz>=map.m_map_size.z)
-//     {
-//         cost += 100;
-//         return cost;
-//     }
+//    // Yaw cost
+//    float yaw_diff = s.theta - tgt.z;
+//    yaw_diff = yaw_diff - floor((yaw_diff + M_PI) / (2 * M_PI)) * 2 * M_PI;
+//    cost += 1.0f*fabs(yaw_diff);
 
-//   #ifdef  __CUDA_ARCH__
-//     float rd = map.edt_const_at(ix,iy,iz).d*map.m_grid_step;
-//     cost += exp(-4.5f*rd)*400;
-
-//     if (rd < 0.71)
-//       cost += 100;
-//   #endif
-
-//     if (sqrt(dist_err.x*dist_err.x + dist_err.y*dist_err.y) > 1)
-//     {
-//       cost += 0.5f*M_PI;
-//     }
-//     else
-//     {
-//       float yaw_diff = s.theta - m_goal.s.theta;
-//       yaw_diff = yaw_diff - floor((yaw_diff + M_PI) / (2 * M_PI)) * 2 * M_PI;
-//       cost += 0.5f*fabs(yaw_diff);
-//     }
+//    // Collision cost
+////    float rd = getMinDist(s,map);
+////    cost += exp(-9.5f*rd)*400;
+////    if (rd < 0.31)
+////      cost += 100;
+////    if (rd < 0.11 && time < 1.5)
+////    {
+////      collision = true;
+////    }
 
      return  cost;
   }
