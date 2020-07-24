@@ -153,3 +153,6 @@ INST_iterate_particles(UGV::UGVModel, UGV::UGVDPControl, UGV::RefTrajEvaluator, 
 
 INST_initialize_particles(UGV::UGVModel, UGV::UGVDPControl, UGV::RefTrajEvaluator, UGV::UGVSwarm<4>);
 INST_iterate_particles(UGV::UGVModel, UGV::UGVDPControl, UGV::RefTrajEvaluator, UGV::UGVSwarm<4>);
+
+INST_initialize_particles(UGV::UGVModel, UGV::UGVDPControl, UGV::RefTrajEvaluator, UGV::UGVSwarm<1>);
+INST_iterate_particles(UGV::UGVModel, UGV::UGVDPControl, UGV::RefTrajEvaluator, UGV::UGVSwarm<1>);

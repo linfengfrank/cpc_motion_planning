@@ -22,7 +22,7 @@ float rand_float_gen(curandState *rs, float min, float max)
 #else
   float myrandf = 0.0;
 #endif
-  myrandf *= (max - min + 0.999999f);
+  myrandf *= (max - min);
   myrandf += min;
   return myrandf;
 }

@@ -238,3 +238,37 @@ bool UGVLocalMotionPlanner::is_stuck_instant(const std::vector<UGV::UGVModel::St
 
   return far_from_tgt && no_turning && no_moving_intention;
 }
+
+bool UGVLocalMotionPlanner::is_stuck_instant_horizon(const std::vector<UGV::UGVModel::State> &traj, const float &best_cost)
+{
+  if (m_status <= UGV::START)
+      return false;
+
+  bool far_from_tgt = false;
+  bool no_moving_intention = false;
+
+  // check is it far from target
+  // TODO: make a better checking condition
+  if (best_cost > 10)
+      far_from_tgt = true;
+
+  // check whether the vehicle is about to move
+  float max_dist = 0;
+  float dist;
+  UGV::UGVModel::State ini_s = traj[0];
+  float2 p_shift = make_float2(0,0);
+
+  for (UGV::UGVModel::State s : traj)
+  {
+      p_shift = ini_s.p - s.p;
+      dist = sqrtf(dot(p_shift,p_shift));
+      if (dist > max_dist)
+          max_dist = dist;
+  }
+  if (max_dist < 0.4f)
+      no_moving_intention = true;
+
+
+  return far_from_tgt && no_moving_intention;
+}
+

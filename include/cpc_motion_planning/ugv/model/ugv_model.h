@@ -2,6 +2,7 @@
 #define UGV_MODEL_H
 #include <curand_kernel.h>
 #include <cpc_motion_planning/pso/pso_utilities.cuh>
+#define UGV_W_SCALE 1.0f
 namespace UGV
 {
 class UGVModel
@@ -60,12 +61,12 @@ public:
   void model_forward(State &s, const float3 &u, const float &dt)
   {
     // x and y
-    s.p.x = s.p.x + (s.v*dt + 0.5f*u.x*dt*dt)*cos(s.theta + s.w*dt + 0.5f*u.y*dt*dt);
-    s.p.y = s.p.y + (s.v*dt + 0.5f*u.x*dt*dt)*sin(s.theta + s.w*dt + 0.5f*u.y*dt*dt);
+    s.p.x = s.p.x + (s.v*dt + 0.5f*u.x*dt*dt)*cos(s.theta + s.w*dt*UGV_W_SCALE + 0.5f*u.y*dt*dt);
+    s.p.y = s.p.y + (s.v*dt + 0.5f*u.x*dt*dt)*sin(s.theta + s.w*dt*UGV_W_SCALE + 0.5f*u.y*dt*dt);
 
     //s and theta
     s.s = s.s + s.v*dt + 0.5f*u.x*dt*dt;
-    s.theta = s.theta + s.w*dt + 0.5f*u.y*dt*dt;
+    s.theta = s.theta + s.w*dt*UGV_W_SCALE + 0.5f*u.y*dt*dt;
 
     //v and w
     s.v = s.v + u.x*dt;

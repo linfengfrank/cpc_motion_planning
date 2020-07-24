@@ -78,6 +78,7 @@ protected:
   void cycle_process_based_on_status();
   bool is_stuck(const std::vector<UGV::UGVModel::State> &traj, const float &best_cost);
   bool is_stuck_instant(const std::vector<UGV::UGVModel::State> &traj, const float &best_cost);
+  bool is_stuck_instant_horizon(const std::vector<UGV::UGVModel::State> &traj, const float &best_cost);
   virtual void do_start() = 0;
   virtual void do_normal() = 0;
   virtual void do_stuck() = 0;
