@@ -26,7 +26,9 @@ enum STATUS {
   NORMAL,
   STUCK,
   EMERGENT,
-  BRAKING};
+  BRAKING,
+  POS_REACHED,
+  FULLY_REACHED};
 }
 
 class UGVLocalMotionPlanner
@@ -84,6 +86,8 @@ protected:
   virtual void do_stuck() = 0;
   virtual void do_emergent() = 0;
   virtual void do_braking() = 0;
+  virtual void do_pos_reached() = 0;
+  virtual void do_fully_reached() = 0;
 
 protected:
   ros::NodeHandle m_nh;

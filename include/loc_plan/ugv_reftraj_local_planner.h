@@ -18,6 +18,8 @@ protected:
   virtual void do_stuck();
   virtual void do_emergent();
   virtual void do_braking();
+  virtual void do_pos_reached();
+  virtual void do_fully_reached();
 
 private:
   void plan_call_back(const ros::TimerEvent&);

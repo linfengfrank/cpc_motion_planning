@@ -207,6 +207,16 @@ void UGVRefTrajMotionPlanner::do_braking()
             << ", collision: " << m_pso_planner->result.collision<<std::endl;
 }
 
+void UGVRefTrajMotionPlanner::do_pos_reached()
+{
+  cycle_init();
+}
+
+void UGVRefTrajMotionPlanner::do_fully_reached()
+{
+  cycle_init();
+}
+
 void UGVRefTrajMotionPlanner::cycle_init()
 {
   if (cycle_initialized)
@@ -399,3 +409,5 @@ float UGVRefTrajMotionPlanner::calculate_length(const float3 &seg_a, const float
   float3 seg_v=seg_b-seg_a;
   return sqrtf(dot(seg_v,seg_v));
 }
+
+

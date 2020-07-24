@@ -176,6 +176,16 @@ void UGVLocalMotionPlanner::cycle_process_based_on_status()
     do_braking();
     break;
   }
+  case UGV::POS_REACHED:
+  {
+    do_pos_reached();
+    break;
+  }
+  case UGV::FULLY_REACHED:
+  {
+    do_fully_reached();
+    break;
+  }
   }
 }
 

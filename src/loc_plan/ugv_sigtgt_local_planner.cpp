@@ -197,6 +197,16 @@ void UGVSigTgtMotionPlanner::do_braking()
             << ", collision: " << m_pso_planner->result.collision<<std::endl;
 }
 
+void UGVSigTgtMotionPlanner::do_pos_reached()
+{
+  cycle_init();
+}
+
+void UGVSigTgtMotionPlanner::do_fully_reached()
+{
+  cycle_init();
+}
+
 void UGVSigTgtMotionPlanner::cycle_init()
 {
   if (cycle_initialized)
