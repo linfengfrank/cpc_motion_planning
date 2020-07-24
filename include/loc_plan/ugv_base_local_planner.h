@@ -73,6 +73,38 @@ protected:
     traj = planner->generate_trajectory();
   }
 
+  void full_stop_trajectory(std::vector<UGV::UGVModel::State> &traj)
+  {
+    traj.clear();
+    float dt = PSO::PSO_CTRL_DT;;
+    for (float t=0.0f; t<PSO::PSO_TOTAL_T; t+=dt)
+    {
+      UGV::UGVModel::State s;
+      s.v = 0;
+      s.w = 0;
+      traj.push_back(s);
+    }
+  }
+
+  bool is_pos_reached(const UGV::UGVModel::State &s, const UGV::UGVModel::State &tgt_state)
+  {
+    float2 p_diff = s.p - tgt_state.p;
+    if (sqrtf(dot(p_diff,p_diff))<0.5)
+      return true;
+    else
+      return false;
+  }
+
+  bool is_heading_reached(const UGV::UGVModel::State &s, const UGV::UGVModel::State &tgt_state)
+  {
+    float yaw_diff = s.theta - tgt_state.theta;
+    yaw_diff = yaw_diff - floorf((yaw_diff + M_PI) / (2 * M_PI)) * 2 * M_PI;
+    if(fabsf(yaw_diff) < 0.2)
+      return true;
+    else
+      return false;
+  }
+
 #ifdef SHOW_PC
   void plot_trajectory(const std::vector<UGV::UGVModel::State> &traj);
 #endif

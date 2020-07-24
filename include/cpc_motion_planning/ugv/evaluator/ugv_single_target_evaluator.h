@@ -13,11 +13,16 @@ public:
   struct Target
   {
     UGVModel::State s;
+    int id;
+    Target():id(0)
+    {
+
+    }
   };
 
   SingleTargetEvaluator()
   {
-
+    m_pure_turning = false;
   }
 
   ~SingleTargetEvaluator()
@@ -73,10 +78,8 @@ public:
   float process_cost(const UGVModel::State &s, const EDTMap &map, const float &time, bool &collision) const
   {
     float cost = 0;
-    float2 dist_err = s.p - m_goal.s.p;
-    cost += 0.5f*sqrt(dist_err.x*dist_err.x + dist_err.y*dist_err.y) + 0.2f*sqrt(3.0f*s.v*s.v + s.w*s.w);
 
-
+    // Collision cost
     float rd = getMinDist(s,map);
     cost += exp(-9.5f*rd)*400;
 
@@ -88,12 +91,16 @@ public:
       collision = true;
     }
 
-    if (sqrt(dist_err.x*dist_err.x + dist_err.y*dist_err.y) > 0.3)
+    if(!m_pure_turning)
     {
-      cost += 0.5f*M_PI;
+      //Distance cost
+      float2 dist_err = s.p - m_goal.s.p;
+      cost += 0.5f*sqrt(dist_err.x*dist_err.x + dist_err.y*dist_err.y) + 0.2f*sqrt(3.0f*s.v*s.v + s.w*s.w);
     }
     else
     {
+      //Pure heading cost
+      cost += 5.0f*sqrt(s.v*s.v); // stay still during turning
       float yaw_diff = s.theta - m_goal.s.theta;
       yaw_diff = yaw_diff - floor((yaw_diff + M_PI) / (2 * M_PI)) * 2 * M_PI;
       cost += 0.5f*fabs(yaw_diff);
@@ -144,6 +151,7 @@ public:
   }
 
   Target m_goal;
+  bool m_pure_turning;
 };
 }
 

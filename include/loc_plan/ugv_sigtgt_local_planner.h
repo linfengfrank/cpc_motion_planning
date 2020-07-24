@@ -2,7 +2,7 @@
 #define UGV_MOTION_PLANNER_H
 #include <loc_plan/ugv_base_local_planner.h>
 
-#define SIMPLE_UGV UGV::UGVModel,UGV::UGVDPControl,UGV::SingleTargetEvaluator,UGV::UGVSwarm<2>
+#define SIMPLE_UGV UGV::UGVModel,UGV::UGVDPControl,UGV::SingleTargetEvaluator,UGV::UGVSwarm<3>
 class UGVSigTgtMotionPlanner : public UGVLocalMotionPlanner
 {
 public:
@@ -30,6 +30,7 @@ private:
   bool m_goal_received;
   PSO::Planner<SIMPLE_UGV> *m_pso_planner;
   UGV::SingleTargetEvaluator::Target m_goal;
+  UGV::SingleTargetEvaluator::Target m_stuck_goal;
   float m_ref_v, m_ref_w;
   cpc_motion_planning::ref_data m_ref_msg;
   int m_v_err_reset_ctt, m_w_err_reset_ctt;
