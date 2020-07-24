@@ -30,6 +30,13 @@ private:
   void linecirc_inter_dist(const float3 &seg_a, const float3 &seg_b, const float3 &circ_pos, float3 &closest, float &dist_v_len) const;
   float3 calculate_unit_vector(const float3 &seg_a, const float3 &seg_b);
   float calculate_length(const float3 &seg_a, const float3 &seg_b);
+  UGV::UGVModel::State float3_to_goal_state(const float3 &in)
+  {
+    UGV::UGVModel::State tmp_goal;
+    tmp_goal.p = make_float2(in.x,in.y);
+    tmp_goal.theta = in.z;
+    return tmp_goal;
+  }
 
 private:
   ros::Subscriber m_goal_sub;

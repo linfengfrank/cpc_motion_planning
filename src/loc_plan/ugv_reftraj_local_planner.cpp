@@ -138,7 +138,8 @@ void UGVRefTrajMotionPlanner::do_normal()
   }
   else
   {
-    if(is_stuck(m_traj,m_pso_planner->result.best_cost))
+    UGV::UGVModel::State tmp_goal = float3_to_goal_state(m_ref_traj.tarj[40]);
+    if(is_stuck(m_traj,tmp_goal))
     {
       m_status = UGV::STUCK;
     }
@@ -166,7 +167,8 @@ void UGVRefTrajMotionPlanner::do_stuck()
 
   std::vector<UGV::UGVModel::State> tmp_traj;
   calculate_trajectory<REF_UGV>(m_pso_planner, tmp_traj);
-  if(!is_stuck_instant_horizon(tmp_traj,m_pso_planner->result.best_cost))
+  UGV::UGVModel::State tmp_goal = float3_to_goal_state(m_ref_traj.tarj[40]);
+  if(!is_stuck_instant_horizon(tmp_traj,tmp_goal))
   {
     m_status = UGV::NORMAL;
     m_traj = tmp_traj;

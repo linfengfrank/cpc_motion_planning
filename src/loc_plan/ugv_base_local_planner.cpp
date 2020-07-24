@@ -189,10 +189,10 @@ void UGVLocalMotionPlanner::cycle_process_based_on_status()
   }
 }
 
-bool UGVLocalMotionPlanner::is_stuck(const std::vector<UGV::UGVModel::State> &traj, const float &best_cost)
+bool UGVLocalMotionPlanner::is_stuck(const std::vector<UGV::UGVModel::State> &traj, const UGV::UGVModel::State &tgt_state)
 {
   // update stuck probability
-  if (is_stuck_instant(traj,best_cost))
+  if (is_stuck_instant(traj,tgt_state))
       m_stuck_pbty +=0.15f;
   else
       m_stuck_pbty *=0.8f;
@@ -208,7 +208,7 @@ bool UGVLocalMotionPlanner::is_stuck(const std::vector<UGV::UGVModel::State> &tr
   }
 }
 
-bool UGVLocalMotionPlanner::is_stuck_instant(const std::vector<UGV::UGVModel::State> &traj, const float &best_cost)
+bool UGVLocalMotionPlanner::is_stuck_instant(const std::vector<UGV::UGVModel::State> &traj, const UGV::UGVModel::State &tgt_state)
 {
   if (m_status <= UGV::START)
       return false;
@@ -218,8 +218,7 @@ bool UGVLocalMotionPlanner::is_stuck_instant(const std::vector<UGV::UGVModel::St
   bool no_moving_intention = false;
 
   // check is it far from target
-  // TODO: make a better checking condition
-  if (best_cost > 10)
+  if (!is_pos_reached(traj[0],tgt_state))
       far_from_tgt = true;
 
   // check whether the vehicle is about to move
@@ -249,7 +248,7 @@ bool UGVLocalMotionPlanner::is_stuck_instant(const std::vector<UGV::UGVModel::St
   return far_from_tgt && no_turning && no_moving_intention;
 }
 
-bool UGVLocalMotionPlanner::is_stuck_instant_horizon(const std::vector<UGV::UGVModel::State> &traj, const float &best_cost)
+bool UGVLocalMotionPlanner::is_stuck_instant_horizon(const std::vector<UGV::UGVModel::State> &traj, const UGV::UGVModel::State &tgt_state)
 {
   if (m_status <= UGV::START)
       return false;
@@ -258,8 +257,7 @@ bool UGVLocalMotionPlanner::is_stuck_instant_horizon(const std::vector<UGV::UGVM
   bool no_moving_intention = false;
 
   // check is it far from target
-  // TODO: make a better checking condition
-  if (best_cost > 10)
+  if (!is_pos_reached(traj[0],tgt_state))
       far_from_tgt = true;
 
   // check whether the vehicle is about to move

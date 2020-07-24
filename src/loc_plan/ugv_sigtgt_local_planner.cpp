@@ -133,7 +133,7 @@ void UGVSigTgtMotionPlanner::do_normal()
   else
   {
     //Goto: Stuck
-    if(is_stuck(m_traj,m_pso_planner->result.best_cost))
+    if(is_stuck(m_traj,m_goal.s))
     {
       m_status = UGV::STUCK;
 
@@ -173,7 +173,7 @@ void UGVSigTgtMotionPlanner::do_stuck()
   m_pso_planner->m_eva.m_pure_turning = false;
   m_pso_planner->m_eva.setTarget(m_goal);
   calculate_trajectory<SIMPLE_UGV>(m_pso_planner, tmp_traj);
-  if(!is_stuck_instant_horizon(tmp_traj,m_pso_planner->result.best_cost))
+  if(!is_stuck_instant_horizon(tmp_traj,m_goal.s))
   {
     m_status = UGV::NORMAL;
     m_traj = tmp_traj;
