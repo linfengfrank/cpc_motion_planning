@@ -89,7 +89,7 @@ protected:
   bool is_pos_reached(const UGV::UGVModel::State &s, const UGV::UGVModel::State &tgt_state)
   {
     float2 p_diff = s.p - tgt_state.p;
-    if (sqrtf(dot(p_diff,p_diff))<0.5)
+    if (sqrtf(dot(p_diff,p_diff))<0.5f && fabsf(s.v) < 0.2f)
       return true;
     else
       return false;
@@ -99,7 +99,7 @@ protected:
   {
     float yaw_diff = s.theta - tgt_state.theta;
     yaw_diff = yaw_diff - floorf((yaw_diff + M_PI) / (2 * M_PI)) * 2 * M_PI;
-    if(fabsf(yaw_diff) < 0.2)
+    if(fabsf(yaw_diff) < 0.2f && fabsf(s.w)<0.2f)
       return true;
     else
       return false;
