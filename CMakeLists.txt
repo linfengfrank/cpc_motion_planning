@@ -193,6 +193,20 @@ target_link_libraries(ref_traj_node
     ${CUDA_cublas_LIBRARY}
     ${CUDA_LIBRARIES}
     ${catkin_LIBRARIES})
+
+cuda_add_executable(nf1_mid_planning_node
+    src/mid_plan/grid_graph.cpp
+    src/mid_plan/dijkstra.cpp
+    src/mid_plan/a_star.cpp
+    src/mid_plan/nf1_mid_planner_node.cpp)
+
+target_link_libraries(nf1_mid_planning_node
+    ${CUDA_curand_LIBRARY}
+    ${CUDA_cublas_LIBRARY}
+    ${CUDA_LIBRARIES}
+    ${catkin_LIBRARIES})
+
+
 ## Rename C++ executable without prefix
 ## The above recommended prefix causes long target names, the following renames the
 ## target back to the shorter version for ease of user use
@@ -204,6 +218,7 @@ target_link_libraries(ref_traj_node
 add_dependencies(${PROJECT_NAME}_node ${${PROJECT_NAME}_EXPORTED_TARGETS} ${catkin_EXPORTED_TARGETS})
 add_dependencies(corridor_node ${${PROJECT_NAME}_EXPORTED_TARGETS} ${catkin_EXPORTED_TARGETS})
 add_dependencies(ref_traj_node ${${PROJECT_NAME}_EXPORTED_TARGETS} ${catkin_EXPORTED_TARGETS})
+add_dependencies(nf1_mid_planning_node ${${PROJECT_NAME}_EXPORTED_TARGETS} ${catkin_EXPORTED_TARGETS})
 ## Specify libraries to link a library or executable target against
 # target_link_libraries(${PROJECT_NAME}_node
 #   ${catkin_LIBRARIES}
