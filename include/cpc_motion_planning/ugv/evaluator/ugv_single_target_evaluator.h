@@ -4,6 +4,7 @@
 #include <cpc_motion_planning/ugv/model/ugv_model.h>
 #include <cpc_motion_planning/dynamic_programming.cuh>
 #include <cuda_geometry/cuda_edtmap.cuh>
+#include <cuda_geometry/cuda_nf1map.cuh>
 namespace UGV
 {
 class SingleTargetEvaluator
@@ -23,6 +24,7 @@ public:
   SingleTargetEvaluator()
   {
     m_pure_turning = false;
+    m_nf1_received = false;
   }
 
   ~SingleTargetEvaluator()
@@ -81,7 +83,7 @@ public:
 
     // Collision cost
     float rd = getMinDist(s,map);
-    cost += exp(-9.5f*rd)*400;
+    cost += expf(-(9.0f-time)*rd)*400;
 
     if (rd < 0.31)
       cost += 100;
@@ -94,16 +96,26 @@ public:
     if(!m_pure_turning)
     {
       //Distance cost
-      float2 dist_err = s.p - m_goal.s.p;
-      cost += 0.5f*sqrt(dist_err.x*dist_err.x + dist_err.y*dist_err.y) + 0.2f*sqrt(3.0f*s.v*s.v + s.w*s.w);
+      if (!m_nf1_received)
+      {
+        float2 dist_err = s.p - m_goal.s.p;
+        cost += 0.5f*sqrtf(dist_err.x*dist_err.x + dist_err.y*dist_err.y) + 0.2f*sqrtf(3.0f*s.v*s.v + s.w*s.w);
+      }
+      else
+      {
+        CUDA_GEO::coord c = m_nf1_map.pos2coord(make_float3(s.p.x,s.p.y,0));
+#ifdef  __CUDA_ARCH__
+        cost += 0.5f*m_nf1_map.nf1_const_at(c.x,c.y,0);
+#endif
+      }
     }
     else
     {
       //Pure heading cost
-      cost += 5.0f*sqrt(s.v*s.v); // stay still during turning
+      cost += 5.0f*sqrtf(s.v*s.v); // stay still during turning
       float yaw_diff = s.theta - m_goal.s.theta;
-      yaw_diff = yaw_diff - floor((yaw_diff + M_PI) / (2 * M_PI)) * 2 * M_PI;
-      cost += 0.5f*fabs(yaw_diff);
+      yaw_diff = yaw_diff - floorf((yaw_diff + M_PI) / (2 * M_PI)) * 2 * M_PI;
+      cost += 0.5f*fabsf(yaw_diff);
     }
 
     return  cost;
@@ -152,6 +164,8 @@ public:
 
   Target m_goal;
   bool m_pure_turning;
+  NF1Map m_nf1_map;
+  bool m_nf1_received;
 };
 }
 

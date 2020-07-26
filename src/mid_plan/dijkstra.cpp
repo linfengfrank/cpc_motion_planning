@@ -156,9 +156,14 @@ void Dijkstra::bfs2D(CUDA_GEO::coord glb_tgt)
           p->inClosed = true;
           p->g = 1*getGridStep() + m->g;
           if (!occupied)
+          {
             _Q.push(p);
+          }
           else
-            _OQ.push(p);
+          {
+            p->h = 0; // Here h is the distance to obstacle boundary
+            _OQ.insert(p,p->h);
+          }
         }
       }
     }
@@ -167,8 +172,7 @@ void Dijkstra::bfs2D(CUDA_GEO::coord glb_tgt)
   //---------------------
   while (_OQ.size()>0)
   {
-    m=_OQ.front();
-    _OQ.pop();
+    m=_OQ.pop();
     m->inClosed = true;
     mc = m->c;
 
@@ -187,9 +191,14 @@ void Dijkstra::bfs2D(CUDA_GEO::coord glb_tgt)
 
         if (p && !p->inClosed)
         {
-          p->inClosed = true;
-          p->g = 1*getGridStep() + m->g;
-          _OQ.push(p);
+          float d_dir = sqrtf(static_cast<float>(ix*ix+iy*iy));
+          float new_h = d_dir*getGridStep() + m->h;
+          if (p->h > new_h)
+          {
+            p->h = new_h; // Here h is the distance to obstacle boundary
+            p->g = d_dir*getGridStep() + m->g;
+            _OQ.insert(p,p->h);
+          }
         }
       }
     }

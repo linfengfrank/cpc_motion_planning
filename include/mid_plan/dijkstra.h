@@ -13,7 +13,7 @@ public:
   void dijkstra3D(CUDA_GEO::coord glb_tgt);
 private:
   std::queue<nodeInfo*> _Q;
-  std::queue<nodeInfo*> _OQ;
+  SortedSet<nodeInfo*> _OQ;
 };
 
 #endif // DIJKSTRA_H

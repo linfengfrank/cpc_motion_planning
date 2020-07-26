@@ -10,16 +10,17 @@ template <typename T> int sgn(T val)
 UGVSigTgtMotionPlanner::UGVSigTgtMotionPlanner():
   m_goal_received(false),
   cycle_initialized(false),
-  m_braking_start_cycle(0)
+  m_braking_start_cycle(0),
+  m_nf1_map(nullptr)
 {
   m_goal_sub = m_nh.subscribe("/move_base_simple/goal",1,&UGVSigTgtMotionPlanner::goal_call_back, this);
-
+  m_nf1_sub = m_nh.subscribe("/mid_layer/goal",1,&UGVSigTgtMotionPlanner::nf1_call_back, this);
 
   m_ref_pub = m_nh.advertise<cpc_motion_planning::ref_data>("ref_traj",1);
 
   m_planning_timer = m_nh.createTimer(ros::Duration(PSO::PSO_REPLAN_DT), &UGVSigTgtMotionPlanner::plan_call_back, this);
 
-  m_pso_planner = new PSO::Planner<SIMPLE_UGV>(120,60,1);
+  m_pso_planner = new PSO::Planner<SIMPLE_UGV>(120,40,1);
   m_pso_planner->initialize();
 
 
@@ -42,6 +43,26 @@ UGVSigTgtMotionPlanner::~UGVSigTgtMotionPlanner()
 
   m_pso_planner->release();
   delete m_pso_planner;
+}
+
+void UGVSigTgtMotionPlanner::nf1_call_back(const cpc_aux_mapping::grid_map::ConstPtr &msg)
+{
+  m_goal_received = true;
+  if (m_nf1_map == nullptr)
+  {
+    CUDA_GEO::pos origin(msg->x_origin,msg->y_origin,msg->z_origin);
+    int3 m_nf1_map_size = make_int3(msg->x_size,msg->y_size,msg->z_size);
+    m_nf1_map = new NF1Map(origin,msg->width,m_nf1_map_size);
+    m_nf1_map->setup_device();
+  }
+  else
+  {
+    m_nf1_map->m_origin = CUDA_GEO::pos(msg->x_origin,msg->y_origin,msg->z_origin);
+    m_nf1_map->m_grid_step = msg->width;
+  }
+  CUDA_MEMCPY_H2D(m_nf1_map->m_nf1_map,msg->payload8.data(),static_cast<size_t>(m_nf1_map->m_byte_size));
+  m_pso_planner->m_eva.m_nf1_map = *m_nf1_map;
+  m_pso_planner->m_eva.m_nf1_received = true;
 }
 
 void UGVSigTgtMotionPlanner::plan_call_back(const ros::TimerEvent&)

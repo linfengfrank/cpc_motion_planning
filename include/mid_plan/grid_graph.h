@@ -30,7 +30,7 @@ class GridGraph : public MapBase
 public:
   GridGraph(int maxX, int maxY, int maxZ);
   float obsCostAt(CUDA_GEO::coord s, float default_value, bool &occupied,
-                  const CUDA_GEO::coord *crd_shift = nullptr, SeenDist *last_val_map = nullptr, float obstacle_dist = 1.0) const;
+                  const CUDA_GEO::coord *crd_shift = nullptr, SeenDist *last_val_map = nullptr, float obstacle_dist = 0.81f) const;
   bool isSeen(const CUDA_GEO::coord & s, const bool default_value) const;
 
   nodeInfo* getIdMapPtr() {return _id_map;}
