@@ -121,7 +121,10 @@ visit_free(int3 cur_buf,
 //    if(local_map.level(nbr_buf.x,nbr_buf.y,nbr_buf.z)==BLACK) // visited
 //      continue;
 
-
+//    // from obs to free, no bfs
+//    if(local_map.checkOccupancy(nbr_buf.x,nbr_buf.y,nbr_buf.z)==false&&
+//       local_map.checkOccupancy(cur_buf.x,cur_buf.y,cur_buf.z)==true)
+//      continue;
     // update nbr cost
     float cost =cur_cost+gridstep ;
     float origin_cost = fatomicMin(&local_map.cost(nbr_buf.x,nbr_buf.y,nbr_buf.z),cost);
@@ -175,6 +178,7 @@ visit_free(int3 cur_buf,
       // only bfs obs
       if(local_map.checkOccupancy(nbr_buf.x,nbr_buf.y,nbr_buf.z)==false)
         continue;
+
 
       // set obs flag to default
 //      local_map.set_obs(nbr_buf,false);
