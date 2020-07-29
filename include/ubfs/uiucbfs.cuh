@@ -121,10 +121,7 @@ visit_free(int3 cur_buf,
 //    if(local_map.level(nbr_buf.x,nbr_buf.y,nbr_buf.z)==BLACK) // visited
 //      continue;
 
-//    // from obs to free, no bfs
-//    if(local_map.checkOccupancy(nbr_buf.x,nbr_buf.y,nbr_buf.z)==false&&
-//       local_map.checkOccupancy(cur_buf.x,cur_buf.y,cur_buf.z)==true)
-//      continue;
+
     // update nbr cost
     float cost =cur_cost+gridstep ;
     float origin_cost = fatomicMin(&local_map.cost(nbr_buf.x,nbr_buf.y,nbr_buf.z),cost);
@@ -134,16 +131,21 @@ visit_free(int3 cur_buf,
     {
       int old_color = atomicExch(&local_map.level(nbr_buf.x,nbr_buf.y,nbr_buf.z),gray_shade);
       if(old_color != gray_shade) {   // free, not in this level
-        if(local_map.checkOccupancy(nbr_buf.x,nbr_buf.y,nbr_buf.z)==true)
-        {
-          //      local_map.isObs(nbr_buf.x,nbr_buf.y,nbr_buf.z) =true;
-          local_map.set_obs(nbr_buf,true);
-        }
-        else
-        {
-          //push to the queue
-          local_q.append(index, overflow, nbr_buf);  // push id to queue[index]
-        }
+//        if(local_map.checkOccupancy(nbr_buf.x,nbr_buf.y,nbr_buf.z)==true)
+//        {
+//          //      local_map.isObs(nbr_buf.x,nbr_buf.y,nbr_buf.z) =true;
+//          local_map.set_obs(nbr_buf,true);
+//        }
+//        else
+//        {
+//          //push to the queue
+//          local_q.append(index, overflow, nbr_buf);  // push id to queue[index]
+//        }
+        //    // from obs to free, no bfs
+            if(local_map.checkOccupancy(nbr_buf.x,nbr_buf.y,nbr_buf.z)==false&&
+               local_map.checkOccupancy(cur_buf.x,cur_buf.y,cur_buf.z)==true)
+              continue;
+            local_q.append(index, overflow, nbr_buf);  // push id to queue[index]
         }
       }
 
