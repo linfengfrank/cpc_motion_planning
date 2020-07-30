@@ -20,7 +20,7 @@ UGVRefTrajMotionPlanner::UGVRefTrajMotionPlanner():
 
   m_planning_timer = m_nh.createTimer(ros::Duration(PSO::PSO_REPLAN_DT), &UGVRefTrajMotionPlanner::plan_call_back, this);
 
-  m_pso_planner = new PSO::Planner<REF_UGV>(100,20,2);
+  m_pso_planner = new PSO::Planner<REF_UGV>(100,30,2);
   m_pso_planner->initialize();
 
 
@@ -93,27 +93,6 @@ void UGVRefTrajMotionPlanner::plan_call_back(const ros::TimerEvent&)
 void UGVRefTrajMotionPlanner::goal_call_back(const geometry_msgs::PoseStamped::ConstPtr &msg)
 {
   m_goal_received = true;
-//  float3 goal;
-//  goal.x = msg->pose.position.x;
-//  goal.y = msg->pose.position.y;
-
-//  double phi,theta,psi;
-
-//  tf::Quaternion q( msg->pose.orientation.x,
-//                    msg->pose.orientation.y,
-//                    msg->pose.orientation.z,
-//                    msg->pose.orientation.w);
-//  tf::Matrix3x3 m(q);
-//  m.getRPY(phi, theta, psi);
-
-
-//  goal.z = psi;
-//  for (int i=0; i<41; i++)
-//  {
-//    m_ref_traj.tarj[i]=goal;
-//  }
-//  m_pso_planner->m_eva.setRef(m_ref_traj);
-
   load_ref_lines();
 }
 //---
@@ -138,11 +117,11 @@ void UGVRefTrajMotionPlanner::do_normal()
   }
   else
   {
-    UGV::UGVModel::State tmp_goal = float3_to_goal_state(m_ref_traj.tarj[40]);
-    if(is_stuck(m_traj,tmp_goal))
-    {
-      m_status = UGV::STUCK;
-    }
+//    UGV::UGVModel::State tmp_goal = float3_to_goal_state(m_ref_traj.tarj[40]);
+//    if(is_stuck(m_traj,tmp_goal))
+//    {
+//      m_status = UGV::STUCK;
+//    }
   }
   auto end = std::chrono::steady_clock::now();
   std::cout << "local planner (NORMAL): "
@@ -272,7 +251,7 @@ void UGVRefTrajMotionPlanner::cycle_init()
     s.w = m_ref_w;
   }
 
-  calculate_ref_traj(s.p);
+  calculate_ref_traj(make_float3(s.p.x,s.p.y,s.theta));
   m_pso_planner->m_model.set_ini_state(s);
   m_traj = m_pso_planner->generate_trajectory();
 }
@@ -282,18 +261,76 @@ void UGVRefTrajMotionPlanner::load_ref_lines()
   std::ifstream corridor_file;
   corridor_file.open("/home/sp/nndp/Learning_part/tripple_integrator/pso/in.txt");
   float data[6];
+  std::vector<float2> wps;
 
   std::cout<<"Read in data"<<std::endl;
   while(1)
   {
     if (corridor_file>>data[0]>>data[1]>>data[2]>>data[3]>>data[4]>>data[5])
     {
-      m_wps.push_back(make_float3(data[0],data[1],0));
+      wps.push_back(make_float2(data[0],data[1]));
       std::cout<<data[0]<<" "<<data[1]<<" "<<data[2]<<" "<<data[3]<<" "<<data[4]<<" "<<data[5]<<std::endl;
     }
     else
     {
       break;
+    }
+  }
+
+  std::vector<float3> tmp_wps;
+  //Assign the heading
+  for (size_t i = 0; i < wps.size(); i++)
+  {
+    if (i == 0)
+    {
+      float theta = atan2f(wps[i+1].y-wps[i].y, wps[i+1].x-wps[i].x);
+      tmp_wps.push_back(make_float3(wps[i].x,wps[i].y,theta));
+    }
+    else if (i == wps.size()-1)
+    {
+      float theta = atan2f(wps[i].y-wps[i-1].y, wps[i].x-wps[i-1].x);
+      theta = un_in_pi(theta,tmp_wps.back().z);
+      tmp_wps.push_back(make_float3(wps[i].x,wps[i].y,theta));
+    }
+    else
+    {
+      float theta = atan2f(wps[i].y-wps[i-1].y, wps[i].x-wps[i-1].x);
+      theta = un_in_pi(theta,tmp_wps.back().z);
+      tmp_wps.push_back(make_float3(wps[i].x,wps[i].y,theta));
+
+      theta = atan2f(wps[i+1].y-wps[i].y, wps[i+1].x-wps[i].x);
+      theta = un_in_pi(theta,tmp_wps.back().z);
+      tmp_wps.push_back(make_float3(wps[i].x,wps[i].y,theta));
+    }
+  }
+
+  //Dense sample bewteen the waypoints
+  m_path.clear();
+  for (size_t i = 0; i < tmp_wps.size()-1; i++)
+  {
+    std::vector<float3> tmp_pol = interpol(tmp_wps[i],tmp_wps[i+1]);
+    for (float3 pol : tmp_pol)
+    {
+      m_path.push_back(pol);
+    }
+  }
+
+  //Parameterization against the length
+  m_path_len.clear();
+  for (size_t i = 0; i < m_path.size(); i++)
+  {
+    if (i == 0)
+    {
+      m_path_len.push_back(make_float3(0,0,0));
+    }
+    else
+    {
+      float3 delta = m_path[i]-m_path[i-1];
+      float dist_xy = sqrtf(delta.x*delta.x + delta.y*delta.y);
+      float dist_theta = fabsf(delta.z);
+      float dist = sqrtf(dot(delta,delta));
+      float3 pre_len = m_path_len.back();
+      m_path_len.push_back(make_float3(pre_len.x+dist_xy, pre_len.y+dist_theta, pre_len.z+dist));
     }
   }
 
@@ -309,73 +346,77 @@ void UGVRefTrajMotionPlanner::load_ref_lines()
   line_strip.color.g = 1.0;
   line_strip.color.a = 1.0;
 
-  for (float3 p : m_wps)
+  for (float2 p: wps)
   {
     geometry_msgs::Point pnt;
     pnt.x = p.x;
     pnt.y = p.y;
-    pnt.z = p.z;
+    pnt.z = 0;
     line_strip.points.push_back(pnt);
   }
   m_vis_pub.publish(line_strip);
 
 }
 
-void UGVRefTrajMotionPlanner::calculate_ref_traj(float2 v_p)
+void UGVRefTrajMotionPlanner::calculate_ref_traj(float3 c)
 {
+  //c=[x y theta]
   //Find nearest point
   float min_len = 1e6;
-  int min_idx = 0;
-  float3 pnt;
+  size_t min_idx = 0;
+  float3 delta;
   float len;
   float3 nearest_pnt;
-  for (int i=0;i<m_wps.size()-1;i++)
+  for (size_t i=0;i<m_path.size();i++)
   {
-    linecirc_inter_dist(m_wps[i],m_wps[i+1],make_float3(v_p.x,v_p.y,0),pnt,len);
+    delta = m_path[i]-c;
+    delta.z = in_pi(delta.z)*0.2f;
+    len = sqrtf(dot(delta,delta));
     if (len < min_len)
     {
       min_len = len;
       min_idx = i;
-      nearest_pnt = pnt;
+      nearest_pnt = m_path[i];
     }
   }
 
-  float3 unv;
-  float3 ref_pnt = nearest_pnt;
-  int line_id = min_idx;
-  unv = calculate_unit_vector(m_wps[line_id],m_wps[line_id+1]);
-  float remaining_len = calculate_length(ref_pnt,m_wps[line_id+1]);
-  float theta = atan2f(unv.y,unv.x);
+  //Make local ref
+  size_t fin = min_idx;
+  for (size_t i=min_idx; i<m_path.size(); i++)
+  {
+    float3 delta_len = m_path_len[i] - m_path_len[min_idx];
+//    float3 delta_c = m_path[i] - m_path[min_idx];
+//    delta_c.z = in_pi(delta_c.z);
+ //   std::cout<<delta_len.x<<std::endl;
 
+    if (delta_len.x < 5 && delta_len.y < 2.0)//
+      fin = i;
+    else
+      break;
+  }
+
+  //Interplocation
+  std::vector<float> x,y,tht;
+  std::vector<float> tmp_s;
+  for (size_t i=min_idx; i<= fin; i++)
+  {
+    x.push_back(m_path[i].x);
+    y.push_back(m_path[i].y);
+    tht.push_back(m_path[i].z);
+    tmp_s.push_back(m_path_len[i].z);
+//    std::cout<<":"<<x.back()<<" "<<y.back()<<" "<<tht.back()<<" "<<tmp_s.back()<<std::endl;
+  }
+
+  std::vector<float> si = interpol(tmp_s.front(),tmp_s.back(),41);
+
+  std::vector<float> xi = interp1(tmp_s,x,si);
+  std::vector<float> yi = interp1(tmp_s,y,si);
+  std::vector<float> thti = interp1(tmp_s,tht,si);
+  std::cout<<min_idx<<" "<<fin<<std::endl;
+//  std::cout<<si.size()<<" "<<xi.size()<<" "<<yi.size()<<" "<<thti.size()<<std::endl;
   for (int i=0; i<41; i++)
   {
-    m_ref_traj.tarj[i]=make_float3(ref_pnt.x,ref_pnt.y,theta);
-
-    //Calculate the next ref point
-    float vel = 0.1f;
-    if (calculate_length(ref_pnt,m_wps[line_id+1]) < 1 || calculate_length(ref_pnt,m_wps[line_id]) <2)
-      vel = 0.05f;
-    remaining_len -= vel;
-    if (remaining_len <0)
-    {
-      if (line_id+1 < m_wps.size()-1)
-      {
-        float len = vel - calculate_length(ref_pnt,m_wps[line_id+1]);
-        line_id++;
-        unv = calculate_unit_vector(m_wps[line_id],m_wps[line_id+1]);
-        theta = atan2f(unv.y,unv.x);
-        ref_pnt = m_wps[line_id] + len*unv;
-        remaining_len = calculate_length(ref_pnt,m_wps[line_id+1]);
-      }
-      else
-      {
-        ref_pnt = m_wps[line_id+1];
-      }
-    }
-    else
-    {
-      ref_pnt = unv*vel + ref_pnt;
-    }
+    m_ref_traj.tarj[i]=make_float3(xi[i],yi[i],thti[i]);
   }
 
   m_pso_planner->m_eva.setRef(m_ref_traj);
