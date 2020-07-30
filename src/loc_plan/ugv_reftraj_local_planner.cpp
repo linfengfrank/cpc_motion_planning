@@ -308,7 +308,12 @@ void UGVRefTrajMotionPlanner::load_ref_lines()
   m_path.clear();
   for (size_t i = 0; i < tmp_wps.size()-1; i++)
   {
-    std::vector<float3> tmp_pol = interpol(tmp_wps[i],tmp_wps[i+1]);
+
+    float tht_err = fabsf(tmp_wps[i+1].z - tmp_wps[i].z);
+    tht_err = min(tht_err,M_PI*0.5);
+    float vd = 1.5f - 1.0f*(tht_err)/(M_PI*0.5);
+
+    std::vector<float3> tmp_pol = interpol(tmp_wps[i],tmp_wps[i+1],vd);
     for (float3 pol : tmp_pol)
     {
       m_path.push_back(pol);
@@ -380,45 +385,34 @@ void UGVRefTrajMotionPlanner::calculate_ref_traj(float3 c)
     }
   }
 
-  //Make local ref
-  size_t fin = min_idx;
-  for (size_t i=min_idx; i<m_path.size(); i++)
+  size_t fix_idx = 0;
+  bool fixed = false;
+  for (size_t i=0; i<41; i++)
   {
-    float3 delta_len = m_path_len[i] - m_path_len[min_idx];
-//    float3 delta_c = m_path[i] - m_path[min_idx];
-//    delta_c.z = in_pi(delta_c.z);
- //   std::cout<<delta_len.x<<std::endl;
+    size_t idx;
+    if(!fixed)
+    {
+      idx = min_idx + i;
+      if (idx > m_path.size()-1)
+        idx = m_path.size()-1;
 
-    if (delta_len.x < 5 && delta_len.y < 2.0)//
-      fin = i;
+      delta = m_path[idx]-c;
+      delta.z = in_pi(delta.z);
+      len = sqrtf(dot(delta,delta));
+
+      if (len > 4.5)
+      {
+        fix_idx = idx;
+        fixed = true;
+      }
+    }
     else
-      break;
+    {
+      idx = fix_idx;
+    }
+
+    m_ref_traj.tarj[i]=m_path[idx];
   }
-
-  //Interplocation
-  std::vector<float> x,y,tht;
-  std::vector<float> tmp_s;
-  for (size_t i=min_idx; i<= fin; i++)
-  {
-    x.push_back(m_path[i].x);
-    y.push_back(m_path[i].y);
-    tht.push_back(m_path[i].z);
-    tmp_s.push_back(m_path_len[i].z);
-//    std::cout<<":"<<x.back()<<" "<<y.back()<<" "<<tht.back()<<" "<<tmp_s.back()<<std::endl;
-  }
-
-  std::vector<float> si = interpol(tmp_s.front(),tmp_s.back(),41);
-
-  std::vector<float> xi = interp1(tmp_s,x,si);
-  std::vector<float> yi = interp1(tmp_s,y,si);
-  std::vector<float> thti = interp1(tmp_s,tht,si);
-  std::cout<<min_idx<<" "<<fin<<std::endl;
-//  std::cout<<si.size()<<" "<<xi.size()<<" "<<yi.size()<<" "<<thti.size()<<std::endl;
-  for (int i=0; i<41; i++)
-  {
-    m_ref_traj.tarj[i]=make_float3(xi[i],yi[i],thti[i]);
-  }
-
   m_pso_planner->m_eva.setRef(m_ref_traj);
 }
 
