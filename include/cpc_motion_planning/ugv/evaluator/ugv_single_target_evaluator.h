@@ -99,13 +99,13 @@ public:
       if (!m_nf1_received)
       {
         float2 dist_err = s.p - m_goal.s.p;
-        cost += 0.5f*sqrtf(dist_err.x*dist_err.x + dist_err.y*dist_err.y) + 0.2f*sqrtf(3.0f*s.v*s.v + s.w*s.w);
+        cost += 0.5f*sqrtf(dist_err.x*dist_err.x + dist_err.y*dist_err.y) + 0.2f*sqrtf(2.0f*s.v*s.v + 1.4*s.w*s.w);
       }
       else
       {
         CUDA_GEO::coord c = m_nf1_map.pos2coord(make_float3(s.p.x,s.p.y,0));
 #ifdef  __CUDA_ARCH__
-        cost += 0.5f*m_nf1_map.nf1_const_at(c.x,c.y,0);
+        cost += 0.5f*m_nf1_map.nf1_const_at(c.x,c.y,c.z) + 0.2f*sqrtf(2.0f*s.v*s.v + 1.4*s.w*s.w);;
 #endif
       }
     }
