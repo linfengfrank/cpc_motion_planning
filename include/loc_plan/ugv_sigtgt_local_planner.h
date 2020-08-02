@@ -29,6 +29,7 @@ private:
   ros::Subscriber m_nf1_sub;
   ros::Timer m_planning_timer;
   ros::Publisher m_ref_pub;
+  ros::Publisher m_status_pub;
   bool m_goal_received;
   PSO::Planner<SIMPLE_UGV> *m_pso_planner;
   UGV::SingleTargetEvaluator::Target m_goal;

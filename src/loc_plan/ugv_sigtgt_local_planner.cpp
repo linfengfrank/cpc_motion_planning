@@ -1,6 +1,7 @@
 #include "loc_plan/ugv_sigtgt_local_planner.h"
 #include "tf/tf.h"
 #include <chrono>
+#include <std_msgs/String.h>
 
 template <typename T> int sgn(T val)
 {
@@ -17,6 +18,7 @@ UGVSigTgtMotionPlanner::UGVSigTgtMotionPlanner():
   m_nf1_sub = m_nh.subscribe("/mid_layer/goal",1,&UGVSigTgtMotionPlanner::nf1_call_back, this);
 
   m_ref_pub = m_nh.advertise<cpc_motion_planning::ref_data>("ref_traj",1);
+  m_status_pub = m_nh.advertise<std_msgs::String>("ref_status_string",1);
 
   m_planning_timer = m_nh.createTimer(ros::Duration(PSO::PSO_REPLAN_DT), &UGVSigTgtMotionPlanner::plan_call_back, this);
 
@@ -318,4 +320,11 @@ void UGVSigTgtMotionPlanner::cycle_init()
 
   m_pso_planner->m_model.set_ini_state(s);
   m_traj = m_pso_planner->generate_trajectory();
+
+  //Publish the ref status string for loging
+  std_msgs::String msg;
+  std::stringstream ss;
+  ss << "STT: " << m_status<<", CST:"<< m_pso_planner->result.best_cost<<", COL:"<<m_pso_planner->result.collision<<std::endl;
+  msg.data = ss.str();
+  m_status_pub.publish(msg);
 }

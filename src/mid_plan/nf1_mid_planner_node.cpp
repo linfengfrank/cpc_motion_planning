@@ -186,6 +186,15 @@ void glb_plan(const ros::TimerEvent&)
   setup_map_msg(nf1_map_msg,mid_map,false);
   copy_map_to_msg(nf1_map_msg,mid_map,tgt_height_coord);
   nf1_pub->publish(nf1_map_msg);
+
+  geometry_msgs::PoseStamped mid_goal_pose;
+  CUDA_GEO::pos mid_goal_pos = mid_map->coord2pos(path[0]);
+  mid_goal_pose.header.frame_id="world";
+  mid_goal_pose.pose.position.x = mid_goal_pos.x;
+  mid_goal_pose.pose.position.y = mid_goal_pos.y;
+  mid_goal_pose.pose.position.z = mid_goal_pos.z;
+  mid_goal_pub->publish(mid_goal_pose);
+
 #ifdef SHOWPC
   publishMap(tgt_height_coord);
 #endif
@@ -210,7 +219,7 @@ int main(int argc, char **argv)
   ros::Subscriber glb_tgt_sub = nh.subscribe("/move_base_simple/goal", 1, &goalCallback);
 
   *pc_pub = nh.advertise<PointCloud> ("/nf1", 1);
-  *mid_goal_pub = nh.advertise<PointCloud> ("/mid_goal", 1);
+  *mid_goal_pub = nh.advertise<geometry_msgs::PoseStamped> ("/mid_goal", 1);
   *nf1_pub = nh.advertise<cpc_aux_mapping::grid_map>("/mid_layer/goal",1);
 
   pclOut->header.frame_id = "/world";
@@ -228,6 +237,7 @@ int main(int argc, char **argv)
   {
     delete mid_map;
     delete a_map;
+    delete mid_goal_pub;
   }
   return 0;
 }
