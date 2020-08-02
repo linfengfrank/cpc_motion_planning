@@ -83,7 +83,7 @@ public:
 
     // Collision cost
     float rd = getMinDist(s,map);
-    cost += expf(-(9.0f-time)*rd)*400;
+    cost += expf(-(6.5f-time)*rd)*400;
 
     if (rd < 0.31)
       cost += 100;
