@@ -105,7 +105,8 @@ public:
       {
         CUDA_GEO::coord c = m_nf1_map.pos2coord(make_float3(s.p.x,s.p.y,0));
 #ifdef  __CUDA_ARCH__
-        cost += 0.5f*m_nf1_map.nf1_const_at(c.x,c.y,c.z) + 0.2f*sqrtf(3.0f*s.v*s.v + 0.2*s.w*s.w);;
+        // Must use c.x c.y and 0 here! Because the NF1 map has only 1 layer.
+        cost += 0.5f*m_nf1_map.nf1_const_at(c.x,c.y,0) + 0.2f*sqrtf(3.0f*s.v*s.v + 0.2*s.w*s.w);
 #endif
       }
     }
