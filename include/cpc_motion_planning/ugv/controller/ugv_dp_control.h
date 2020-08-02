@@ -67,7 +67,7 @@ public:
       float3 u = dp_control(s, ttr[i]);
       m.model_forward(s,u,dt);
 
-      cost += 0.1f*sqrtf(u.x*u.x + u.y*u.y + u.z*u.z);
+      cost += 0.1f*sqrtf(u.x*u.x + 0.5f*u.y*u.y + u.z*u.z);
       cost += eva.process_cost(s,map,t,collision);
 
     }
