@@ -144,7 +144,10 @@ visit_free(int3 cur_buf,
         //    // from obs to free, no bfs
             if(local_map.checkOccupancy(nbr_buf.x,nbr_buf.y,nbr_buf.z)==false&&
                local_map.checkOccupancy(cur_buf.x,cur_buf.y,cur_buf.z)==true)
+            {
+              local_map.cost(nbr_buf.x,nbr_buf.y,nbr_buf.z)=origin_cost;
               continue;
+            }
             local_q.append(index, overflow, nbr_buf);  // push id to queue[index]
         }
       }

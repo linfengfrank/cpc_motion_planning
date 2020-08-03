@@ -36,8 +36,8 @@ void ubfs_sssp(int3 &src, int num_dirs,const int3* dirs,
 
   // set goal cost first
   set_goal_cost<<<1,1>>>(*midmap3d,ugraph.q1_shared[0]);
-  GpuTimer tm1;
-  tm1.Start();
+//  GpuTimer tm1;
+//  tm1.Start();
   do
   {
     num_t=ugraph.tail_shared[0];
@@ -119,8 +119,8 @@ void ubfs_sssp(int3 &src, int num_dirs,const int3* dirs,
     }
 
   } while(1);
-  tm1.Stop();
-  std::cout<<"--- BFS total time is "<<float(tm1.Elapsed())<<" ms"<<std::endl;
+//  tm1.Stop();
+//  std::cout<<"--- BFS total time is "<<float(tm1.Elapsed())<<" ms"<<std::endl;
 }
 
 
