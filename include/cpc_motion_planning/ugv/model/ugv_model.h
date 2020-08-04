@@ -2,7 +2,7 @@
 #define UGV_MODEL_H
 #include <curand_kernel.h>
 #include <cpc_motion_planning/pso/pso_utilities.cuh>
-#define UGV_W_SCALE 1.0f
+
 namespace UGV
 {
 class UGVModel
@@ -61,18 +61,33 @@ public:
   void model_forward(State &s, const float3 &u, const float &dt)
   {
     // x and y
-    s.p.x = s.p.x + (s.v*dt + 0.5f*u.x*dt*dt)*cos(s.theta + s.w*dt*UGV_W_SCALE + 0.5f*u.y*dt*dt);
-    s.p.y = s.p.y + (s.v*dt + 0.5f*u.x*dt*dt)*sin(s.theta + s.w*dt*UGV_W_SCALE + 0.5f*u.y*dt*dt);
+    s.p.x = s.p.x + (s.v*dt + 0.5f*u.x*dt*dt)*cos(s.theta + s.w*dt + 0.5f*u.y*dt*dt);
+    s.p.y = s.p.y + (s.v*dt + 0.5f*u.x*dt*dt)*sin(s.theta + s.w*dt + 0.5f*u.y*dt*dt);
 
     //s and theta
     s.s = s.s + s.v*dt + 0.5f*u.x*dt*dt;
-    s.theta = s.theta + s.w*dt*UGV_W_SCALE + 0.5f*u.y*dt*dt;
+    s.theta = s.theta + s.w*dt + 0.5f*u.y*dt*dt;
 
     //v and w
     s.v = s.v + u.x*dt;
     s.w = s.w + u.y*dt;
   }
 
+  __host__ __device__
+  void model_forward_with_slip(State &s, const float3 &u, const float &dt, const float slip = 0.7f)
+  {
+    // x and y
+    s.p.x = s.p.x + (s.v*dt + 0.5f*u.x*dt*dt)*cos(s.theta + s.w*dt*slip + 0.5f*u.y*dt*dt);
+    s.p.y = s.p.y + (s.v*dt + 0.5f*u.x*dt*dt)*sin(s.theta + s.w*dt*slip + 0.5f*u.y*dt*dt);
+
+    //s and theta
+    s.s = s.s + s.v*dt + 0.5f*u.x*dt*dt;
+    s.theta = s.theta + s.w*dt*slip + 0.5f*u.y*dt*dt;
+
+    //v and w
+    s.v = s.v + u.x*dt;
+    s.w = s.w + u.y*dt;
+  }
   State m_s_ini;
 
 };

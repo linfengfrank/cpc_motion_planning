@@ -54,7 +54,8 @@ public:
   __host__ __device__
   float simulate_evaluate(const EDTMap &map, const Evaluator &eva, Model &m, const Swarm &sw, const typename Swarm::Trace &ttr, bool &collision)
   {
-    typename Model::State s = m.get_ini_state();
+    typename Model::State s_cmd = m.get_ini_state();
+    typename Model::State s_slip = s_cmd;
     float cost = 0;
     float dt = PSO::PSO_SIM_DT;
     collision = false;
@@ -64,14 +65,15 @@ public:
       if (i > sw.steps - 1)
         i = sw.steps - 1;
 
-      float3 u = dp_control(s, ttr[i]);
-      m.model_forward(s,u,dt);
+      float3 u = dp_control(s_cmd, ttr[i]);
+      m.model_forward(s_cmd,u,dt);
+      m.model_forward_with_slip(s_slip,u,dt);
 
-      cost += 0.1f*sqrtf(u.x*u.x + 0.5f*u.y*u.y + u.z*u.z);
-      cost += eva.process_cost(s,map,t,collision);
+      //cost += 0.1f*sqrtf(u.x*u.x + 0.5f*u.y*u.y + u.z*u.z);
+      cost += eva.process_cost(s_slip,map,t,collision);
 
     }
-    cost += eva.final_cost(s,map);
+    cost += eva.final_cost(s_slip,map);
 
     return cost;
   }
