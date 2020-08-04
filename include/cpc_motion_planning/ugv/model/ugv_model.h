@@ -74,7 +74,7 @@ public:
   }
 
   __host__ __device__
-  void model_forward_with_slip(State &s, const float3 &u, const float &dt, const float slip = 0.7f)
+  void model_forward_with_slip(State &s, const float3 &u, const float &dt, const float slip = 1.0f)
   {
     // x and y
     s.p.x = s.p.x + (s.v*dt + 0.5f*u.x*dt*dt)*cos(s.theta + s.w*dt*slip + 0.5f*u.y*dt*dt);

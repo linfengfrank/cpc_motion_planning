@@ -99,14 +99,33 @@ void UGVRefTrajMotionPlanner::goal_call_back(const geometry_msgs::PoseStamped::C
 void UGVRefTrajMotionPlanner::do_start()
 {
 if (m_slam_odo_received && m_raw_odo_received && m_received_map && m_goal_received)
-  m_status = UGV::NORMAL;
+{
+  cycle_init();
+  std::cout<<"START"<<std::endl;
+
+  // Planning
+  m_pso_planner->m_eva.m_pure_turning = true;
+
+  float end_theta = m_line_list[0].front().tht;
+  m_tgt.s.theta = end_theta;
+  m_pso_planner->m_eva.setTarget(m_tgt);
+  calculate_trajectory<REF_UGV>(m_pso_planner, m_traj);
+
+  if(is_heading_reached(m_pso_planner->m_model.get_ini_state(),m_tgt.s))
+  {
+    m_status = UGV::NORMAL;
+  }
+}
 }
 //---
 void UGVRefTrajMotionPlanner::do_normal()
 {
   cycle_init();
-  auto start = std::chrono::steady_clock::now();
+  std::cout<<"NORMAL"<<std::endl;
 
+  //Planning
+  m_pso_planner->m_eva.m_pure_turning = false;
+  m_pso_planner->m_eva.setTarget(m_tgt);
   calculate_trajectory<REF_UGV>(m_pso_planner, m_traj);
 
   if (m_pso_planner->result.collision)
@@ -117,46 +136,48 @@ void UGVRefTrajMotionPlanner::do_normal()
   }
   else
   {
+    //Goto: Stuck
 //    UGV::UGVModel::State tmp_goal = float3_to_goal_state(m_ref_traj.tarj[40]);
 //    if(is_stuck(m_traj,tmp_goal))
 //    {
 //      m_status = UGV::STUCK;
 //    }
+    //Goto: Pos_reached
+    if(is_pos_reached(m_pso_planner->m_model.get_ini_state(),m_tgt.s))
+    {
+      m_status = UGV::POS_REACHED;
+    }
   }
-  auto end = std::chrono::steady_clock::now();
-  std::cout << "local planner (NORMAL): "
-            << std::chrono::duration_cast<std::chrono::milliseconds>(end - start).count()
-            << "ms, " << m_pso_planner->result.best_cost
-            << ", collision: " << m_pso_planner->result.collision<<std::endl;
+
 }
 //---
 void UGVRefTrajMotionPlanner::do_stuck()
 {
   cycle_init();
-  auto start = std::chrono::steady_clock::now();
-  m_traj.clear();
-  float dt = PSO::PSO_CTRL_DT;;
-  for (float t=0.0f; t<PSO::PSO_TOTAL_T; t+=dt)
-  {
-    UGV::UGVModel::State s;
-    s.v = 0;
-    s.w = 0.5;
-    m_traj.push_back(s);
-  }
+//  auto start = std::chrono::steady_clock::now();
+//  m_traj.clear();
+//  float dt = PSO::PSO_CTRL_DT;;
+//  for (float t=0.0f; t<PSO::PSO_TOTAL_T; t+=dt)
+//  {
+//    UGV::UGVModel::State s;
+//    s.v = 0;
+//    s.w = 0.5;
+//    m_traj.push_back(s);
+//  }
 
-  std::vector<UGV::UGVModel::State> tmp_traj;
-  calculate_trajectory<REF_UGV>(m_pso_planner, tmp_traj);
-  UGV::UGVModel::State tmp_goal = float3_to_goal_state(m_ref_traj.tarj[40]);
-  if(!is_stuck_instant_horizon(tmp_traj,tmp_goal))
-  {
-    m_status = UGV::NORMAL;
-    m_traj = tmp_traj;
-  }
-  auto end = std::chrono::steady_clock::now();
-  std::cout << "local planner (STUCK): "
-            << std::chrono::duration_cast<std::chrono::milliseconds>(end - start).count()
-            << "ms, " << m_pso_planner->result.best_cost
-            << ", collision: " << m_pso_planner->result.collision<<std::endl;
+//  std::vector<UGV::UGVModel::State> tmp_traj;
+//  calculate_trajectory<REF_UGV>(m_pso_planner, tmp_traj);
+//  UGV::UGVModel::State tmp_goal = float3_to_goal_state(m_ref_traj.tarj[40]);
+//  if(!is_stuck_instant_horizon(tmp_traj,tmp_goal))
+//  {
+//    m_status = UGV::NORMAL;
+//    m_traj = tmp_traj;
+//  }
+//  auto end = std::chrono::steady_clock::now();
+//  std::cout << "local planner (STUCK): "
+//            << std::chrono::duration_cast<std::chrono::milliseconds>(end - start).count()
+//            << "ms, " << m_pso_planner->result.best_cost
+//            << ", collision: " << m_pso_planner->result.collision<<std::endl;
 }
 //---
 void UGVRefTrajMotionPlanner::do_emergent()
@@ -191,11 +212,39 @@ void UGVRefTrajMotionPlanner::do_braking()
 void UGVRefTrajMotionPlanner::do_pos_reached()
 {
   cycle_init();
+  std::cout<<"POS_REACHED"<<std::endl;
+
+  // Planning
+  m_pso_planner->m_eva.m_pure_turning = true;
+
+  float end_theta;
+  if (m_path_idx + 1 < m_line_list.size())
+  {
+    end_theta = m_line_list[m_path_idx+1].front().tht;
+  }
+  else
+  {
+    end_theta = m_line_list[m_path_idx].back().tht;
+  }
+  m_tgt.s.theta = end_theta;
+  m_pso_planner->m_eva.setTarget(m_tgt);
+  calculate_trajectory<REF_UGV>(m_pso_planner, m_traj);
+
+  if(is_heading_reached(m_pso_planner->m_model.get_ini_state(),m_tgt.s))
+  {
+    m_status = UGV::FULLY_REACHED;
+  }
 }
 
 void UGVRefTrajMotionPlanner::do_fully_reached()
 {
   cycle_init();
+  std::cout<<"FULLY_REACHED"<<std::endl;
+  if (m_path_idx + 1 < m_line_list.size())
+  {
+    m_path_idx++;
+    m_status = UGV::NORMAL;
+  }
 }
 
 void UGVRefTrajMotionPlanner::cycle_init()
@@ -251,25 +300,37 @@ void UGVRefTrajMotionPlanner::cycle_init()
     s.w = m_ref_w;
   }
 
-  calculate_ref_traj(make_float3(s.p.x,s.p.y,s.theta));
+  calculate_ref_traj(s.p);
   m_pso_planner->m_model.set_ini_state(s);
   m_traj = m_pso_planner->generate_trajectory();
 }
 
 void UGVRefTrajMotionPlanner::load_ref_lines()
 {
+  if(!(m_slam_odo_received && m_raw_odo_received && m_received_map))
+    return;
+
   std::ifstream corridor_file;
   corridor_file.open("/home/sp/nndp/Learning_part/tripple_integrator/pso/in.txt");
   float data[6];
   std::vector<float2> wps;
-
+  float2 vehicle_pos = make_float2(m_slam_odo.pose.pose.position.x,m_slam_odo.pose.pose.position.y);
   std::cout<<"Read in data"<<std::endl;
   while(1)
   {
-    if (corridor_file>>data[0]>>data[1]>>data[2]>>data[3]>>data[4]>>data[5])
+    if (corridor_file>>data[0]>>data[1])
     {
+      if(wps.empty())
+      {
+        // Check whether the vehicle is far from the first wp
+        float2 first_wp = make_float2(data[0],data[1]);
+        if (sqrt(dot(vehicle_pos-first_wp,vehicle_pos-first_wp))>1)
+        {
+          wps.push_back(vehicle_pos);
+        }
+      }
       wps.push_back(make_float2(data[0],data[1]));
-      std::cout<<data[0]<<" "<<data[1]<<" "<<data[2]<<" "<<data[3]<<" "<<data[4]<<" "<<data[5]<<std::endl;
+      std::cout<<data[0]<<" "<<data[1]<<std::endl;
     }
     else
     {
@@ -277,67 +338,44 @@ void UGVRefTrajMotionPlanner::load_ref_lines()
     }
   }
 
-  std::vector<float3> tmp_wps;
-  //Assign the heading
-  for (size_t i = 0; i < wps.size(); i++)
+  // Construct the line list
+  std::vector<line_seg> lines;
+  for (size_t i = 0; i < wps.size()-1; i++)
   {
-    if (i == 0)
-    {
-      float theta = atan2f(wps[i+1].y-wps[i].y, wps[i+1].x-wps[i].x);
-      tmp_wps.push_back(make_float3(wps[i].x,wps[i].y,theta));
-    }
-    else if (i == wps.size()-1)
-    {
-      float theta = atan2f(wps[i].y-wps[i-1].y, wps[i].x-wps[i-1].x);
-      theta = un_in_pi(theta,tmp_wps.back().z);
-      tmp_wps.push_back(make_float3(wps[i].x,wps[i].y,theta));
-    }
-    else
-    {
-      float theta = atan2f(wps[i].y-wps[i-1].y, wps[i].x-wps[i-1].x);
-      theta = un_in_pi(theta,tmp_wps.back().z);
-      tmp_wps.push_back(make_float3(wps[i].x,wps[i].y,theta));
-
-      theta = atan2f(wps[i+1].y-wps[i].y, wps[i+1].x-wps[i].x);
-      theta = un_in_pi(theta,tmp_wps.back().z);
-      tmp_wps.push_back(make_float3(wps[i].x,wps[i].y,theta));
-    }
+    lines.push_back(line_seg(wps[i],wps[i+1]));
   }
 
-  //Dense sample bewteen the waypoints
-  m_path.clear();
-  for (size_t i = 0; i < tmp_wps.size()-1; i++)
+  m_line_list.clear();
+  std::vector<line_seg> tmp;
+  for (size_t i = 0; i < lines.size()-1; i++)
   {
-
-    float tht_err = fabsf(tmp_wps[i+1].z - tmp_wps[i].z);
-    tht_err = min(tht_err,M_PI*0.5);
-    float vd = 1.5f - 1.0f*(tht_err)/(M_PI*0.5);
-
-    std::vector<float3> tmp_pol = interpol(tmp_wps[i],tmp_wps[i+1],vd);
-    for (float3 pol : tmp_pol)
+    tmp.push_back(lines[i]);
+    if (fabsf(in_pi(lines[i].tht-lines[i+1].tht)) > 0.25*M_PI)
     {
-      m_path.push_back(pol);
+      m_line_list.push_back(tmp);
+      tmp.clear();
     }
   }
+  tmp.push_back((lines.back()));
+  m_line_list.push_back(tmp);
 
-  //Parameterization against the length
-  m_path_len.clear();
-  for (size_t i = 0; i < m_path.size(); i++)
+  // Construct the path
+  m_path_list.clear();
+  for (size_t i = 0; i < m_line_list.size(); i++)
   {
-    if (i == 0)
+    std::vector<float2> path;
+    for (size_t j = 0; j < m_line_list[i].size(); j++)
     {
-      m_path_len.push_back(make_float3(0,0,0));
+      std::vector<float2> tmp_pol = interpol(m_line_list[i][j].a,m_line_list[i][j].b,0.8f);
+      for (float2 pol : tmp_pol)
+      {
+        path.push_back(pol);
+      }
     }
-    else
-    {
-      float3 delta = m_path[i]-m_path[i-1];
-      float dist_xy = sqrtf(delta.x*delta.x + delta.y*delta.y);
-      float dist_theta = fabsf(delta.z);
-      float dist = sqrtf(dot(delta,delta));
-      float3 pre_len = m_path_len.back();
-      m_path_len.push_back(make_float3(pre_len.x+dist_xy, pre_len.y+dist_theta, pre_len.z+dist));
-    }
+    m_path_list.push_back(path);
   }
+
+  m_path_idx = 0;
 
   // For visulization
   visualization_msgs::Marker line_strip;
@@ -363,88 +401,82 @@ void UGVRefTrajMotionPlanner::load_ref_lines()
 
 }
 
-void UGVRefTrajMotionPlanner::calculate_ref_traj(float3 c)
+void UGVRefTrajMotionPlanner::calculate_ref_traj(float2 c)
 {
+  std::vector<float2> &path = m_path_list[m_path_idx];
   //c=[x y theta]
+
   //Find nearest point
   float min_len = 1e6;
   size_t min_idx = 0;
-  float3 delta;
+  float2 delta;
   float len;
-  float3 nearest_pnt;
-  for (size_t i=0;i<m_path.size();i++)
+  float2 nearest_pnt;
+  for (size_t i=0;i<path.size();i++)
   {
-    delta = m_path[i]-c;
-    delta.z = in_pi(delta.z)*0.2f;
+    delta = path[i]-c;
     len = sqrtf(dot(delta,delta));
     if (len < min_len)
     {
       min_len = len;
       min_idx = i;
-      nearest_pnt = m_path[i];
+      nearest_pnt = path[i];
     }
   }
 
-  size_t fix_idx = 0;
-  bool fixed = false;
-  for (size_t i=0; i<41; i++)
+  //Get the carrot point
+  float2 carrot = nearest_pnt;
+  for (size_t i=min_idx;i<path.size();i++)
   {
-    size_t idx;
-    if(!fixed)
-    {
-      idx = min_idx + i;
-      if (idx > m_path.size()-1)
-        idx = m_path.size()-1;
-
-      delta = m_path[idx]-c;
-      delta.z = in_pi(delta.z);
-      len = sqrtf(dot(delta,delta));
-
-      if (len > 4.5)
-      {
-        fix_idx = idx;
-        fixed = true;
-      }
-    }
+    delta = path[i]-c;
+    len = sqrtf(dot(delta,delta));
+    if (len < 2.8)
+      carrot = path[i];
     else
-    {
-      idx = fix_idx;
-    }
-
-    m_ref_traj.tarj[i]=m_path[idx];
+      break;
   }
-  m_pso_planner->m_eva.setRef(m_ref_traj);
+
+  //Set the carrot point
+  m_tgt.s.p = carrot;
+  float2 dist_err = m_tgt.s.p - c;
+  m_tgt.s.theta = atan2f(dist_err.y,dist_err.x);
+
+
+
+
+
+  std::cout<<m_tgt.s.p.x<<" "<<m_tgt.s.p.y<<" "<<m_tgt.s.theta <<std::endl;
 }
 
-void UGVRefTrajMotionPlanner::linecirc_inter_dist(const float3 &seg_a, const float3 &seg_b, const float3 &circ_pos, float3 &closest, float &dist_v_len) const
-{
-  float3 seg_v=seg_b-seg_a;
-  float3 pt_v=circ_pos-seg_a;
-  float seg_v_len = sqrtf(dot(seg_v,seg_v));
-  float3 seg_v_unit=seg_v/seg_v_len;
-  float proj=dot(pt_v,seg_v_unit);
-  float3 proj_v=seg_v_unit*proj;
-  if (proj <=0)
-    closest =seg_a;
-  else if(proj>seg_v_len)
-    closest =seg_b;
-  else
-    closest=proj_v+seg_a;
+//void UGVRefTrajMotionPlanner::linecirc_inter_dist(const float3 &seg_a, const float3 &seg_b, const float3 &circ_pos, float3 &closest, float &dist_v_len) const
+//{
+//  float3 seg_v=seg_b-seg_a;
+//  float3 pt_v=circ_pos-seg_a;
+//  float seg_v_len = sqrtf(dot(seg_v,seg_v));
+//  float3 seg_v_unit=seg_v/seg_v_len;
+//  float proj=dot(pt_v,seg_v_unit);
+//  float3 proj_v=seg_v_unit*proj;
+//  if (proj <=0)
+//    closest =seg_a;
+//  else if(proj>seg_v_len)
+//    closest =seg_b;
+//  else
+//    closest=proj_v+seg_a;
 
-  dist_v_len = sqrtf(dot(circ_pos-closest,circ_pos-closest));
-}
+//  dist_v_len = sqrtf(dot(circ_pos-closest,circ_pos-closest));
+//}
 
-float3 UGVRefTrajMotionPlanner::calculate_unit_vector(const float3 &seg_a, const float3 &seg_b)
-{
-  float3 seg_v=seg_b-seg_a;
-  float seg_v_len = sqrtf(dot(seg_v,seg_v));
-  return seg_v/seg_v_len;
-}
+//float3 UGVRefTrajMotionPlanner::calculate_unit_vector(const float3 &seg_a, const float3 &seg_b)
+//{
+//  float3 seg_v=seg_b-seg_a;
+//  float seg_v_len = sqrtf(dot(seg_v,seg_v));
+//  return seg_v/seg_v_len;
+//}
 
-float UGVRefTrajMotionPlanner::calculate_length(const float3 &seg_a, const float3 &seg_b)
-{
-  float3 seg_v=seg_b-seg_a;
-  return sqrtf(dot(seg_v,seg_v));
-}
+//float UGVRefTrajMotionPlanner::calculate_length(const float3 &seg_a, const float3 &seg_b)
+//{
+//  float3 seg_v=seg_b-seg_a;
+//  return sqrtf(dot(seg_v,seg_v));
+//}
 
 

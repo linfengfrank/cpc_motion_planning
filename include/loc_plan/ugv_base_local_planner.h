@@ -89,7 +89,7 @@ protected:
   bool is_pos_reached(const UGV::UGVModel::State &s, const UGV::UGVModel::State &tgt_state)
   {
     float2 p_diff = s.p - tgt_state.p;
-    if (sqrtf(dot(p_diff,p_diff))<0.5f && fabsf(s.v) < 0.2f)
+    if (sqrtf(dot(p_diff,p_diff))<0.8f && fabsf(s.v) < 0.5f)
       return true;
     else
       return false;

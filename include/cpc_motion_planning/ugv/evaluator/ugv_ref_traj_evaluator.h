@@ -9,14 +9,19 @@ class RefTrajEvaluator
 {
 public:
 
-  struct Ref
+  struct Target
   {
-    float3 tarj[41];
+    UGVModel::State s;
+    int id;
+    Target():id(0)
+    {
+
+    }
   };
 
   RefTrajEvaluator()
   {
-
+    m_pure_turning = false;
   }
 
   ~RefTrajEvaluator()
@@ -25,9 +30,9 @@ public:
   }
 
   __host__ __device__
-  void setRef(const Ref &ref)
+  void setTarget(const Target &goal)
   {
-    m_ref = ref;
+    m_goal = goal;
   }
 
   __host__ __device__
@@ -71,28 +76,36 @@ public:
   __host__ __device__
   float process_cost(const UGVModel::State &s, const EDTMap &map, const float &time, bool &collision) const
   {
-    int idx = min(40, static_cast<int>(floorf(time/0.1f + 0.5f)));
-    float3 tgt = m_ref.tarj[idx];
-
-    // Velocity cost
-    float cost = 0.2f*sqrt(3.0f*s.v*s.v + s.w*s.w);
-
-    // Horizontal dist cost
-    cost += 0.5f*sqrt((s.p.x-tgt.x)*(s.p.x-tgt.x)+(s.p.y-tgt.y)*(s.p.y-tgt.y));
-
-    // Yaw cost
-    float yaw_diff = s.theta - tgt.z;
-    yaw_diff = yaw_diff - floor((yaw_diff + M_PI) / (2 * M_PI)) * 2 * M_PI;
-    cost += 0.2f*fabs(yaw_diff);
+    float cost = 0;
 
     // Collision cost
     float rd = getMinDist(s,map);
-    cost += exp(-9.5f*rd)*400;
-    if (rd < 0.31)
+    cost += expf(-(7.5f-time)*rd)*400;
+
+    if (rd < 0.37f)
       cost += 100;
-    if (rd < 0.11 && time < 1.5)
+
+    if (rd < 0.11f && time < 1.5f)
     {
       collision = true;
+    }
+
+    if(!m_pure_turning)
+    {
+      //Distance cost
+      float2 dist_err = m_goal.s.p - s.p;
+      cost += 0.5f*sqrtf(dist_err.x*dist_err.x + dist_err.y*dist_err.y) + 0.2f*sqrtf(3.0f*s.v*s.v + 0.2*s.w*s.w);
+      float yaw_diff = s.theta - m_goal.s.theta;
+      yaw_diff = yaw_diff - floorf((yaw_diff + M_PI) / (2 * M_PI)) * 2 * M_PI;
+      cost += 0.4f*fabsf(yaw_diff);
+    }
+    else
+    {
+      //Pure heading cost
+      cost += 5.0f*sqrtf(s.v*s.v); // stay still during turning
+      float yaw_diff = s.theta - m_goal.s.theta;
+      yaw_diff = yaw_diff - floorf((yaw_diff + M_PI) / (2 * M_PI)) * 2 * M_PI;
+      cost += 0.5f*fabsf(yaw_diff);
     }
 
     return  cost;
@@ -101,33 +114,12 @@ public:
   __host__ __device__
   float final_cost(const UGVModel::State &s, const EDTMap &map) const
   {
-    float3 tgt = m_ref.tarj[20];
-
-    // Velocity cost
     float cost = 0;
-
-//    // Horizontal dist cost
-//    cost += 2.5f*sqrt((s.p.x-tgt.x)*(s.p.x-tgt.x)+(s.p.y-tgt.y)*(s.p.y-tgt.y));
-
-//    // Yaw cost
-//    float yaw_diff = s.theta - tgt.z;
-//    yaw_diff = yaw_diff - floor((yaw_diff + M_PI) / (2 * M_PI)) * 2 * M_PI;
-//    cost += 1.0f*fabs(yaw_diff);
-
-//    // Collision cost
-////    float rd = getMinDist(s,map);
-////    cost += exp(-9.5f*rd)*400;
-////    if (rd < 0.31)
-////      cost += 100;
-////    if (rd < 0.11 && time < 1.5)
-////    {
-////      collision = true;
-////    }
-
-     return  cost;
+    return  cost;
   }
 
-  Ref m_ref;
+  Target m_goal;
+  bool m_pure_turning;
 };
 }
 #endif // UGV_REF_TRAJ_EVALUATOR_H
