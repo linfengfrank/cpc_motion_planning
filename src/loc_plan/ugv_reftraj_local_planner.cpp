@@ -240,6 +240,10 @@ void UGVRefTrajMotionPlanner::do_fully_reached()
 {
   cycle_init();
   std::cout<<"FULLY_REACHED"<<std::endl;
+
+  // Planing
+  full_stop_trajectory(m_traj);
+
   if (m_path_idx + 1 < m_line_list.size())
   {
     m_path_idx++;
