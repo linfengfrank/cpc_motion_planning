@@ -34,7 +34,7 @@ private:
   PSO::Planner<SIMPLE_UGV> *m_pso_planner;
   UGV::SingleTargetEvaluator::Target m_goal;
   UGV::SingleTargetEvaluator::Target m_stuck_goal;
-  float m_ref_v, m_ref_w;
+  float m_ref_v, m_ref_w, m_ref_theta;
   cpc_motion_planning::ref_data m_ref_msg;
   int m_v_err_reset_ctt, m_w_err_reset_ctt;
   int m_plan_cycle;

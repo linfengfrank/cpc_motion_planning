@@ -30,11 +30,12 @@ UGVSigTgtMotionPlanner::UGVSigTgtMotionPlanner():
 
   m_ref_v = 0.0f;
   m_ref_w = 0.0f;
+  m_ref_theta = 0.0f;
 
   m_v_err_reset_ctt = 0;
   m_w_err_reset_ctt = 0;
   //Initialize the control message
-  m_ref_msg.rows = 2;
+  m_ref_msg.rows = 3;
   m_plan_cycle = 0;
   m_ref_start_idx = 0;
 }
@@ -89,10 +90,13 @@ void UGVSigTgtMotionPlanner::plan_call_back(const ros::TimerEvent&)
     {
       m_ref_v = traj_s.v;
       m_ref_w = traj_s.w;
+      m_ref_theta = traj_s.theta;
     }
 
     cols++;
   }
+
+  //std::cout<<m_ref_theta<<std::endl;
 
   m_ref_start_idx = next_ref_start_idx;
 
@@ -220,7 +224,7 @@ void UGVSigTgtMotionPlanner::do_braking()
   std::cout<<"BRAKING"<<std::endl;
 
   //Planning
-  full_stop_trajectory(m_traj);
+  full_stop_trajectory(m_traj,m_pso_planner->m_model.get_ini_state());
 
   //Goto: Normal
   if (m_plan_cycle - m_braking_start_cycle >= 10)
@@ -256,7 +260,7 @@ void UGVSigTgtMotionPlanner::do_fully_reached()
   std::cout<<"FULLY_REACHED"<<std::endl;
 
   // Planing
-  full_stop_trajectory(m_traj);
+  full_stop_trajectory(m_traj,m_pso_planner->m_model.get_ini_state());
 
   //Goto: Normal (New target)
   if (m_goal.id != m_pso_planner->m_eva.m_goal.id)
@@ -279,6 +283,9 @@ void UGVSigTgtMotionPlanner::cycle_init()
                    m_slam_odo.pose.pose.orientation.w);
   tf::Matrix3x3 m(q);
   m.getRPY(phi, theta, psi);
+
+  if (m_status != UGV::START)
+    psi = m_ref_theta;
 
   UGV::UGVModel::State s = predict_state(m_slam_odo,psi,m_ref_start_idx);
 

@@ -73,16 +73,15 @@ protected:
     traj = planner->generate_trajectory();
   }
 
-  void full_stop_trajectory(std::vector<UGV::UGVModel::State> &traj)
+  void full_stop_trajectory(std::vector<UGV::UGVModel::State> &traj, UGV::UGVModel::State curr_s)
   {
     traj.clear();
-    float dt = PSO::PSO_CTRL_DT;;
+    float dt = PSO::PSO_CTRL_DT;
+    curr_s.v = 0;
+    curr_s.w = 0;
     for (float t=0.0f; t<PSO::PSO_TOTAL_T; t+=dt)
     {
-      UGV::UGVModel::State s;
-      s.v = 0;
-      s.w = 0;
-      traj.push_back(s);
+      traj.push_back(curr_s);
     }
   }
 

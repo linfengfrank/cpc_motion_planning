@@ -130,6 +130,7 @@ void UGVLocalMotionPlanner::add_to_ref_msg(cpc_motion_planning::ref_data& ref_ms
   ref_msg.ids.push_back(ref_counter);
   ref_msg.data.push_back(traj_s.v);
   ref_msg.data.push_back(traj_s.w);
+  ref_msg.data.push_back(traj_s.theta);
 }
 
 #ifdef SHOW_PC
