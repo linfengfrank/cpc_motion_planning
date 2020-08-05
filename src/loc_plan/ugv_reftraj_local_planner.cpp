@@ -338,6 +338,21 @@ void UGVRefTrajMotionPlanner::load_ref_lines()
     }
   }
 
+  // Use split & merge to identify the wps of sharp turning
+  std::set<size_t> split_sharp_wp_ids;
+  std::vector<size_t> split_wp_ids = findSplitCoords(wps, 3.0f);
+  for (size_t i = 1; i< split_wp_ids.size()-1; i++)
+  {
+    line_seg l1(wps[split_wp_ids[i-1]],wps[split_wp_ids[i]]);
+    line_seg l2(wps[split_wp_ids[i]],wps[split_wp_ids[i+1]]);
+
+    if (fabsf(in_pi(l1.tht-l2.tht)) > 0.25*M_PI)
+    {
+      split_sharp_wp_ids.insert(split_wp_ids[i]);
+      //std::cout<<split_wp_ids[i]<<std::endl;
+    }
+  }
+
   // Construct the line list
   std::vector<line_seg> lines;
   for (size_t i = 0; i < wps.size()-1; i++)
@@ -350,7 +365,7 @@ void UGVRefTrajMotionPlanner::load_ref_lines()
   for (size_t i = 0; i < lines.size()-1; i++)
   {
     tmp.push_back(lines[i]);
-    if (fabsf(in_pi(lines[i].tht-lines[i+1].tht)) > 0.25*M_PI)
+    if (fabsf(in_pi(lines[i].tht-lines[i+1].tht)) > 0.25*M_PI || split_sharp_wp_ids.count(i+1) != 0)
     {
       m_line_list.push_back(tmp);
       tmp.clear();
@@ -445,7 +460,7 @@ void UGVRefTrajMotionPlanner::calculate_ref_traj(float2 c)
 
 
 
-  std::cout<<m_tgt.s.p.x<<" "<<m_tgt.s.p.y<<" "<<m_tgt.s.theta <<std::endl;
+  //std::cout<<m_tgt.s.p.x<<" "<<m_tgt.s.p.y<<" "<<m_tgt.s.theta <<std::endl;
 }
 
 //void UGVRefTrajMotionPlanner::linecirc_inter_dist(const float3 &seg_a, const float3 &seg_b, const float3 &circ_pos, float3 &closest, float &dist_v_len) const

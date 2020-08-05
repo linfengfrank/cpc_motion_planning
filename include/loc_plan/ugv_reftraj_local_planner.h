@@ -101,6 +101,77 @@ private:
   std::vector<std::vector<float2>> m_path_list;
   UGV::RefTrajEvaluator::Target m_tgt;
   size_t m_path_idx;
+
+private:
+  // Distance from c0 to line_seg c1_c2
+  inline float point2lineDist(const float2 & c1, const float2 & c2, const float2 & c0)
+  {
+    float2 a = c1-c0;
+    float2 b = c2-c1;
+
+
+    float a_dot_b = dot(a,b);
+
+    if (dot(b,b) < 1e-6)
+      return sqrtf(static_cast<float>(dot(a,a)));
+
+    return sqrtf((dot(a,a)*dot(b,b) - a_dot_b*a_dot_b)/dot(b,b));
+  }
+
+  //----
+  std::vector<size_t> findSplitCoords(const std::vector<float2> &path, float split_dist)
+  {
+    std::vector<size_t> split_pts;
+
+    // If there is no path, return empty
+    if (path.size() == 0)
+    {
+      return split_pts;
+    }
+
+    std::stack<std::pair<unsigned int,unsigned int>> pls; // fist is anchor, second is target
+    pls.push(std::make_pair(path.size() - 1, 0));
+
+    unsigned int check = static_cast<unsigned int>(path.size()) - 1;
+
+    while (pls.size() > 0)
+    {
+      unsigned int target = pls.top().second;
+      unsigned int anchor = pls.top().first;
+      pls.pop();
+      // find the largest distance
+      unsigned int max_id = 0;
+      float max_dist = 0;
+      for (unsigned int j = target; j< anchor; j++)
+      {
+        float dist = point2lineDist(path[anchor],path[target],path[j]);
+        if (dist > max_dist)
+        {
+          max_dist = dist;
+          max_id = j;
+        }
+      }
+
+      if (max_dist > split_dist)
+      {
+        pls.push(std::make_pair(max_id, target));
+        pls.push(std::make_pair(anchor, max_id));
+        target = max_id;
+      }
+      else
+      {
+        split_pts.push_back(target);
+        if (target >= check)
+        {
+          ROS_ERROR("Wrong split sequence");
+          exit(-1);
+        }
+        check = target;
+      }
+    }
+    std::reverse(std::begin(split_pts), std::end(split_pts));
+    return split_pts;
+  }
 };
 
 #endif // UGV_REFTRAJ_LOCAL_PLANNER_H
