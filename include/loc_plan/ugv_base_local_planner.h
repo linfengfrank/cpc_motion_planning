@@ -105,6 +105,16 @@ protected:
       return false;
   }
 
+  float in_pi(float in)
+  {
+    return in - floor((in + M_PI) / (2 * M_PI)) * 2 * M_PI;
+  }
+
+  float un_in_pi(float in, float last)
+  {
+    return in_pi(in-last) + last;
+  }
+
 #ifdef SHOW_PC
   void plot_trajectory(const std::vector<UGV::UGVModel::State> &traj);
 #endif

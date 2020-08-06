@@ -250,7 +250,7 @@ unsigned int Astar::findTargetCoord(const std::vector<CUDA_GEO::coord> &path)
       }
     }
 
-    if (max_dist*_gridstep > 3.4f)
+    if (max_dist*_gridstep > 0.5f)
     {
       target = max_id;
     }

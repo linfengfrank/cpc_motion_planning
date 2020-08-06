@@ -85,7 +85,10 @@ float GridGraph::obsCostAt(CUDA_GEO::coord s, float default_value, bool &occupie
   }
   else
   {
-    cost = 0.0;
+    if (dist <= obstacle_dist + 0.5f)
+      cost = 6.0f*expf(-dist*2.6f);
+    else
+      cost = 0;
     occupied = false;
   }
 

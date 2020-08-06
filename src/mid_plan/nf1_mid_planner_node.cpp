@@ -187,8 +187,11 @@ void glb_plan(const ros::TimerEvent&)
   copy_map_to_msg(nf1_map_msg,mid_map,tgt_height_coord);
   nf1_pub->publish(nf1_map_msg);
 
+  //Get the mid goal
+  //std::reverse(path.begin(),path.end());
+  unsigned int tgt_idx = a_map->findTargetCoord(path);
   geometry_msgs::PoseStamped mid_goal_pose;
-  CUDA_GEO::pos mid_goal_pos = mid_map->coord2pos(path[0]);
+  CUDA_GEO::pos mid_goal_pos = mid_map->coord2pos(path[tgt_idx]);
   mid_goal_pose.header.frame_id="world";
   mid_goal_pose.pose.position.x = mid_goal_pos.x;
   mid_goal_pose.pose.position.y = mid_goal_pos.y;
