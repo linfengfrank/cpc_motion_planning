@@ -72,16 +72,6 @@ private:
     return tmp;
   }
 
-  float in_pi(float in)
-  {
-    return in - floor((in + M_PI) / (2 * M_PI)) * 2 * M_PI;
-  }
-
-  float un_in_pi(float in, float last)
-  {
-    return in_pi(in-last) + last;
-  }
-
 private:
   ros::Subscriber m_goal_sub;
   ros::Publisher m_vis_pub;

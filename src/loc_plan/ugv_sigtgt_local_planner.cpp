@@ -10,11 +10,13 @@ template <typename T> int sgn(T val)
 
 UGVSigTgtMotionPlanner::UGVSigTgtMotionPlanner():
   m_goal_received(false),
+  m_mid_goal_received(false),
   cycle_initialized(false),
   m_braking_start_cycle(0),
   m_nf1_map(nullptr)
 {
   m_goal_sub = m_nh.subscribe("/move_base_simple/goal",1,&UGVSigTgtMotionPlanner::goal_call_back, this);
+  m_mid_goal_sub = m_nh.subscribe("/mid_goal",1,&UGVSigTgtMotionPlanner::mid_goal_call_back, this);
   m_nf1_sub = m_nh.subscribe("/mid_layer/goal",1,&UGVSigTgtMotionPlanner::nf1_call_back, this);
 
   m_ref_pub = m_nh.advertise<cpc_motion_planning::ref_data>("ref_traj",1);
@@ -26,7 +28,7 @@ UGVSigTgtMotionPlanner::UGVSigTgtMotionPlanner():
   m_pso_planner->initialize();
 
 
-
+  m_mid_goal=make_float2(0,0);
 
   m_ref_v = 0.0f;
   m_ref_w = 0.0f;
@@ -133,6 +135,13 @@ void UGVSigTgtMotionPlanner::goal_call_back(const geometry_msgs::PoseStamped::Co
   m_goal.s.theta = psi;
   m_goal.id++;
 }
+
+void UGVSigTgtMotionPlanner::mid_goal_call_back(const geometry_msgs::PoseStamped::ConstPtr &msg)
+{
+  m_mid_goal_received = true;
+  m_mid_goal.x = msg->pose.position.x;
+  m_mid_goal.y = msg->pose.position.y;
+}
 //=====================================
 void UGVSigTgtMotionPlanner::do_start()
 {
@@ -166,7 +175,16 @@ void UGVSigTgtMotionPlanner::do_normal()
 
       m_stuck_goal = m_goal;
       m_stuck_goal.s = m_pso_planner->m_model.get_ini_state();
-      m_stuck_goal.s.theta += 0.5*M_PI;
+      if (m_mid_goal_received)
+      {
+        float2 diff = m_mid_goal - m_stuck_goal.s.p;
+        m_stuck_goal.s.theta = un_in_pi(atan2f(diff.y,diff.x),m_stuck_goal.s.theta);
+      }
+      else
+      {
+        m_stuck_goal.s.theta += 0.5*M_PI;
+      }
+
     }
 
     //Goto: Pos_reached
@@ -196,14 +214,17 @@ void UGVSigTgtMotionPlanner::do_stuck()
   }
 
   //Goto: Normal (Found excape trajectory)
-  std::vector<UGV::UGVModel::State> tmp_traj;
-  m_pso_planner->m_eva.m_pure_turning = false;
-  m_pso_planner->m_eva.setTarget(m_goal);
-  calculate_trajectory<SIMPLE_UGV>(m_pso_planner, tmp_traj);
-  if(!is_stuck_instant_horizon(tmp_traj,m_goal.s))
+  if (!m_mid_goal_received)
   {
-    m_status = UGV::NORMAL;
-    m_traj = tmp_traj;
+    std::vector<UGV::UGVModel::State> tmp_traj;
+    m_pso_planner->m_eva.m_pure_turning = false;
+    m_pso_planner->m_eva.setTarget(m_goal);
+    calculate_trajectory<SIMPLE_UGV>(m_pso_planner, tmp_traj);
+    if(!is_stuck_instant_horizon(tmp_traj,m_goal.s))
+    {
+      m_status = UGV::NORMAL;
+      m_traj = tmp_traj;
+    }
   }
 
   //Goto: Normal (New target)
