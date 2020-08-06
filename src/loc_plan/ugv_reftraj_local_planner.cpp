@@ -2,11 +2,6 @@
 #include "tf/tf.h"
 #include <chrono>
 
-template <typename T> int sgn(T val)
-{
-    return (T(0) < val) - (val < T(0));
-}
-
 UGVRefTrajMotionPlanner::UGVRefTrajMotionPlanner():
   m_goal_received(false),
   cycle_initialized(false),
@@ -28,9 +23,11 @@ UGVRefTrajMotionPlanner::UGVRefTrajMotionPlanner():
 
   m_ref_v = 0.0f;
   m_ref_w = 0.0f;
+  m_ref_theta = 0.0f;
 
   m_v_err_reset_ctt = 0;
   m_w_err_reset_ctt = 0;
+  m_tht_err_reset_ctt = 0;
   //Initialize the control message
   m_ref_msg.rows = 2;
   m_plan_cycle = 0;
@@ -69,6 +66,7 @@ void UGVRefTrajMotionPlanner::plan_call_back(const ros::TimerEvent&)
     {
       m_ref_v = traj_s.v;
       m_ref_w = traj_s.w;
+      m_ref_theta = traj_s.theta;
     }
 
     cols++;
@@ -242,7 +240,7 @@ void UGVRefTrajMotionPlanner::do_fully_reached()
   std::cout<<"FULLY_REACHED"<<std::endl;
 
   // Planing
-  full_stop_trajectory(m_traj);
+  full_stop_trajectory(m_traj,m_pso_planner->m_model.get_ini_state());
 
   if (m_path_idx + 1 < m_line_list.size())
   {
@@ -266,43 +264,13 @@ void UGVRefTrajMotionPlanner::cycle_init()
   tf::Matrix3x3 m(q);
   m.getRPY(phi, theta, psi);
 
+  if (m_status != UGV::START)
+    psi = select_mes_ref(psi, m_ref_theta, m_tht_err_reset_ctt, true, 0.5f);
+
   UGV::UGVModel::State s = predict_state(m_slam_odo,psi,m_ref_start_idx);
 
-
-  float v_err = m_ref_v-m_raw_odo.twist.twist.linear.x;
-  float w_err = m_ref_w-m_raw_odo.twist.twist.angular.z;
-
-  if (fabs(v_err) > 1.0 )
-    m_v_err_reset_ctt++;
-  else
-    m_v_err_reset_ctt = 0;
-
-  if (fabs(w_err) > 1.0)
-    m_w_err_reset_ctt++;
-  else
-    m_w_err_reset_ctt = 0;
-
-  if (m_v_err_reset_ctt > 5)
-  {
-    std::cout<<"------Reset v------"<<std::endl;
-    s.v = m_raw_odo.twist.twist.linear.x + sgn<float>(v_err)*0.5;
-    m_v_err_reset_ctt = 0;
-  }
-  else
-  {
-    s.v = m_ref_v;
-  }
-
-  if (m_w_err_reset_ctt > 5)
-  {
-    std::cout<<"------Reset w------"<<std::endl;
-    s.w = m_raw_odo.twist.twist.angular.z + sgn<float>(w_err)*0.5;
-    m_w_err_reset_ctt = 0;
-  }
-  else
-  {
-    s.w = m_ref_w;
-  }
+  s.v = select_mes_ref(m_raw_odo.twist.twist.linear.x, m_ref_v, m_v_err_reset_ctt);
+  s.w = select_mes_ref(m_raw_odo.twist.twist.angular.z, m_ref_w, m_w_err_reset_ctt);
 
   calculate_ref_traj(s.p);
   m_pso_planner->m_model.set_ini_state(s);

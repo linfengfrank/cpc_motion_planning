@@ -63,6 +63,11 @@ protected:
 
   void add_to_ref_msg(cpc_motion_planning::ref_data& ref_msg, int ref_counter, const UGV::UGVModel::State &traj);
 
+  template <typename T> int sgn(T val)
+  {
+      return (T(0) < val) - (val < T(0));
+  }
+
   template<class Model, class Controller, class Evaluator, class Swarm>
   void calculate_trajectory(PSO::Planner<Model, Controller, Evaluator, Swarm> *planner, std::vector<UGV::UGVModel::State> &traj)
   {
@@ -112,6 +117,31 @@ protected:
   float un_in_pi(float in, float last)
   {
     return in_pi(in-last) + last;
+  }
+
+  float select_mes_ref(float mes, float ref, int& ctt,  bool is_theta = false, float th = 1.0f, int ctt_th = 5)
+  {
+    float output;
+    float err = ref - mes;
+
+    if(is_theta)
+      err = in_pi(err);
+
+    if (fabsf(err) > th)
+      ctt++;
+    else
+      ctt = 0;
+
+    if (ctt >= ctt_th)
+    {
+      ctt = 0;
+      output = mes + sgn<float>(err)*0.5f;
+    }
+    else
+    {
+      output = ref;
+    }
+    return output;
   }
 
 #ifdef SHOW_PC

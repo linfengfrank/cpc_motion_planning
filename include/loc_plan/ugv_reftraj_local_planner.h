@@ -79,9 +79,9 @@ private:
   ros::Publisher m_ref_pub;
   bool m_goal_received;
   PSO::Planner<REF_UGV> *m_pso_planner;
-  float m_ref_v, m_ref_w;
+  float m_ref_v, m_ref_w, m_ref_theta;
   cpc_motion_planning::ref_data m_ref_msg;
-  int m_v_err_reset_ctt, m_w_err_reset_ctt;
+  int m_v_err_reset_ctt, m_w_err_reset_ctt, m_tht_err_reset_ctt;
   int m_plan_cycle;
   int m_ref_start_idx;
   std::vector<UGV::UGVModel::State> m_traj;
