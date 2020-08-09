@@ -71,11 +71,10 @@ endif()
  )
 
 ## Generate services in the 'srv' folder
-# add_service_files(
-#   FILES
-#   Service1.srv
-#   Service2.srv
-# )
+ add_service_files(
+   FILES
+   astar_service.srv
+ )
 
 ## Generate actions in the 'action' folder
 # add_action_files(
@@ -88,6 +87,7 @@ endif()
 generate_messages(
   DEPENDENCIES
   std_msgs
+  geometry_msgs
 )
 
 ################################################
@@ -206,6 +206,17 @@ target_link_libraries(nf1_mid_planning_node
     ${CUDA_LIBRARIES}
     ${catkin_LIBRARIES})
 
+cuda_add_executable(astar_mid_planning_node
+    src/mid_plan/grid_graph.cpp
+    src/mid_plan/a_star.cpp
+    src/mid_plan/astar_mid_planner_node.cpp)
+
+target_link_libraries(astar_mid_planning_node
+    ${CUDA_curand_LIBRARY}
+    ${CUDA_cublas_LIBRARY}
+    ${CUDA_LIBRARIES}
+    ${catkin_LIBRARIES})
+
 
 ## Rename C++ executable without prefix
 ## The above recommended prefix causes long target names, the following renames the
@@ -219,6 +230,7 @@ add_dependencies(${PROJECT_NAME}_node ${${PROJECT_NAME}_EXPORTED_TARGETS} ${catk
 add_dependencies(corridor_node ${${PROJECT_NAME}_EXPORTED_TARGETS} ${catkin_EXPORTED_TARGETS})
 add_dependencies(ref_traj_node ${${PROJECT_NAME}_EXPORTED_TARGETS} ${catkin_EXPORTED_TARGETS})
 add_dependencies(nf1_mid_planning_node ${${PROJECT_NAME}_EXPORTED_TARGETS} ${catkin_EXPORTED_TARGETS})
+add_dependencies(astar_mid_planning_node ${${PROJECT_NAME}_EXPORTED_TARGETS} ${catkin_EXPORTED_TARGETS})
 ## Specify libraries to link a library or executable target against
 # target_link_libraries(${PROJECT_NAME}_node
 #   ${catkin_LIBRARIES}

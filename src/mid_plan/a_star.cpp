@@ -307,6 +307,7 @@ std::vector<CUDA_GEO::pos> Astar::findSplitCoords(const std::vector<CUDA_GEO::co
 
   unsigned int check = static_cast<unsigned int>(path.size()) - 1;
 
+  split_pts.push_back(coord2pos(path.back()));
   while (pls.size() > 0)
   {
     unsigned int target = pls.top().second;

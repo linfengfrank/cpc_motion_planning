@@ -5,4 +5,7 @@
 <remap from="/raw_odom" to ="/odom"/>
 <remap from="/slam_odom" to ="/groundtrue_odom"/>
 </node>
+
+<node pkg="cpc_motion_planning" type="astar_mid_planning_node" name="astar_mid_planning_node" output="screen">
+</node>
 </launch>
