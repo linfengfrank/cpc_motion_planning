@@ -29,7 +29,7 @@ void test(VoidPtrCarrier data)
   action best_action;
   bool updated = false;
 
-  for (float acc=-2;acc<2.1;acc+=0.2)
+  for (float acc=-1.4;acc<1.5;acc+=0.2)
   {
     for (float alpha=-1.5;alpha<1.6;alpha+=0.3)
     {
@@ -38,19 +38,19 @@ void test(VoidPtrCarrier data)
       s_next[2] = s_curr[2] + s_curr[3]*DT + 0.5*alpha*DT*DT;
       s_next[3] = s_curr[3] + alpha*DT;
       val = CUDA_MAT::get_value_4(s_next,*S_old, *bin_p, *bin_v, *bin_theta, *bin_w);
-      val += 10*acc*acc + 10*alpha*alpha;
+      val += 5*acc*acc + 5*alpha*alpha;
       val += 1*s_curr[0]*s_curr[0] + 0.2*s_curr[1]*s_curr[1] +s_curr[2]*s_curr[2] + 0.2*s_curr[3]*s_curr[3];
-      if (s_curr[1] - 1.2 > 0)
-        val += 80*(s_curr[1] - 1.2);
+      if (s_curr[1] - 0.7 > 0)
+        val += 80*(s_curr[1] - 0.7);
 
-      if (s_curr[1] < -1.2)
-        val += 80*(-s_curr[1] - 1.2);
+      if (s_curr[1] < -0.7)
+        val += 80*(-s_curr[1] - 0.7);
 
-      if (s_curr[3] - 0.6 > 0)
-        val += 80*(s_curr[3] - 0.6);
+      if (s_curr[3] - 0.35 > 0)
+        val += 80*(s_curr[3] - 0.35);
 
-      if (s_curr[3] < -0.6)
-        val += 80*(-s_curr[3] - 0.6);
+      if (s_curr[3] < -0.35)
+        val += 80*(-s_curr[3] - 0.35);
 
       acc_lat = s_curr[1]*s_curr[3];
       acc_tot = sqrt(acc_lat*acc_lat + acc*acc);
@@ -65,7 +65,7 @@ void test(VoidPtrCarrier data)
 
       if (fabs(s_curr[0]) > 0.25 || fabs(s_curr[1]) > 0.25 || fabs(s_curr[2]) > 0.25 || fabs(s_curr[3]) > 0.25)
       {
-        val += 32;
+        val += 2;
       }
 
       if (val < val_min)

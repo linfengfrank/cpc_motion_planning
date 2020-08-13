@@ -339,7 +339,7 @@ float theta_gen_val(int i)
 __host__ __device__ __forceinline__
 float w_gen_val(int i)
 {
-   return -1.25f + 0.05f*static_cast<float>(i);
+   return -0.625f + 0.025f*static_cast<float>(i);
 }
 }
 

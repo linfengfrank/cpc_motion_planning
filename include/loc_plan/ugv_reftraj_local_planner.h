@@ -75,6 +75,7 @@ private:
 private:
   ros::Subscriber m_goal_sub;
   ros::Publisher m_vis_pub;
+  ros::ServiceClient m_astar_client;
   ros::Timer m_planning_timer;
   ros::Publisher m_ref_pub;
   bool m_goal_received;

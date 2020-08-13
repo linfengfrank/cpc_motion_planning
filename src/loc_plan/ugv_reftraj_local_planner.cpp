@@ -1,6 +1,7 @@
 #include "loc_plan/ugv_reftraj_local_planner.h"
 #include "tf/tf.h"
 #include <chrono>
+#include <cpc_motion_planning/astar_service.h>
 
 UGVRefTrajMotionPlanner::UGVRefTrajMotionPlanner():
   m_goal_received(false),
@@ -12,6 +13,8 @@ UGVRefTrajMotionPlanner::UGVRefTrajMotionPlanner():
 
   m_ref_pub = m_nh.advertise<cpc_motion_planning::ref_data>("ref_traj",1);
   m_vis_pub = m_nh.advertise<visualization_msgs::Marker>("path_viz",1);
+
+  m_astar_client =  m_nh.serviceClient<cpc_motion_planning::astar_service>("/astar_service");
 
   m_planning_timer = m_nh.createTimer(ros::Duration(PSO::PSO_REPLAN_DT), &UGVRefTrajMotionPlanner::plan_call_back, this);
 
@@ -135,11 +138,10 @@ void UGVRefTrajMotionPlanner::do_normal()
   else
   {
     //Goto: Stuck
-//    UGV::UGVModel::State tmp_goal = float3_to_goal_state(m_ref_traj.tarj[40]);
-//    if(is_stuck(m_traj,tmp_goal))
-//    {
-//      m_status = UGV::STUCK;
-//    }
+    if(is_stuck(m_traj,m_tgt.s))
+    {
+      m_status = UGV::STUCK;
+    }
     //Goto: Pos_reached
     if(is_pos_reached(m_pso_planner->m_model.get_ini_state(),m_tgt.s))
     {
@@ -152,6 +154,12 @@ void UGVRefTrajMotionPlanner::do_normal()
 void UGVRefTrajMotionPlanner::do_stuck()
 {
   cycle_init();
+  cpc_motion_planning::astar_service srv;
+  srv.request.target.position.x = m_path_list[m_path_idx].back().x;
+  srv.request.target.position.y = m_path_list[m_path_idx].back().y;
+  srv.request.target.position.z = 0;
+
+  m_astar_client.call(srv);
 //  auto start = std::chrono::steady_clock::now();
 //  m_traj.clear();
 //  float dt = PSO::PSO_CTRL_DT;;
