@@ -141,8 +141,15 @@ void UGVSigTgtMotionPlanner::mid_goal_call_back(const geometry_msgs::PoseStamped
 //=====================================
 void UGVSigTgtMotionPlanner::do_start()
 {
-if (m_slam_odo_received && m_raw_odo_received && m_received_map && m_goal_received)
-  m_status = UGV::NORMAL;
+  if (m_slam_odo_received && m_raw_odo_received && m_received_map && m_goal_received)
+  {
+    m_status = UGV::NORMAL;
+  }
+  else
+  {
+    if (m_slam_odo_received)
+      m_ref_theta = get_heading(m_slam_odo);
+  }
 }
 //=====================================
 void UGVSigTgtMotionPlanner::do_normal()
@@ -292,19 +299,7 @@ void UGVSigTgtMotionPlanner::cycle_init()
     return;
 
   cycle_initialized = true;
-  double phi,theta,psi;
-
-  tf::Quaternion q(m_slam_odo.pose.pose.orientation.x,
-                   m_slam_odo.pose.pose.orientation.y,
-                   m_slam_odo.pose.pose.orientation.z,
-                   m_slam_odo.pose.pose.orientation.w);
-  tf::Matrix3x3 m(q);
-  m.getRPY(phi, theta, psi);
-
-  //std::cout<<m_ref_theta-psi<<std::endl;
-
-  if (m_status != UGV::START)
-    psi = select_mes_ref(psi, m_ref_theta, m_tht_err_reset_ctt, true, 0.5f);
+  float psi = select_mes_ref(get_heading(m_slam_odo), m_ref_theta, m_tht_err_reset_ctt, true, 0.25f);
 
   UGV::UGVModel::State s = predict_state(m_slam_odo,psi,m_ref_start_idx);
 

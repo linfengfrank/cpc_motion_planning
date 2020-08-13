@@ -99,24 +99,29 @@ void UGVRefTrajMotionPlanner::goal_call_back(const geometry_msgs::PoseStamped::C
 //---
 void UGVRefTrajMotionPlanner::do_start()
 {
-if (m_slam_odo_received && m_raw_odo_received && m_received_map && m_goal_received)
-{
-  cycle_init();
-  std::cout<<"START"<<std::endl;
-
-  // Planning
-  m_pso_planner->m_eva.m_pure_turning = true;
-
-  float end_theta = m_line_list[0].front().tht;
-  m_tgt.s.theta = end_theta;
-  m_pso_planner->m_eva.setTarget(m_tgt);
-  calculate_trajectory<REF_UGV>(m_pso_planner, m_traj);
-
-  if(is_heading_reached(m_pso_planner->m_model.get_ini_state(),m_tgt.s))
+  if (m_slam_odo_received && m_raw_odo_received && m_received_map && m_goal_received)
   {
-    m_status = UGV::NORMAL;
+    cycle_init();
+    std::cout<<"START"<<std::endl;
+
+    // Planning
+    m_pso_planner->m_eva.m_pure_turning = true;
+
+    float end_theta = m_line_list[0].front().tht;
+    m_tgt.s.theta = end_theta;
+    m_pso_planner->m_eva.setTarget(m_tgt);
+    calculate_trajectory<REF_UGV>(m_pso_planner, m_traj);
+
+    if(is_heading_reached(m_pso_planner->m_model.get_ini_state(),m_tgt.s))
+    {
+      m_status = UGV::NORMAL;
+    }
   }
-}
+  else
+  {
+    if (m_slam_odo_received)
+      m_ref_theta = get_heading(m_slam_odo);
+  }
 }
 //---
 void UGVRefTrajMotionPlanner::do_normal()
@@ -263,17 +268,7 @@ void UGVRefTrajMotionPlanner::cycle_init()
     return;
 
   cycle_initialized = true;
-  double phi,theta,psi;
-
-  tf::Quaternion q(m_slam_odo.pose.pose.orientation.x,
-                   m_slam_odo.pose.pose.orientation.y,
-                   m_slam_odo.pose.pose.orientation.z,
-                   m_slam_odo.pose.pose.orientation.w);
-  tf::Matrix3x3 m(q);
-  m.getRPY(phi, theta, psi);
-
-  if (m_status != UGV::START)
-    psi = select_mes_ref(psi, m_ref_theta, m_tht_err_reset_ctt, true, 0.5f);
+  float psi = select_mes_ref(get_heading(m_slam_odo), m_ref_theta, m_tht_err_reset_ctt, true, 0.25f);
 
   UGV::UGVModel::State s = predict_state(m_slam_odo,psi,m_ref_start_idx);
 

@@ -16,6 +16,7 @@
 #include <cpc_motion_planning/ugv/controller/ugv_jlt_control.h>
 #include <cpc_motion_planning/ugv/swarm/ugv_swarm.h>
 #include <deque>
+#include "tf/tf.h"
 
 #define PRED_STATE
 #define SHOW_PC
@@ -144,6 +145,17 @@ protected:
     return output;
   }
 
+  float get_heading(const nav_msgs::Odometry &odom)
+  {
+    double phi,theta,psi;
+    tf::Quaternion q(odom.pose.pose.orientation.x,
+                     odom.pose.pose.orientation.y,
+                     odom.pose.pose.orientation.z,
+                     odom.pose.pose.orientation.w);
+    tf::Matrix3x3 m(q);
+    m.getRPY(phi, theta, psi);
+    return psi;
+  }
 #ifdef SHOW_PC
   void plot_trajectory(const std::vector<UGV::UGVModel::State> &traj);
 #endif
