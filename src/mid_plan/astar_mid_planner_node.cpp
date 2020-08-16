@@ -94,7 +94,7 @@ void mapCallback(const cpc_aux_mapping::grid_map::ConstPtr& msg)
 }
 //---
 bool mid_plan(cpc_motion_planning::astar_service::Request &req,
-              cpc_motion_planning::astar_service::Request &res)
+              cpc_motion_planning::astar_service::Response &res)
 {
   if (!received_map)
     return false;
@@ -198,12 +198,22 @@ bool mid_plan(cpc_motion_planning::astar_service::Request &req,
 //  line_pub->publish(line_msg);
 
 
+  geometry_msgs::Pose tmp_pose;
+  for (CUDA_GEO::pos p : path)
+  {
+    tmp_pose.position.x = p.x;
+    tmp_pose.position.y = p.y;
+    tmp_pose.position.z = p.z;
+    res.wps.push_back(tmp_pose);
+  }
+  //std::cout<<res.wps.size()<<std::endl;
+
   auto end_time = std::chrono::steady_clock::now();
       std::cout << "Planning time: "
                 << std::chrono::duration_cast<std::chrono::milliseconds>(end_time - start_time).count()
                 << " ms" << std::endl;
 
-      return false;
+      return true;
   //extract_target(msg);
 }
 //---

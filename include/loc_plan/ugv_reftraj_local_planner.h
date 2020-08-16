@@ -48,29 +48,6 @@ private:
   void cycle_init();
   void load_ref_lines();
   void calculate_ref_traj(float2 vehicle_pos);
-//  void linecirc_inter_dist(const float3 &seg_a, const float3 &seg_b, const float3 &circ_pos, float3 &closest, float &dist_v_len) const;
-//  float3 calculate_unit_vector(const float3 &seg_a, const float3 &seg_b);
-//  float calculate_length(const float3 &seg_a, const float3 &seg_b);
-//  UGV::UGVModel::State float3_to_goal_state(const float3 &in)
-//  {
-//    UGV::UGVModel::State tmp_goal;
-//    tmp_goal.p = make_float2(in.x,in.y);
-//    tmp_goal.theta = in.z;
-//    return tmp_goal;
-//  }
-
-  std::vector<float2> interpol(const float2 &a, const float2 &b, float v = 1.0f)
-  {
-    int n = static_cast<int>(sqrtf(dot(b-a,b-a))/(v*PSO::PSO_SIM_DT));
-    n = max(2,n);
-    std::vector<float2> tmp(n);
-    float2 delta = (b-a)/static_cast<float>(n-1);
-    for (int i = 0; i < n; i++)
-    {
-      tmp[i] = a + delta*static_cast<float>(i);
-    }
-    return tmp;
-  }
 
 private:
   ros::Subscriber m_goal_sub;
@@ -94,6 +71,20 @@ private:
   size_t m_path_idx;
 
 private:
+  //-----------------
+  std::vector<float2> interpol(const float2 &a, const float2 &b, float v = 1.0f)
+  {
+    int n = static_cast<int>(sqrtf(dot(b-a,b-a))/(v*PSO::PSO_SIM_DT));
+    n = max(2,n);
+    std::vector<float2> tmp(n);
+    float2 delta = (b-a)/static_cast<float>(n-1);
+    for (int i = 0; i < n; i++)
+    {
+      tmp[i] = a + delta*static_cast<float>(i);
+    }
+    return tmp;
+  }
+  //-----------------
   // Distance from c0 to line_seg c1_c2
   inline float point2lineDist(const float2 & c1, const float2 & c2, const float2 & c0)
   {
@@ -109,7 +100,7 @@ private:
     return sqrtf((dot(a,a)*dot(b,b) - a_dot_b*a_dot_b)/dot(b,b));
   }
 
-  //----
+  //-----------------
   std::vector<size_t> findSplitCoords(const std::vector<float2> &path, float split_dist)
   {
     std::vector<size_t> split_pts;
@@ -162,6 +153,90 @@ private:
     }
     std::reverse(std::begin(split_pts), std::end(split_pts));
     return split_pts;
+  }
+
+  //-----------------
+  void update_path(const std::vector<float2> &wps)
+  {
+    // Use split & merge to identify the wps of sharp turning
+    std::set<size_t> split_sharp_wp_ids;
+    std::vector<size_t> split_wp_ids = findSplitCoords(wps, 3.0f);
+    for (size_t i = 1; i< split_wp_ids.size()-1; i++)
+    {
+      line_seg l1(wps[split_wp_ids[i-1]],wps[split_wp_ids[i]]);
+      line_seg l2(wps[split_wp_ids[i]],wps[split_wp_ids[i+1]]);
+
+      if (fabsf(in_pi(l1.tht-l2.tht)) > 0.25*M_PI)
+      {
+        split_sharp_wp_ids.insert(split_wp_ids[i]);
+        //std::cout<<split_wp_ids[i]<<std::endl;
+      }
+    }
+
+    // Construct the line list
+    std::vector<line_seg> lines;
+    for (size_t i = 0; i < wps.size()-1; i++)
+    {
+      lines.push_back(line_seg(wps[i],wps[i+1]));
+    }
+
+    m_line_list.clear();
+    std::vector<line_seg> tmp;
+    for (size_t i = 0; i < lines.size()-1; i++)
+    {
+      tmp.push_back(lines[i]);
+      if (fabsf(in_pi(lines[i].tht-lines[i+1].tht)) > 0.25*M_PI || split_sharp_wp_ids.count(i+1) != 0)
+      {
+        m_line_list.push_back(tmp);
+        tmp.clear();
+      }
+    }
+    tmp.push_back((lines.back()));
+    m_line_list.push_back(tmp);
+
+    // Construct the path
+    m_path_list.clear();
+    for (size_t i = 0; i < m_line_list.size(); i++)
+    {
+      std::vector<float2> path;
+      for (size_t j = 0; j < m_line_list[i].size(); j++)
+      {
+        std::vector<float2> tmp_pol = interpol(m_line_list[i][j].a,m_line_list[i][j].b,0.8f);
+        for (float2 pol : tmp_pol)
+        {
+          path.push_back(pol);
+        }
+      }
+      m_path_list.push_back(path);
+    }
+
+    m_path_idx = 0;
+  }
+
+  //-----------------
+  void show_path(const std::vector<float2> &wps)
+  {
+    // For visulization
+    visualization_msgs::Marker line_strip;
+    line_strip.header.frame_id = "world";
+    line_strip.ns = "points_and_lines";
+    line_strip.action = visualization_msgs::Marker::ADD;
+    line_strip.pose.orientation.w = 1.0;
+    line_strip.id = 1;
+    line_strip.type = visualization_msgs::Marker::LINE_STRIP;
+    line_strip.scale.x = 0.1;
+    line_strip.color.g = 1.0;
+    line_strip.color.a = 1.0;
+
+    for (float2 p: wps)
+    {
+      geometry_msgs::Point pnt;
+      pnt.x = p.x;
+      pnt.y = p.y;
+      pnt.z = 0;
+      line_strip.points.push_back(pnt);
+    }
+    m_vis_pub.publish(line_strip);
   }
 };
 
