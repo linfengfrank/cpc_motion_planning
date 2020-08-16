@@ -73,7 +73,7 @@ protected:
   }
 
 public:
-  bool isLOS(const CUDA_GEO::coord &p0Index, const CUDA_GEO::coord &p1Index, float obstacle_dist = 1.0)
+  bool isLOS(const CUDA_GEO::coord &p0Index, const CUDA_GEO::coord &p1Index, float obstacle_dist = 0.81f)
   {
     bool los = true;
     bool occupied = false;
@@ -89,7 +89,7 @@ public:
     return los;
   }
   //---
-  bool isOccupied(const CUDA_GEO::coord &s, float obstacle_dist = 1.0)
+  bool isOccupied(const CUDA_GEO::coord &s, float obstacle_dist = 0.81f)
   {
     bool occupied = false;
     obsCostAt(s, 0, occupied, nullptr,nullptr, obstacle_dist);

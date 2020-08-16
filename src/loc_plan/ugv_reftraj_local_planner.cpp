@@ -32,7 +32,7 @@ UGVRefTrajMotionPlanner::UGVRefTrajMotionPlanner():
   m_w_err_reset_ctt = 0;
   m_tht_err_reset_ctt = 0;
   //Initialize the control message
-  m_ref_msg.rows = 3;
+  m_ref_msg.rows = 5;
   m_plan_cycle = 0;
   m_ref_start_idx = 0;
 

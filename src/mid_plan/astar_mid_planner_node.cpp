@@ -120,27 +120,23 @@ bool mid_plan(cpc_motion_planning::astar_service::Request &req,
 
   // Do the planning
   // Initialize the list
-  std::vector<std::vector<CUDA_GEO::coord>> path_list(3);
-  std::vector<float> cost_list(2);
   std::vector<CUDA_GEO::coord> path_adopt;
 
-  if (1)
+  if (!received_ref)
   {
     // Plan A: the new plan
-    cost_list[0]=planPath(start,glb_tgt,path_list[0]);
+    planPath(start,glb_tgt,path_adopt);
   }
   else
   {
     // Plan B: modify based on current trajectory
-    float ini_v_x = ref.data[3];
-    float ini_v_y = ref.data[4];
-    float ini_v_z = ref.data[5];
-    float speed = sqrtf(ini_v_x*ini_v_x + ini_v_y*ini_v_y + ini_v_z*ini_v_z);
-    int max_i = max(speed/0.8f/0.05f,20);
-    //std::cout<<"----"<<max_i<<"----"<<ref.cols<<std::endl;
+    std::vector<CUDA_GEO::coord> path_tmp;
+    float speed = fabsf(ref.data[0]);
+    int max_i = max(speed/0.5f/0.05f,20);
+    std::cout<<"----"<<max_i<<"----"<<ref.cols<<std::endl;
     for (int i=0; i<ref.cols; i++)
     {
-      CUDA_GEO::pos p(ref.data[i*ref.rows],ref.data[i*ref.rows+1],ref.data[i*ref.rows+2]);
+      CUDA_GEO::pos p(ref.data[i*ref.rows+3],ref.data[i*ref.rows+4],0);
       CUDA_GEO::coord c = mid_map->pos2coord(p);
 #ifdef USE2D
       c.z = tgt_height_coord;
@@ -148,34 +144,22 @@ bool mid_plan(cpc_motion_planning::astar_service::Request &req,
       if (i > max_i)
         break;
 
-      if (path_list[1].empty() || !(path_list[1].back() == c))
+      if (path_tmp.empty() || !(path_tmp.back() == c))
       {
-        if(mid_map->isOccupied(c,0.5f) || !mid_map->isInside(c))
+        if(mid_map->isOccupied(c) || !mid_map->isInside(c))
           break;
         else
-          path_list[1].push_back(c);
+          path_tmp.push_back(c);
       }
     }
 
-    if (path_list[1].empty())
+    if (path_tmp.empty())
     {
-      path_list[1].push_back(start);
+      path_tmp.push_back(start);
     }
 
-    std::reverse(path_list[1].begin(),path_list[1].end());
-    cost_list[1] = cascadePath(path_list[1],path_list[2],glb_tgt);
-  }
-
-  unsigned int selected_case = 0;
-  if(1)
-  {
-    path_adopt = path_list[0];
-    selected_case = 0;
-  }
-  else
-  {
-    selected_case = 2;
-    path_adopt = path_list[2];
+    std::reverse(path_tmp.begin(),path_tmp.end());
+    cascadePath(path_tmp,path_adopt,glb_tgt);
   }
 
   //std::reverse(path_adopt.begin(),path_adopt.end());
