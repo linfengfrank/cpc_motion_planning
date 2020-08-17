@@ -12,9 +12,8 @@
 #include "cpc_motion_planning/ref_data.h"
 #include "cpc_motion_planning/astar_service.h"
 
-
 #define SHOWPC
-#define USE2D
+
 typedef pcl::PointCloud<pcl::PointXYZRGB> PointCloud;
 PointCloud::Ptr pclOut (new PointCloud);
 ros::Publisher* point_pub;
@@ -54,11 +53,7 @@ float planPath(const CUDA_GEO::coord &start, const CUDA_GEO::coord &goal, std::v
                 const CUDA_GEO::coord *crd_shift = nullptr, SeenDist *last_value_map=nullptr)
 {
   float length = 0;
-#ifdef USE2D
   path = mid_map->AStar2D(goal,start,false,length,crd_shift,last_value_map);
-#else
-  path = mid_map->AStar3D(goal,start,false,length,crd_shift,last_value_map);
-#endif
   length += 1*actualDistBetweenCoords(path[0],goal);
   return length;
 }
@@ -105,9 +100,7 @@ bool mid_plan(cpc_motion_planning::astar_service::Request &req,
   int tgt_height_coord = mid_map->calcTgtHeightCoord(0.0f);
 
   CUDA_GEO::coord start(mid_map->getMaxX()/2,mid_map->getMaxY()/2,mid_map->getMaxZ()/2);
-#ifdef USE2D
   start.z = tgt_height_coord;
-#endif
 
   CUDA_GEO::pos goal;
   goal.x = req.target.position.x;
@@ -129,18 +122,17 @@ bool mid_plan(cpc_motion_planning::astar_service::Request &req,
   }
   else
   {
-    // Plan B: modify based on current trajectory
+    // Plan B: cascade based on current trajectory
     std::vector<CUDA_GEO::coord> path_tmp;
     float speed = fabsf(ref.data[0]);
-    int max_i = max(speed/0.5f/0.05f,20);
+    int max_i = max(static_cast<int>(speed/0.5f/0.05f),20);
     std::cout<<"----"<<max_i<<"----"<<ref.cols<<std::endl;
     for (int i=0; i<ref.cols; i++)
     {
       CUDA_GEO::pos p(ref.data[i*ref.rows+3],ref.data[i*ref.rows+4],0);
       CUDA_GEO::coord c = mid_map->pos2coord(p);
-#ifdef USE2D
       c.z = tgt_height_coord;
-#endif
+
       if (i > max_i)
         break;
 
@@ -162,25 +154,9 @@ bool mid_plan(cpc_motion_planning::astar_service::Request &req,
     cascadePath(path_tmp,path_adopt,glb_tgt);
   }
 
-  //std::reverse(path_adopt.begin(),path_adopt.end());
+  // The function findSplitCoords will reverse the path sequence
   std::vector<CUDA_GEO::pos>path = mid_map->findSplitCoords(path_adopt);
   publishMap(path);
-  //publish the guide line
-//  std::reverse(path_adopt.begin(),path_adopt.end());
-//  cpc_motion_planning::guide_line line_msg;
-//  geometry_msgs::Point line_pnt;
-//  guide_path.clear();
-//  for (CUDA_GEO::coord &path_crd : path_adopt)
-//  {
-//    CUDA_GEO::pos path_pnt = mid_map->coord2pos(path_crd);
-//    guide_path.push_back(path_pnt);
-//    line_pnt.x = path_pnt.x;
-//    line_pnt.y = path_pnt.y;
-//    line_pnt.z = path_pnt.z;
-//    line_msg.pts.push_back(line_pnt);
-//  }
-//  line_pub->publish(line_msg);
-
 
   geometry_msgs::Pose tmp_pose;
   for (CUDA_GEO::pos p : path)
@@ -190,15 +166,13 @@ bool mid_plan(cpc_motion_planning::astar_service::Request &req,
     tmp_pose.position.z = p.z;
     res.wps.push_back(tmp_pose);
   }
-  //std::cout<<res.wps.size()<<std::endl;
 
   auto end_time = std::chrono::steady_clock::now();
-      std::cout << "Planning time: "
-                << std::chrono::duration_cast<std::chrono::milliseconds>(end_time - start_time).count()
-                << " ms" << std::endl;
+  std::cout << "A-star planning time: "
+            << std::chrono::duration_cast<std::chrono::milliseconds>(end_time - start_time).count()
+            << " ms" << std::endl;
 
-      return true;
-  //extract_target(msg);
+  return true;
 }
 //---
 void get_reference(const cpc_motion_planning::ref_data::ConstPtr &msg)
@@ -221,11 +195,8 @@ int main(int argc, char **argv)
 
 
   *pc_pub = nh.advertise<PointCloud> ("/path", 1);
-
   *point_pub = nh.advertise<geometry_msgs::PoseStamped>("/mid_layer/",1);
-
   pclOut->header.frame_id = "/world";
-
 
   ros::spin();
 
