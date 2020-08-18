@@ -45,7 +45,7 @@ std::vector<CUDA_GEO::coord> Astar::AStar2D(const CUDA_GEO::coord &goal, const C
     ni->inClosed = true;
     my_coord = ni->c;
 
-    obsCostAt(my_coord,0,occupied,crd_shift,last_val_map);
+    obsCostAt(my_coord,0,occupied);
     if (!occupied)
       reached_free_zone = true;
 
@@ -74,7 +74,7 @@ std::vector<CUDA_GEO::coord> Astar::AStar2D(const CUDA_GEO::coord &goal, const C
         {
 
           float new_g = sqrtf(static_cast<float>(ix*ix+iy*iy))*getGridStep() +
-              ni->g + obsCostAt(child_coord,0,occupied,crd_shift,last_val_map);
+              ni->g + obsCostAt(child_coord,0,occupied,true);
           if (p->g > new_g && !(occupied && reached_free_zone))
           {
             p->ptr2parent = ni;
@@ -151,7 +151,7 @@ std::vector<CUDA_GEO::coord> Astar::AStar3D(const CUDA_GEO::coord &goal, const C
     ni->inClosed = true;
     my_coord = ni->c;
 
-    obsCostAt(my_coord,0,occupied,crd_shift,last_val_map);
+    obsCostAt(my_coord,0,occupied);
     if (!occupied)
       reached_free_zone = true;
 
@@ -182,7 +182,7 @@ std::vector<CUDA_GEO::coord> Astar::AStar3D(const CUDA_GEO::coord &goal, const C
           {
 
             float new_g = sqrtf(static_cast<float>(ix*ix+iy*iy+iz*iz))*getGridStep() +
-                ni->g + obsCostAt(child_coord,0,occupied,crd_shift,last_val_map);
+                ni->g + obsCostAt(child_coord,0,occupied);
             if (p->g > new_g && !(occupied && reached_free_zone))
             {
               p->ptr2parent = ni;

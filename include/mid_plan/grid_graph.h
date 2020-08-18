@@ -5,6 +5,7 @@
 #include <mid_plan/SortedSet.h>
 #include <cpc_aux_mapping/grid_map.h>
 
+#define MID_SAFE_DIST 0.66f
 struct nodeInfo
 {
   bool inClosed;
@@ -29,8 +30,7 @@ class GridGraph : public MapBase
 {
 public:
   GridGraph(int maxX, int maxY, int maxZ);
-  float obsCostAt(CUDA_GEO::coord s, float default_value, bool &occupied,
-                  const CUDA_GEO::coord *crd_shift = nullptr, SeenDist *last_val_map = nullptr, float obstacle_dist = 0.81f) const;
+  float obsCostAt(CUDA_GEO::coord s, float default_value, bool &occupied, bool extend=false, float obstacle_dist = MID_SAFE_DIST) const;
   bool isSeen(const CUDA_GEO::coord & s, const bool default_value) const;
 
   nodeInfo* getIdMapPtr() {return _id_map;}
@@ -73,13 +73,13 @@ protected:
   }
 
 public:
-  bool isLOS(const CUDA_GEO::coord &p0Index, const CUDA_GEO::coord &p1Index, float obstacle_dist = 0.81f)
+  bool isLOS(const CUDA_GEO::coord &p0Index, const CUDA_GEO::coord &p1Index, float obstacle_dist = MID_SAFE_DIST)
   {
     bool los = true;
     bool occupied = false;
     for (CUDA_GEO::coord s : rayCast(p0Index, p1Index))
     {
-      obsCostAt(s, 0, occupied, nullptr,nullptr, obstacle_dist);
+      obsCostAt(s, 0, occupied, obstacle_dist);
       if (occupied)
       {
         los = false;
@@ -89,10 +89,10 @@ public:
     return los;
   }
   //---
-  bool isOccupied(const CUDA_GEO::coord &s, float obstacle_dist = 0.81f)
+  bool isOccupied(const CUDA_GEO::coord &s, float obstacle_dist = MID_SAFE_DIST)
   {
     bool occupied = false;
-    obsCostAt(s, 0, occupied, nullptr,nullptr, obstacle_dist);
+    obsCostAt(s, 0, occupied, obstacle_dist);
     return occupied;
   }
   //---
