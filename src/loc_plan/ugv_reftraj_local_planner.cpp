@@ -2,6 +2,7 @@
 #include "tf/tf.h"
 #include <chrono>
 
+//#define HDL_STUCK
 UGVRefTrajMotionPlanner::UGVRefTrajMotionPlanner():
   m_goal_received(false),
   cycle_initialized(false),
@@ -141,6 +142,7 @@ void UGVRefTrajMotionPlanner::do_normal()
   }
   else
   {
+#ifdef HDL_STUCK
     //Goto: Stuck
     if(is_stuck(m_traj,m_tgt.s))
     {
@@ -191,6 +193,7 @@ void UGVRefTrajMotionPlanner::do_normal()
       m_status = UGV::STUCK;
 
     }
+#endif
     //Goto: Pos_reached
     if(is_pos_reached(m_pso_planner->m_model.get_ini_state(),m_tgt.s))
     {
