@@ -106,7 +106,7 @@ void UGVRefTrajMotionPlanner::do_start()
     // Planning
     m_pso_planner->m_eva.m_pure_turning = true;
 
-    float end_theta = m_line_list[0].front().tht;
+    float end_theta = m_loc_lines[0].front().tht;
     m_tgt.s.theta = end_theta;
     m_pso_planner->m_eva.setTarget(m_tgt);
     calculate_trajectory<REF_UGV>(m_pso_planner, m_traj);
@@ -147,12 +147,12 @@ void UGVRefTrajMotionPlanner::do_normal()
       //Find the target point as the next waypoint that is
       //1. As a turning point
       //2. On the global waypoint list
-      waypoint astar_tgt = m_line_list[m_path_idx].back().b;
-      for (size_t i=m_path_idx;i<m_line_list.size();i++)
+      waypoint astar_tgt = m_loc_lines[m_path_idx].back().b;
+      for (size_t i=m_path_idx;i<m_loc_lines.size();i++)
       {
-        if (m_line_list[i].back().b.id > 0)
+        if (m_loc_lines[i].back().b.id > 0)
         {
-          astar_tgt = m_line_list[i].back().b;
+          astar_tgt = m_loc_lines[i].back().b;
           break;
         }
       }
@@ -208,7 +208,7 @@ void UGVRefTrajMotionPlanner::do_stuck()
   // Planning
   m_pso_planner->m_eva.m_pure_turning = true;
 
-  float end_theta = m_line_list[0].front().tht;
+  float end_theta = m_loc_lines[0].front().tht;
   m_tgt.s.theta = end_theta;
   m_pso_planner->m_eva.setTarget(m_tgt);
   calculate_trajectory<REF_UGV>(m_pso_planner, m_traj);
@@ -257,13 +257,13 @@ void UGVRefTrajMotionPlanner::do_pos_reached()
   m_pso_planner->m_eva.m_pure_turning = true;
 
   float end_theta;
-  if (m_path_idx + 1 < m_line_list.size())
+  if (m_path_idx + 1 < m_loc_lines.size())
   {
-    end_theta = m_line_list[m_path_idx+1].front().tht;
+    end_theta = m_loc_lines[m_path_idx+1].front().tht;
   }
   else
   {
-    end_theta = m_line_list[m_path_idx].back().tht;
+    end_theta = m_loc_lines[m_path_idx].back().tht;
   }
   m_tgt.s.theta = end_theta;
   m_pso_planner->m_eva.setTarget(m_tgt);
@@ -283,7 +283,7 @@ void UGVRefTrajMotionPlanner::do_fully_reached()
   // Planing
   full_stop_trajectory(m_traj,m_pso_planner->m_model.get_ini_state());
 
-  if (m_path_idx + 1 < m_line_list.size())
+  if (m_path_idx + 1 < m_loc_lines.size())
   {
     m_path_idx++;
     m_status = UGV::NORMAL;
@@ -348,7 +348,7 @@ void UGVRefTrajMotionPlanner::load_ref_lines()
 
 void UGVRefTrajMotionPlanner::calculate_ref_traj(float2 c)
 {
-  std::vector<float2> &path = m_path_list[m_path_idx];
+  std::vector<float2> &path = m_loc_paths[m_path_idx];
   //c=[x y theta]
 
   //Find nearest point
