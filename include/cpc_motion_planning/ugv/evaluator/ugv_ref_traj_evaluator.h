@@ -80,7 +80,7 @@ public:
 
     // Collision cost
     float rd = getEDT(s.p,map);
-    cost += expf(-7.5f*rd)*400;
+    cost += expf(-8.5f*rd)*400;
 
     if (rd < 0.61f)
       cost += 100;
