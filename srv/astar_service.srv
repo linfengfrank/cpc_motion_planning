@@ -1,3 +1,4 @@
 geometry_msgs/Pose target
 ---
 geometry_msgs/Pose[] wps
+bool reachable

@@ -167,6 +167,14 @@ bool mid_plan(cpc_motion_planning::astar_service::Request &req,
     res.wps.push_back(tmp_pose);
   }
 
+  // Check whether the true goal is reachable or not
+  res.reachable = true;
+  if(mid_map->isInside(mid_map->pos2coord(goal)) && sqrtf((path.back()-goal).square()) > 2*mid_map->getGridStep())
+  {
+    // The target is inside the map and is not reached by the A* path
+    res.reachable = false;
+  }
+
   auto end_time = std::chrono::steady_clock::now();
   std::cout << "A-star planning time: "
             << std::chrono::duration_cast<std::chrono::milliseconds>(end_time - start_time).count()

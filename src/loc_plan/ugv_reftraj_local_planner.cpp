@@ -1,7 +1,6 @@
 #include "loc_plan/ugv_reftraj_local_planner.h"
 #include "tf/tf.h"
 #include <chrono>
-#include <cpc_motion_planning/astar_service.h>
 
 UGVRefTrajMotionPlanner::UGVRefTrajMotionPlanner():
   m_goal_received(false),
@@ -160,34 +159,37 @@ void UGVRefTrajMotionPlanner::do_normal()
 
       // Construct and call the services
       cpc_motion_planning::astar_service srv;
-      srv.request.target.position.x = astar_tgt.p.x;
-      srv.request.target.position.y = astar_tgt.p.y;
-      srv.request.target.position.z = 0;
+      call_a_star_service(srv,astar_tgt);
 
-      // Call the A star service
-      if(m_astar_client.call(srv))
+      // If the target cannot be reached, go to the next target
+      if(!srv.response.reachable)
       {
-        // Get the A star path
-        std::vector<waypoint> wps;
-        for(geometry_msgs::Pose pose : srv.response.wps)
-        {
-          wps.push_back(waypoint(make_float2(pose.position.x,pose.position.y),-1));
-        }
-
-        // Add in the rest of the original plan
-        float2 diff = wps.back().p - astar_tgt.p;
-        if (sqrt(dot(diff,diff))>0.5f)
-          wps.push_back(astar_tgt);
-
-        for (size_t i = astar_tgt.id+1; i<m_glb_wps.size(); i++)
-        {
-          wps.push_back(m_glb_wps[i]);
-        }
-
-        update_path(wps);
-        show_path(wps);
-        m_status = UGV::STUCK;
+        int tgt_glb_wp_id = min(astar_tgt.id+1, m_glb_wps.size());
+        astar_tgt = m_glb_wps[tgt_glb_wp_id];
+        call_a_star_service(srv,astar_tgt);
       }
+
+      // Get the A star path
+      std::vector<waypoint> wps;
+      for(geometry_msgs::Pose pose : srv.response.wps)
+      {
+        wps.push_back(waypoint(make_float2(pose.position.x,pose.position.y),-1));
+      }
+
+      // Add in the rest of the original plan
+      float2 diff = wps.back().p - astar_tgt.p;
+      if (sqrt(dot(diff,diff))>0.5f)
+        wps.push_back(astar_tgt);
+
+      for (size_t i = astar_tgt.id+1; i<m_glb_wps.size(); i++)
+      {
+        wps.push_back(m_glb_wps[i]);
+      }
+
+      update_path(wps);
+      show_path(wps);
+      m_status = UGV::STUCK;
+
     }
     //Goto: Pos_reached
     if(is_pos_reached(m_pso_planner->m_model.get_ini_state(),m_tgt.s))

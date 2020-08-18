@@ -3,6 +3,7 @@
 
 #include <loc_plan/ugv_base_local_planner.h>
 #include <visualization_msgs/Marker.h>
+#include <cpc_motion_planning/astar_service.h>
 
 #define REF_UGV UGV::UGVModel,UGV::UGVDPControl,UGV::RefTrajEvaluator,UGV::UGVSwarm<3>
 
@@ -110,7 +111,14 @@ private:
 
     return sqrtf((dot(a,a)*dot(b,b) - a_dot_b*a_dot_b)/dot(b,b));
   }
-
+  //-----------------
+  bool call_a_star_service(cpc_motion_planning::astar_service &srv, const waypoint &astar_tgt)
+  {
+    srv.request.target.position.x = astar_tgt.p.x;
+    srv.request.target.position.y = astar_tgt.p.y;
+    srv.request.target.position.z = 0;
+    return m_astar_client.call(srv);
+  }
   //-----------------
   std::vector<size_t> findSplitCoords(const std::vector<waypoint> &path, float split_dist)
   {
