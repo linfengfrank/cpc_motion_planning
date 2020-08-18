@@ -145,18 +145,45 @@ void UGVRefTrajMotionPlanner::do_normal()
     //Goto: Stuck
     if(is_stuck(m_traj,m_tgt.s))
     {
+      //Find the target point as the next waypoint that is
+      //1. As a turning point
+      //2. On the global waypoint list
+      waypoint astar_tgt = m_line_list[m_path_idx].back().b;
+      for (size_t i=m_path_idx;i<m_line_list.size();i++)
+      {
+        if (m_line_list[i].back().b.id > 0)
+        {
+          astar_tgt = m_line_list[i].back().b;
+          break;
+        }
+      }
+
+      // Construct and call the services
       cpc_motion_planning::astar_service srv;
-      srv.request.target.position.x = m_path_list[m_path_idx].back().x;
-      srv.request.target.position.y = m_path_list[m_path_idx].back().y;
+      srv.request.target.position.x = astar_tgt.p.x;
+      srv.request.target.position.y = astar_tgt.p.y;
       srv.request.target.position.z = 0;
 
+      // Call the A star service
       if(m_astar_client.call(srv))
       {
-        std::vector<float2> wps;
+        // Get the A star path
+        std::vector<waypoint> wps;
         for(geometry_msgs::Pose pose : srv.response.wps)
         {
-          wps.push_back(make_float2(pose.position.x,pose.position.y));
+          wps.push_back(waypoint(make_float2(pose.position.x,pose.position.y),-1));
         }
+
+        // Add in the rest of the original plan
+        float2 diff = wps.back().p - astar_tgt.p;
+        if (sqrt(dot(diff,diff))>0.5f)
+          wps.push_back(astar_tgt);
+
+        for (size_t i = astar_tgt.id+1; i<m_glb_wps.size(); i++)
+        {
+          wps.push_back(m_glb_wps[i]);
+        }
+
         update_path(wps);
         show_path(wps);
         m_status = UGV::STUCK;
@@ -287,8 +314,9 @@ void UGVRefTrajMotionPlanner::load_ref_lines()
   std::ifstream corridor_file;
   corridor_file.open("/home/sp/nndp/Learning_part/tripple_integrator/pso/in.txt");
   float data[2];
-  std::vector<float2> wps;
+  std::vector<waypoint> wps;
   float2 vehicle_pos = make_float2(m_slam_odo.pose.pose.position.x,m_slam_odo.pose.pose.position.y);
+  int wp_id = 0;
   std::cout<<"Read in data"<<std::endl;
   while(1)
   {
@@ -300,10 +328,10 @@ void UGVRefTrajMotionPlanner::load_ref_lines()
         float2 first_wp = make_float2(data[0],data[1]);
         if (sqrt(dot(vehicle_pos-first_wp,vehicle_pos-first_wp))>1)
         {
-          wps.push_back(vehicle_pos);
+          wps.push_back(waypoint(vehicle_pos,wp_id++));
         }
       }
-      wps.push_back(make_float2(data[0],data[1]));
+      wps.push_back(waypoint(make_float2(data[0],data[1]),wp_id++));
       std::cout<<data[0]<<" "<<data[1]<<std::endl;
     }
     else
@@ -311,7 +339,7 @@ void UGVRefTrajMotionPlanner::load_ref_lines()
       break;
     }
   }
-
+  m_glb_wps = wps;
   update_path(wps);
   show_path(wps);
 }

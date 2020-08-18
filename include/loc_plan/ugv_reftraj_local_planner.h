@@ -9,19 +9,29 @@
 class UGVRefTrajMotionPlanner : public UGVLocalMotionPlanner
 {
 public:
+  struct waypoint
+  {
+    float2 p;
+    int id;
+    waypoint(float2 p_, int id_):p(p_),id(id_)
+    {
+
+    }
+  };
+
   struct line_seg
   {
-    float2 a;
-    float2 b;
+    waypoint a;
+    waypoint b;
     float2 uni;
     float tht;
     float dist;
-    line_seg(float2 a_, float2 b_):a(a_),b(b_)
+    line_seg(waypoint a_, waypoint b_):a(a_),b(b_)
     {
-      dist = sqrtf(dot(b-a,b-a));
+      dist = sqrtf(dot(b.p-a.p,b.p-a.p));
 
       if (dist > 1e-6)
-        uni = (b-a)/dist;
+        uni = (b.p-a.p)/dist;
       else
         uni = make_float2(0,0);
 
@@ -65,6 +75,7 @@ private:
   std::vector<UGV::UGVModel::State> m_traj;
   bool cycle_initialized;
   int m_braking_start_cycle;
+  std::vector<waypoint> m_glb_wps;
   std::vector<std::vector<line_seg>> m_line_list;
   std::vector<std::vector<float2>> m_path_list;
   UGV::RefTrajEvaluator::Target m_tgt;
@@ -101,7 +112,7 @@ private:
   }
 
   //-----------------
-  std::vector<size_t> findSplitCoords(const std::vector<float2> &path, float split_dist)
+  std::vector<size_t> findSplitCoords(const std::vector<waypoint> &path, float split_dist)
   {
     std::vector<size_t> split_pts;
 
@@ -126,7 +137,7 @@ private:
       float max_dist = 0;
       for (unsigned int j = target; j< anchor; j++)
       {
-        float dist = point2lineDist(path[anchor],path[target],path[j]);
+        float dist = point2lineDist(path[anchor].p,path[target].p,path[j].p);
         if (dist > max_dist)
         {
           max_dist = dist;
@@ -156,7 +167,7 @@ private:
   }
 
   //-----------------
-  void update_path(const std::vector<float2> &wps)
+  void update_path(const std::vector<waypoint> &wps)
   {
     // Use split & merge to identify the wps of sharp turning
     std::set<size_t> split_sharp_wp_ids;
@@ -201,7 +212,7 @@ private:
       std::vector<float2> path;
       for (size_t j = 0; j < m_line_list[i].size(); j++)
       {
-        std::vector<float2> tmp_pol = interpol(m_line_list[i][j].a,m_line_list[i][j].b,0.8f);
+        std::vector<float2> tmp_pol = interpol(m_line_list[i][j].a.p,m_line_list[i][j].b.p,0.8f);
         for (float2 pol : tmp_pol)
         {
           path.push_back(pol);
@@ -214,7 +225,7 @@ private:
   }
 
   //-----------------
-  void show_path(const std::vector<float2> &wps)
+  void show_path(const std::vector<waypoint> &wps)
   {
     // For visulization
     visualization_msgs::Marker line_strip;
@@ -228,11 +239,11 @@ private:
     line_strip.color.g = 1.0;
     line_strip.color.a = 1.0;
 
-    for (float2 p: wps)
+    for (waypoint wp: wps)
     {
       geometry_msgs::Point pnt;
-      pnt.x = p.x;
-      pnt.y = p.y;
+      pnt.x = wp.p.x;
+      pnt.y = wp.p.y;
       pnt.z = 0;
       line_strip.points.push_back(pnt);
     }
