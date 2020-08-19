@@ -317,7 +317,8 @@ void UGVRefTrajMotionPlanner::load_ref_lines()
     return;
 
   std::ifstream corridor_file;
-  corridor_file.open("/home/sp/nndp/Learning_part/tripple_integrator/pso/in.txt");
+   corridor_file.open("/home/ugv/yzchen_ws/scout_ws/src/cpc_src/core_modules/cpc_motion_planning/cfg/in2.txt");
+  //  corridor_file.open("/home/yzchen/CODE/higgs/higgs_ugv/src/autowalker_wrapper/cpc_src/core_modules/cpc_motion_planning/cfg/in.txt");
   float data[2];
   std::vector<waypoint> wps;
   float2 vehicle_pos = make_float2(m_slam_odo.pose.pose.position.x,m_slam_odo.pose.pose.position.y);

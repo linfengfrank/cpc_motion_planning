@@ -13,7 +13,9 @@ class UGVDPControl
 public:
   UGVDPControl()
   {
-
+	      weight_prefix="/home/ugv/yzchen_ws/omen_deploy/UGV_new/";
+        
+      //  weight_prefix="/home/yzchen/CODE/higgs/higgs_ugv/UGV_new/";
   }
 
   ~UGVDPControl()
@@ -24,11 +26,11 @@ public:
 
   void load_data(CUDA_MAT::CudaMatrixFactory &factory, bool load_to_host)
   {
-    S_A = static_cast<CUDA_MAT::Matrix<4,UGVModel::Input>*>(factory.load_cuda_matrix<4,UGVModel::Input>("/home/sp/cpc_ws/ugv_new/SA.dat",load_to_host));
-    factory.load_uniform_bin("/home/sp/cpc_ws/ugv_new/pos_bin.dat",ubc.bins[0]);
-    factory.load_uniform_bin("/home/sp/cpc_ws/ugv_new/vel_bin.dat",ubc.bins[1]);
-    factory.load_uniform_bin("/home/sp/cpc_ws/ugv_new/theta_bin.dat",ubc.bins[2]);
-    factory.load_uniform_bin("/home/sp/cpc_ws/ugv_new/w_bin.dat",ubc.bins[3]);
+    S_A = static_cast<CUDA_MAT::Matrix<4,UGVModel::Input>*>(factory.load_cuda_matrix<4,UGVModel::Input>(weight_prefix+"SA.dat",load_to_host));
+    factory.load_uniform_bin(weight_prefix+"pos_bin.dat",ubc.bins[0]);
+    factory.load_uniform_bin(weight_prefix+"vel_bin.dat",ubc.bins[1]);
+    factory.load_uniform_bin(weight_prefix+"theta_bin.dat",ubc.bins[2]);
+    factory.load_uniform_bin(weight_prefix+"w_bin.dat",ubc.bins[3]);
   }
 
   void release_data(CUDA_MAT::CudaMatrixFactory &factory, bool load_from_host)
@@ -101,6 +103,7 @@ public:
   CUDA_MAT::Matrix<4,UGVModel::Input> *S_A;
 
   UniformBinCarrier ubc;
+  std::string weight_prefix;
 };
 }
 #endif // UGV_DP_CONTROL_H
