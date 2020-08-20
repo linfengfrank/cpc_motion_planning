@@ -77,6 +77,29 @@ public:
   }
 
   __host__ __device__
+  float getDesiredHeading(const CUDA_GEO::coord &c) const
+  {
+    float min_cost = 1e6;
+    float cost = 0;
+    float2 dir = make_float2(0,0);
+#ifdef  __CUDA_ARCH__
+    for (int x=-1;x<=1;x++)
+    {
+      for (int y=-1;y<=1;y++)
+      {
+        cost = m_nf1_map.nf1_const_at(c.x+x,c.y+y,0);
+        if (cost < min_cost)
+        {
+          min_cost = cost;
+          dir = make_float2(x,y);
+        }
+      }
+    }
+#endif
+    return atan2f(dir.y,dir.x);
+  }
+
+  __host__ __device__
   float process_cost(const UGVModel::State &s, const EDTMap &map, const float &time, bool &collision) const
   {
     float cost = 0;
@@ -108,6 +131,9 @@ public:
         // Must use c.x c.y and 0 here! Because the NF1 map has only 1 layer.
         cost += 0.5f*m_nf1_map.nf1_const_at(c.x,c.y,0) + 0.2f*sqrtf(3.0f*s.v*s.v + 0.2*s.w*s.w);
 #endif
+        float yaw_diff = s.theta - getDesiredHeading(c);
+        yaw_diff = yaw_diff - floorf((yaw_diff + M_PI) / (2 * M_PI)) * 2 * M_PI;
+        cost += 0.1f*fabsf(yaw_diff);
       }
     }
     else
