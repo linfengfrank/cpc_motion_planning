@@ -293,6 +293,11 @@ void UGVSigTgtMotionPlanner::do_fully_reached()
   }
 }
 //=====================================
+void UGVSigTgtMotionPlanner::do_dropoff()
+{
+
+}
+//=====================================
 void UGVSigTgtMotionPlanner::cycle_init()
 {
   if (cycle_initialized)

@@ -189,6 +189,11 @@ void UGVLocalMotionPlanner::cycle_process_based_on_status()
     do_fully_reached();
     break;
   }
+  case UGV::DROPOFF:
+  {
+    do_dropoff();
+    break;
+  }
   }
 }
 
