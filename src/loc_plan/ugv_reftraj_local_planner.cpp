@@ -14,7 +14,7 @@ UGVRefTrajMotionPlanner::UGVRefTrajMotionPlanner():
 
   m_ref_pub = m_nh.advertise<cpc_motion_planning::ref_data>("ref_traj",1);
   m_vis_pub = m_nh.advertise<visualization_msgs::Marker>("path_viz",1);
-
+  m_mission_finished_pub = m_nh.advertise<std_msgs::Int32>("/mission_finished",1);
   m_dropoff_start_pub = m_nh.advertise<std_msgs::Int32>("/dropoff_start",1);
 
   m_astar_client =  m_nh.serviceClient<cpc_motion_planning::astar_service>("/astar_service");
@@ -302,10 +302,9 @@ void UGVRefTrajMotionPlanner::do_fully_reached()
     m_dropoff_finish_id = -1;
     m_status = UGV::DROPOFF;
   }
-  else if (m_path_idx + 1 < m_loc_lines.size())
+  else
   {
-    m_path_idx++;
-    m_status = UGV::NORMAL;
+    go_to_next_chain();
   }
 }
 
@@ -318,12 +317,22 @@ void UGVRefTrajMotionPlanner::do_dropoff()
   full_stop_trajectory(m_traj,m_pso_planner->m_model.get_ini_state());
 
   if (m_dropoff_finish_id == m_loc_lines[m_path_idx].back().b.id)
+    go_to_next_chain();
+
+}
+
+void UGVRefTrajMotionPlanner::go_to_next_chain()
+{
+  if (m_path_idx + 1 < m_loc_lines.size())
   {
-    if (m_path_idx + 1 < m_loc_lines.size())
-      {
-        m_path_idx++;
-        m_status = UGV::NORMAL;
-      }
+    m_path_idx++;
+    m_status = UGV::NORMAL;
+  }
+  else
+  {
+    std_msgs::Int32 msg;
+    msg.data = 0;
+    m_mission_finished_pub.publish(msg);
   }
 }
 
