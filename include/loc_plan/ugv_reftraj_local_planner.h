@@ -63,12 +63,14 @@ private:
   void cycle_init();
   void load_ref_lines();
   void calculate_ref_traj(float2 vehicle_pos);
+  void go_to_next_chain();
 
 private:
   ros::Subscriber m_goal_sub;
   ros::Subscriber m_dropoff_finish_sub;
   ros::Publisher m_vis_pub;
   ros::Publisher m_dropoff_start_pub;
+  ros::Publisher m_mission_finished_pub;
   ros::ServiceClient m_astar_client;
   ros::Timer m_planning_timer;
   ros::Publisher m_ref_pub;
