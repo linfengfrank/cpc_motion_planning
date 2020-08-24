@@ -17,7 +17,7 @@ protected:
   virtual void do_braking();
   virtual void do_pos_reached();
   virtual void do_fully_reached();
-
+  virtual void do_dropoff();
 private:
   void plan_call_back(const ros::TimerEvent&);
   void goal_call_back(const geometry_msgs::PoseStamped::ConstPtr &msg);

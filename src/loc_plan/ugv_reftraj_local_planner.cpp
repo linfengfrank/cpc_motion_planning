@@ -6,7 +6,8 @@
 UGVRefTrajMotionPlanner::UGVRefTrajMotionPlanner():
   m_goal_received(false),
   cycle_initialized(false),
-  m_braking_start_cycle(0)
+  m_braking_start_cycle(0),
+  m_dropoff_finish_id(-1)
 {
   m_goal_sub = m_nh.subscribe("/move_base_simple/goal",1,&UGVRefTrajMotionPlanner::goal_call_back, this);
 
@@ -14,8 +15,10 @@ UGVRefTrajMotionPlanner::UGVRefTrajMotionPlanner():
   m_ref_pub = m_nh.advertise<cpc_motion_planning::ref_data>("ref_traj",1);
   m_vis_pub = m_nh.advertise<visualization_msgs::Marker>("path_viz",1);
 
-  m_astar_client =  m_nh.serviceClient<cpc_motion_planning::astar_service>("/astar_service");
+  m_dropoff_start_pub = m_nh.advertise<std_msgs::Int32>("/dropoff_start",1);
 
+  m_astar_client =  m_nh.serviceClient<cpc_motion_planning::astar_service>("/astar_service");
+  m_dropoff_finish_sub = m_nh.subscribe("/dropoff_finish",1,&UGVRefTrajMotionPlanner::dropoff_finish_call_back, this);
   m_planning_timer = m_nh.createTimer(ros::Duration(PSO::PSO_REPLAN_DT), &UGVRefTrajMotionPlanner::plan_call_back, this);
 
   m_pso_planner = new PSO::Planner<REF_UGV>(100,30,2);
@@ -41,8 +44,6 @@ UGVRefTrajMotionPlanner::UGVRefTrajMotionPlanner():
 
 UGVRefTrajMotionPlanner::~UGVRefTrajMotionPlanner()
 {
-
-
   m_pso_planner->release();
   delete m_pso_planner;
 }
@@ -89,7 +90,10 @@ void UGVRefTrajMotionPlanner::plan_call_back(const ros::TimerEvent&)
   m_plan_cycle++;
 }
 
-
+void UGVRefTrajMotionPlanner::dropoff_finish_call_back(const std_msgs::Int32::ConstPtr &msg)
+{
+  m_dropoff_finish_id = msg->data;
+}
 
 void UGVRefTrajMotionPlanner::goal_call_back(const geometry_msgs::PoseStamped::ConstPtr &msg)
 {
@@ -289,12 +293,37 @@ void UGVRefTrajMotionPlanner::do_fully_reached()
   // If the current targeting wp is a dropoff point stop until received a msg
   if (m_loc_lines[m_path_idx].back().b.mission_type > 0)
   {
+    //Publish a reaching message here
+    std_msgs::Int32 msg;
+    msg.data = m_loc_lines[m_path_idx].back().b.id;
+    m_dropoff_start_pub.publish(msg);
 
+    //Go to the dropoff state
+    m_dropoff_finish_id = -1;
+    m_status = UGV::DROPOFF;
   }
   else if (m_path_idx + 1 < m_loc_lines.size())
   {
     m_path_idx++;
     m_status = UGV::NORMAL;
+  }
+}
+
+void UGVRefTrajMotionPlanner::do_dropoff()
+{
+  cycle_init();
+  std::cout<<"DROPOFF"<<std::endl;
+
+  // Planing
+  full_stop_trajectory(m_traj,m_pso_planner->m_model.get_ini_state());
+
+  if (m_dropoff_finish_id == m_loc_lines[m_path_idx].back().b.id)
+  {
+    if (m_path_idx + 1 < m_loc_lines.size())
+      {
+        m_path_idx++;
+        m_status = UGV::NORMAL;
+      }
   }
 }
 

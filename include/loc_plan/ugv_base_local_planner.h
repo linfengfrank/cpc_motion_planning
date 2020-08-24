@@ -29,7 +29,8 @@ enum STATUS {
   EMERGENT,
   BRAKING,
   POS_REACHED,
-  FULLY_REACHED};
+  FULLY_REACHED,
+  DROPOFF};
 }
 
 class UGVLocalMotionPlanner
@@ -171,7 +172,7 @@ protected:
   virtual void do_braking() = 0;
   virtual void do_pos_reached() = 0;
   virtual void do_fully_reached() = 0;
-
+  virtual void do_dropoff() = 0;
 protected:
   ros::NodeHandle m_nh;
   ros::Subscriber m_map_sub;

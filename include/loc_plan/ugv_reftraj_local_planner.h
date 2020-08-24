@@ -4,6 +4,7 @@
 #include <loc_plan/ugv_base_local_planner.h>
 #include <visualization_msgs/Marker.h>
 #include <cpc_motion_planning/astar_service.h>
+#include <std_msgs/Int32.h>
 
 #define REF_UGV UGV::UGVModel,UGV::UGVDPControl,UGV::RefTrajEvaluator,UGV::UGVSwarm<3>
 
@@ -53,17 +54,21 @@ protected:
   virtual void do_braking();
   virtual void do_pos_reached();
   virtual void do_fully_reached();
+  virtual void do_dropoff();
 
 private:
   void plan_call_back(const ros::TimerEvent&);
   void goal_call_back(const geometry_msgs::PoseStamped::ConstPtr &msg);
+  void dropoff_finish_call_back(const std_msgs::Int32::ConstPtr &msg);
   void cycle_init();
   void load_ref_lines();
   void calculate_ref_traj(float2 vehicle_pos);
 
 private:
   ros::Subscriber m_goal_sub;
+  ros::Subscriber m_dropoff_finish_sub;
   ros::Publisher m_vis_pub;
+  ros::Publisher m_dropoff_start_pub;
   ros::ServiceClient m_astar_client;
   ros::Timer m_planning_timer;
   ros::Publisher m_ref_pub;
@@ -82,6 +87,7 @@ private:
   std::vector<std::vector<waypoint>> m_loc_paths;
   UGV::RefTrajEvaluator::Target m_tgt;
   size_t m_path_idx;
+  int m_dropoff_finish_id;
 
 private:
   //-----------------
