@@ -14,7 +14,8 @@ public:
   {
     float2 p;
     int id;
-    waypoint(float2 p_, int id_):p(p_),id(id_)
+    int mission_type;
+    waypoint(float2 p_, int id_, int mission_type_):p(p_),id(id_),mission_type(mission_type_)
     {
 
     }
@@ -78,7 +79,7 @@ private:
   int m_braking_start_cycle;
   std::vector<waypoint> m_glb_wps;
   std::vector<std::vector<line_seg>> m_loc_lines;
-  std::vector<std::vector<float2>> m_loc_paths;
+  std::vector<std::vector<waypoint>> m_loc_paths;
   UGV::RefTrajEvaluator::Target m_tgt;
   size_t m_path_idx;
 
@@ -204,7 +205,7 @@ private:
     for (size_t i = 0; i < lines.size()-1; i++)
     {
       tmp.push_back(lines[i]);
-      if (fabsf(in_pi(lines[i].tht-lines[i+1].tht)) > 0.25*M_PI || split_sharp_wp_ids.count(i+1) != 0)
+      if (fabsf(in_pi(lines[i].tht-lines[i+1].tht)) > 0.25*M_PI || split_sharp_wp_ids.count(i+1) != 0 || lines[i].b.mission_type > 0)
       {
         m_loc_lines.push_back(tmp);
         tmp.clear();
@@ -217,13 +218,13 @@ private:
     m_loc_paths.clear();
     for (size_t i = 0; i < m_loc_lines.size(); i++)
     {
-      std::vector<float2> path;
+      std::vector<waypoint> path;
       for (size_t j = 0; j < m_loc_lines[i].size(); j++)
       {
         std::vector<float2> tmp_pol = interpol(m_loc_lines[i][j].a.p,m_loc_lines[i][j].b.p,0.8f);
         for (float2 pol : tmp_pol)
         {
-          path.push_back(pol);
+          path.push_back(waypoint(pol,m_loc_lines[i][j].b.id,m_loc_lines[i][j].b.mission_type));
         }
       }
       m_loc_paths.push_back(path);
