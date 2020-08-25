@@ -70,7 +70,7 @@ private:
   ros::Subscriber m_dropoff_finish_sub;
   ros::Publisher m_vis_pub;
   ros::Publisher m_dropoff_start_pub;
-  ros::Publisher m_mission_finished_pub;
+  ros::Publisher m_mission_status_pub;
   ros::ServiceClient m_astar_client;
   ros::Timer m_planning_timer;
   ros::Publisher m_ref_pub;
