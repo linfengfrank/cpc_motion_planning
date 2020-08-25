@@ -98,6 +98,7 @@ void UGVRefTrajMotionPlanner::dropoff_finish_call_back(const std_msgs::Int32::Co
 void UGVRefTrajMotionPlanner::goal_call_back(const geometry_msgs::PoseStamped::ConstPtr &msg)
 {
   load_ref_lines();
+  ROS_ERROR("GOT GOAL!");
 }
 //---
 void UGVRefTrajMotionPlanner::do_start()
@@ -360,14 +361,13 @@ void UGVRefTrajMotionPlanner::load_ref_lines()
 
   // Read in the data files
   std::ifstream corridor_file;
-   corridor_file.open("/home/ugv/yzchen_ws/scout_ws/src/cpc_src/core_modules/cpc_motion_planning/cfg/in2.txt");
-  //  corridor_file.open("/home/yzchen/CODE/higgs/higgs_ugv/src/autowalker_wrapper/cpc_src/core_modules/cpc_motion_planning/cfg/in.txt");
+  //  corridor_file.open("/home/ugv/yzchen_ws/scout_ws/src/cpc_src/core_modules/cpc_motion_planning/cfg/in.txt");
+   corridor_file.open("/home/yzchen/CODE/higgs/higgs_ugv/src/autowalker_wrapper/cpc_src/core_modules/cpc_motion_planning/cfg/in.txt");
   float data[2];
   std::vector<waypoint> wps;
   float2 vehicle_pos = make_float2(m_slam_odo.pose.pose.position.x,m_slam_odo.pose.pose.position.y);
   int wp_id = 0;
 
-  corridor_file.open("/home/sp/nndp/Learning_part/tripple_integrator/pso/in.txt");
   std::cout<<"Read in data"<<std::endl;
   while(1)
   {
