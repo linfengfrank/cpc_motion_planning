@@ -14,7 +14,7 @@ UGVRefTrajMotionPlanner::UGVRefTrajMotionPlanner():
 
   m_ref_pub = m_nh.advertise<cpc_motion_planning::ref_data>("ref_traj",1);
   m_vis_pub = m_nh.advertise<visualization_msgs::Marker>("path_viz",1);
-  m_mission_finished_pub = m_nh.advertise<std_msgs::Int32>("/mission_finished",1);
+  m_mission_status_pub = m_nh.advertise<std_msgs::Int32>("/mission_status",1);
   m_dropoff_start_pub = m_nh.advertise<std_msgs::Int32>("/dropoff_start",1);
 
   m_astar_client =  m_nh.serviceClient<cpc_motion_planning::astar_service>("/astar_service");
@@ -97,7 +97,6 @@ void UGVRefTrajMotionPlanner::dropoff_finish_call_back(const std_msgs::Int32::Co
 
 void UGVRefTrajMotionPlanner::goal_call_back(const geometry_msgs::PoseStamped::ConstPtr &msg)
 {
-  m_goal_received = true;
   load_ref_lines();
 }
 //---
@@ -331,8 +330,8 @@ void UGVRefTrajMotionPlanner::go_to_next_chain()
   else
   {
     std_msgs::Int32 msg;
-    msg.data = 0;
-    m_mission_finished_pub.publish(msg);
+    msg.data = 1;
+    m_mission_status_pub.publish(msg);
   }
 }
 
@@ -359,12 +358,14 @@ void UGVRefTrajMotionPlanner::load_ref_lines()
   if(!(m_slam_odo_received && m_raw_odo_received && m_received_map))
     return;
 
+  // Read in the data files
   std::ifstream corridor_file;
-  corridor_file.open("/home/sp/nndp/Learning_part/tripple_integrator/pso/in.txt");
   float data[3];
   std::vector<waypoint> wps;
   float2 vehicle_pos = make_float2(m_slam_odo.pose.pose.position.x,m_slam_odo.pose.pose.position.y);
   int wp_id = 0;
+
+  corridor_file.open("/home/sp/nndp/Learning_part/tripple_integrator/pso/in.txt");
   std::cout<<"Read in data"<<std::endl;
   while(1)
   {
@@ -387,9 +388,24 @@ void UGVRefTrajMotionPlanner::load_ref_lines()
       break;
     }
   }
-  m_glb_wps = wps;
-  update_path(wps);
-  show_path(wps);
+
+  // We need at least two waypoint to form a line
+  if(wps.size()>1)
+  {
+    m_glb_wps = wps;
+    update_path(wps);
+    show_path(wps);
+    m_goal_received = true;
+    std_msgs::Int32 msg;
+    msg.data = 0;
+    m_mission_status_pub.publish(msg);
+  }
+  else
+  {
+    std_msgs::Int32 msg;
+    msg.data = -1;
+    m_mission_status_pub.publish(msg);
+  }
 }
 
 void UGVRefTrajMotionPlanner::calculate_ref_traj(float2 c)
