@@ -47,6 +47,10 @@ void Dijkstra::dijkstra2D(CUDA_GEO::coord glb_tgt)
           {
             float new_g = sqrtf(static_cast<float>(ix*ix+iy*iy))*getGridStep() +
                 m->g + obsCostAt(pc,0,occupied,true);
+
+            CUDA_GEO::pos pl = coord2pos(pc);
+
+            new_g += 0.1f*fabsf(pl.y*pl.y+pl.x*pl.x-25);
             if (p->g > new_g)
             {
               p->g = new_g;

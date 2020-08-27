@@ -134,6 +134,9 @@ public:
         float yaw_diff = s.theta - getDesiredHeading(c);
         yaw_diff = yaw_diff - floorf((yaw_diff + M_PI) / (2 * M_PI)) * 2 * M_PI;
         cost += 0.1f*fabsf(yaw_diff);
+
+//        if (s.v < 0)
+//          cost += fabsf(s.v)*10;
       }
     }
     else
