@@ -13,9 +13,12 @@ UGVSigTgtMotionPlanner::UGVSigTgtMotionPlanner():
   m_goal_sub = m_nh.subscribe("/move_base_simple/goal",1,&UGVSigTgtMotionPlanner::goal_call_back, this);
   m_mid_goal_sub = m_nh.subscribe("/mid_goal",1,&UGVSigTgtMotionPlanner::mid_goal_call_back, this);
   m_nf1_sub = m_nh.subscribe("/mid_layer/goal",1,&UGVSigTgtMotionPlanner::nf1_call_back, this);
+  m_dropoff_finish_sub = m_nh.subscribe("/dropoff_finish",1,&UGVSigTgtMotionPlanner::dropoff_finish_call_back, this);
 
   m_ref_pub = m_nh.advertise<cpc_motion_planning::ref_data>("ref_traj",1);
   m_status_pub = m_nh.advertise<std_msgs::String>("ref_status_string",1);
+  m_mission_status_pub = m_nh.advertise<std_msgs::Int32>("/mission_status",1);
+  m_dropoff_start_pub = m_nh.advertise<std_msgs::Int32>("/dropoff_start",1);
 
   m_planning_timer = m_nh.createTimer(ros::Duration(PSO::PSO_REPLAN_DT), &UGVSigTgtMotionPlanner::plan_call_back, this);
 
@@ -40,10 +43,15 @@ UGVSigTgtMotionPlanner::UGVSigTgtMotionPlanner():
 
 UGVSigTgtMotionPlanner::~UGVSigTgtMotionPlanner()
 {
-
-
   m_pso_planner->release();
   delete m_pso_planner;
+}
+
+void UGVSigTgtMotionPlanner::dropoff_finish_call_back(const std_msgs::Int32::ConstPtr &msg)
+{
+  std_msgs::Int32 msg_out;
+  msg_out.data = 1;
+  m_mission_status_pub.publish(msg_out);
 }
 
 void UGVSigTgtMotionPlanner::nf1_call_back(const cpc_aux_mapping::grid_map::ConstPtr &msg)
@@ -130,6 +138,10 @@ void UGVSigTgtMotionPlanner::goal_call_back(const geometry_msgs::PoseStamped::Co
 
   m_goal.s.theta = psi;
   m_goal.id++;
+
+  std_msgs::Int32 msg_out;
+  msg_out.data = 0;
+  m_mission_status_pub.publish(msg_out);
 }
 
 void UGVSigTgtMotionPlanner::mid_goal_call_back(const geometry_msgs::PoseStamped::ConstPtr &msg)
@@ -286,16 +298,28 @@ void UGVSigTgtMotionPlanner::do_fully_reached()
   // Planing
   full_stop_trajectory(m_traj,m_pso_planner->m_model.get_ini_state());
 
+  //Publish a dropoff start message here
+  std_msgs::Int32 msg;
+  msg.data = m_goal.id;
+  m_dropoff_start_pub.publish(msg);
+
+  //Go to the dropoff state
+  m_status = UGV::DROPOFF;
+}
+//=====================================
+void UGVSigTgtMotionPlanner::do_dropoff()
+{
+  cycle_init();
+  std::cout<<"DROPOFF"<<std::endl;
+
+  // Planing
+  full_stop_trajectory(m_traj,m_pso_planner->m_model.get_ini_state());
+
   //Goto: Normal (New target)
   if (m_goal.id != m_pso_planner->m_eva.m_goal.id)
   {
     m_status = UGV::NORMAL;
   }
-}
-//=====================================
-void UGVSigTgtMotionPlanner::do_dropoff()
-{
-
 }
 //=====================================
 void UGVSigTgtMotionPlanner::cycle_init()
