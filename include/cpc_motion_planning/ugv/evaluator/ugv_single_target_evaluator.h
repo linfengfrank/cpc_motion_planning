@@ -129,11 +129,15 @@ public:
         CUDA_GEO::coord c = m_nf1_map.pos2coord(make_float3(s.p.x,s.p.y,0));
 #ifdef  __CUDA_ARCH__
         // Must use c.x c.y and 0 here! Because the NF1 map has only 1 layer.
-        cost += 0.5f*m_nf1_map.nf1_const_at(c.x,c.y,0) + 0.2f*sqrtf(3.0f*s.v*s.v + 0.2*s.w*s.w);
+        cost += 0.5f*m_nf1_map.nf1_const_at(c.x,c.y,0) + 0.2f*sqrtf(3.0f*s.v*s.v + 0.01*s.w*s.w);
 #endif
         float yaw_diff = s.theta - getDesiredHeading(c);
         yaw_diff = yaw_diff - floorf((yaw_diff + M_PI) / (2 * M_PI)) * 2 * M_PI;
-        cost += 0.1f*fabsf(yaw_diff);
+
+        if (fabsf(yaw_diff) < M_PI*0.6)
+          cost += 0.10f*fabsf(yaw_diff);
+        else
+          cost += 1.00f*fabsf(yaw_diff) -  M_PI*0.6*0.9f;
 
 //        if (s.v < 0)
 //          cost += fabsf(s.v)*10;
