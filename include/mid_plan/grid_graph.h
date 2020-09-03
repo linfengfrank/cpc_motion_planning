@@ -105,6 +105,57 @@ public:
 
     return true;
   }
+  //---
+  bool isInside(const CUDA_GEO::pos &p)
+  {
+    CUDA_GEO::coord s = pos2coord(p);
+    if (s.x<0 || s.x>=_w ||
+        s.y<0 || s.y>=_h ||
+        s.z<0 || s.z>=_d)
+      return false;
+
+    return true;
+  }
+  //---
+  int lineseg_proj(const CUDA_GEO::pos &seg_a, const CUDA_GEO::pos &seg_b, const CUDA_GEO::pos &vehicle_pos, CUDA_GEO::pos &proj_pnt) const
+  {
+    CUDA_GEO::pos seg_v=seg_b-seg_a;
+    CUDA_GEO::pos pt_v=vehicle_pos-seg_a;
+    float seg_v_len = sqrtf(seg_v.square());
+    CUDA_GEO::pos seg_v_unit=seg_v/seg_v_len;
+    float proj= pt_v.x*seg_v_unit.x + pt_v.y*seg_v_unit.y + pt_v.z*seg_v_unit.z; // dot product
+    CUDA_GEO::pos proj_v=seg_v_unit*proj;
+    int indicator = 0;
+    if (proj <=0)
+    {
+      proj_pnt = seg_a;
+      indicator = -2;
+    }
+    else if(proj>seg_v_len)
+    {
+      proj_pnt = seg_b;
+      indicator = -1;
+    }
+    else
+    {
+      proj_pnt = proj_v+seg_a;
+      indicator = 0;
+    }
+    return indicator;
+  }
+  //---
+  float straight_line_proj(const CUDA_GEO::pos &seg_a, const CUDA_GEO::pos &seg_b, const CUDA_GEO::pos &vehicle_pos) const
+  {
+    CUDA_GEO::pos seg_v=seg_b-seg_a;
+    CUDA_GEO::pos pt_v=vehicle_pos-seg_a;
+    float seg_v_len = sqrtf(seg_v.square());
+    CUDA_GEO::pos seg_v_unit=seg_v/seg_v_len;
+    float proj= pt_v.x*seg_v_unit.x + pt_v.y*seg_v_unit.y + pt_v.z*seg_v_unit.z; // dot product
+    CUDA_GEO::pos proj_v=seg_v_unit*proj;
+    CUDA_GEO::pos proj_pnt = proj_v+seg_a;
+
+    return sqrtf((vehicle_pos-proj_pnt).square());
+  }
 };
 
 #endif // GRID_GRAPH

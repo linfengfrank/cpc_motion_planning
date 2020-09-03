@@ -32,9 +32,7 @@ public:
 
   struct Target
   {
-    Corridor* c;
-    int n;
-    bool oa;
+    Corridor c;
   };
 
   CorridorEvaluator()
@@ -56,79 +54,40 @@ public:
     float3 seg_v_unit=seg_v/seg_v_len;
     float proj=dot(pt_v,seg_v_unit);
     float3 proj_v=seg_v_unit*proj;
-    if (proj <=0)
-      closest =seg_a;
-    else if(proj>seg_v_len)
-      closest =seg_b;
-    else
+//    if (proj <=0)
+//      closest =seg_a;
+//    else if(proj>seg_v_len)
+//      closest =seg_b;
+//    else
       closest=proj_v+seg_a;
 
     dist_v_len = sqrtf(dot(circ_pos-closest,circ_pos-closest));
   }
 
   __host__ __device__
-  void find_nearest_point(const float3 &p, float & min_len, int &min_idx, float3 &nearest_point) const
-  {
-    min_len = 1e6;
-    min_idx = 1;
-    float3 pnt;
-    float len;
-    for (int i=0;i<m_sfc.n;i++)
-    {
-      linecirc_inter_dist(m_sfc.c[i].a,m_sfc.c[i].b,p,pnt,len);
-      if (len < min_len)
-      {
-        min_len = len;
-        min_idx = i;
-        nearest_point = pnt;
-      }
-    }
-  }
-
-  __host__ __device__
-  float corridor_cost(const Corridor &c, const int &c_idx , const float3 &p) const
-  {
-    float3 pnt;
-    float len;
-    linecirc_inter_dist(c.a,c.b,p,pnt,len);
-
-    float cost = 0;
-    for(int i=c_idx;i<m_sfc.n;i++)
-    {
-      if (i == c_idx)
-        cost += sqrtf(dot(pnt-c.b, pnt-c.b));
-      else
-        cost += m_sfc.c[i].l;
-    }
-
-    cost += len;
-
-    if (len > c.r)
-      cost += 10 + 1e4f*(len -  c.r);
-
-    return cost;
-  }
-
-  __host__ __device__
-  float fc_cost(const float3 &p) const
-  {
-    float min_cost = 1e6;
-    float cost;
-    for(int i=0;i<m_sfc.n;i++)
-    {
-      cost = corridor_cost(m_sfc.c[i],i,p);
-      if (cost < min_cost)
-        min_cost = cost;
-    }
-
-    return min_cost;
-  }
-
-  __host__ __device__
   float process_cost(const UGVModel::State &s, const EDTMap &map, const float &time, bool &collision) const
   {
     float cost = 0;
-    cost = cost+fc_cost(make_float3(s.p.x,s.p.y,0));
+
+    float3 closest;
+    float lat_dist;
+
+    linecirc_inter_dist(m_sfc.c.a, m_sfc.c.b, make_float3(s.p.x,s.p.y,0), closest, lat_dist);
+
+
+    float lon_dist = sqrtf(dot(closest - m_sfc.c.b,closest - m_sfc.c.b));
+
+    float K = 5;
+    cost = lon_dist + K*lat_dist*lat_dist;
+
+    float3 diff_1 = m_sfc.c.b - m_sfc.c.a;
+    diff_1 = diff_1 / sqrtf(dot(diff_1,diff_1));
+    float3 diff_2 = 2*K*(closest - make_float3(s.p.x,s.p.y,0));
+    float3 diff = diff_1 + diff_2;
+    float yaw_diff = s.theta - atan2f(diff.y,diff.x);
+    yaw_diff = yaw_diff - floorf((yaw_diff + M_PI) / (2 * M_PI)) * 2 * M_PI;
+    cost += 0.9f*fabsf(yaw_diff);
+    //cost = cost+fc_cost(make_float3(s.p.x,s.p.y,0));
     //    float3 dist_err = s.p - m_goal.s.p;
     //    cost += 0.5f*sqrtf(dist_err.x*dist_err.x + dist_err.y*dist_err.y + 3*dist_err.z*dist_err.z);
     //    cost += 0.1f*sqrtf(s.v.x*s.v.x + s.v.y*s.v.y + s.v.z*s.v.z);
@@ -167,6 +126,22 @@ public:
   float final_cost(const UGVModel::State &s, const EDTMap &map) const
   {
     float cost = 0;
+
+//    float3 closest;
+//    float lat_dist;
+
+//    linecirc_inter_dist(m_sfc.c.a, m_sfc.c.b, make_float3(s.p.x,s.p.y,0), closest, lat_dist);
+
+
+//    float lon_dist = sqrtf(dot(closest - m_sfc.c.b,closest - m_sfc.c.b));
+
+//    cost = lon_dist + 100*lat_dist*lat_dist;
+
+//    float3 diff = m_sfc.c.b - m_sfc.c.a;
+//    float yaw_diff = s.theta - atan2(diff.y,diff.x);
+//    yaw_diff = yaw_diff - floorf((yaw_diff + M_PI) / (2 * M_PI)) * 2 * M_PI;
+//    cost += 2.5f*fabsf(yaw_diff);
+
     //cost = cost+fc_cost(make_float3(s.p.x,s.p.y,0));
     //    float3 dist_err = s.p - m_goal.s.p;
     //    cost += 1.0f*sqrtf(dist_err.x*dist_err.x + dist_err.y*dist_err.y + 3*dist_err.z*dist_err.z);
