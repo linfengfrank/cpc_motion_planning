@@ -61,8 +61,11 @@ void UGVSigTgtMotionPlanner::nf1_call_back(const cpc_aux_mapping::grid_map::Cons
   {
     CUDA_GEO::pos origin(msg->x_origin,msg->y_origin,msg->z_origin);
     int3 m_nf1_map_size = make_int3(msg->x_size,msg->y_size,msg->z_size);
+
     m_nf1_map = new NF1Map(origin,msg->width,m_nf1_map_size);
     m_nf1_map->setup_device();
+
+    //std::cout<<"********* "<<m_nf1_map->m_map_size.x<<" "<<m_nf1_map->m_map_size.y<<" "<<m_nf1_map->m_map_size.z<<std::endl;
   }
   else
   {
@@ -72,6 +75,22 @@ void UGVSigTgtMotionPlanner::nf1_call_back(const cpc_aux_mapping::grid_map::Cons
   CUDA_MEMCPY_H2D(m_nf1_map->m_nf1_map,msg->payload8.data(),static_cast<size_t>(m_nf1_map->m_byte_size));
   m_pso_planner->m_eva.m_nf1_map = *m_nf1_map;
   m_pso_planner->m_eva.m_nf1_received = true;
+
+//  std::ofstream mylog;
+//  mylog.open("/home/sp/nf1_log_2.txt");
+//  const float *tmp = static_cast<const float*>(static_cast<const void*>(msg->payload8.data()));
+//  int i = 0;
+//  for (size_t z=0;z<8;z++)
+//  {
+//    for (size_t y=0;y<100;y++)
+//    {
+//      for (size_t x=0;x<100;x++)
+//      {
+//        mylog<<tmp[i++]<<" ";
+//      }
+//    }
+//  }
+
 }
 
 void UGVSigTgtMotionPlanner::plan_call_back(const ros::TimerEvent&)
@@ -184,23 +203,23 @@ void UGVSigTgtMotionPlanner::do_normal()
   else
   {
     //Goto: Stuck
-    if(is_stuck(m_traj,m_goal.s))
-    {
-      m_status = UGV::STUCK;
+//    if(is_stuck(m_traj,m_goal.s))
+//    {
+//      m_status = UGV::STUCK;
 
-      m_stuck_goal = m_goal;
-      m_stuck_goal.s = m_pso_planner->m_model.get_ini_state();
-      if (m_mid_goal_received)
-      {
-        float2 diff = m_mid_goal - m_stuck_goal.s.p;
-        m_stuck_goal.s.theta = un_in_pi(atan2f(diff.y,diff.x),m_stuck_goal.s.theta);
-      }
-      else
-      {
-        m_stuck_goal.s.theta += 0.5*M_PI;
-      }
+//      m_stuck_goal = m_goal;
+//      m_stuck_goal.s = m_pso_planner->m_model.get_ini_state();
+//      if (m_mid_goal_received)
+//      {
+//        float2 diff = m_mid_goal - m_stuck_goal.s.p;
+//        m_stuck_goal.s.theta = un_in_pi(atan2f(diff.y,diff.x),m_stuck_goal.s.theta);
+//      }
+//      else
+//      {
+//        m_stuck_goal.s.theta += 0.5*M_PI;
+//      }
 
-    }
+//    }
 
     //Goto: Pos_reached
     if(is_pos_reached(m_pso_planner->m_model.get_ini_state(),m_goal.s))
