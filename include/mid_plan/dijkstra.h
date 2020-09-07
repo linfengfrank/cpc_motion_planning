@@ -16,8 +16,8 @@ public:
   void update_neighbour(const CUDA_GEO::coord &c, const int3 &shift, const float &m_g);
   ~Dijkstra()
   {
-    delete [] _id_map;
-    delete [] _init_id_map;
+    delete [] m_id_map;
+    delete [] m_init_id_map;
   }
 
 
