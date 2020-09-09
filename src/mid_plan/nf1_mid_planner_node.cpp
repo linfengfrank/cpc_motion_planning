@@ -43,7 +43,7 @@ void publishMap(int tgt_height_coord)
   {
     for (int y=0;y<mid_map->getMaxY();y++)
     {
-      for (int z=0;z<8;z++)
+      for (int z=0;z<THETA_GRID_SIZE;z++)
       {
         c.x = x;
         c.y = y;
@@ -110,7 +110,7 @@ void setup_map_msg(cpc_aux_mapping::grid_map &msg, GridGraph* map, bool resize)
   {
     msg.x_size = map->getMaxX();
     msg.y_size = map->getMaxY();
-    msg.z_size = 8;
+    msg.z_size = THETA_GRID_SIZE;
     msg.payload8.resize(sizeof(float)*static_cast<unsigned int>(msg.x_size*msg.y_size*msg.z_size));
   }
 
@@ -122,7 +122,7 @@ void copy_map_to_msg(cpc_aux_mapping::grid_map &msg, GridGraph* map,int tgt_heig
   CUDA_GEO::coord c;
   float *tmp = static_cast<float*>(static_cast<void*>(msg.payload8.data()));
   int i=0;
-  for (int z=0;z<8;z++)
+  for (int z=0;z<THETA_GRID_SIZE;z++)
   {
     for (int y=0;y<map->getMaxY();y++)
     {
@@ -232,7 +232,7 @@ int main(int argc, char **argv)
   nh.param<float>("/nndp_cpp/fly_height",FLY_HEIGHT,0.0);
 
 
-  glb_plan_timer = nh.createTimer(ros::Duration(0.333), glb_plan);
+  glb_plan_timer = nh.createTimer(ros::Duration(0.5), glb_plan);
 
   ros::spin();
 

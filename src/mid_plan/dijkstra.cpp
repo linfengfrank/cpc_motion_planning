@@ -4,8 +4,8 @@
 Dijkstra::Dijkstra(int maxX, int maxY, int maxZ):
   GridGraph(maxX,maxY,maxZ)
 {
-  m_id_map = new nodeInfo[_w*_h*8];
-  m_init_id_map = new nodeInfo[_w*_h*8];
+  m_id_map = new nodeInfo[_w*_h*THETA_GRID_SIZE];
+  m_init_id_map = new nodeInfo[_w*_h*THETA_GRID_SIZE];
 
   //Assign coords value for all members in the id map
   CUDA_GEO::coord s;
@@ -13,41 +13,32 @@ Dijkstra::Dijkstra(int maxX, int maxY, int maxZ):
   {
     for (s.y=0; s.y<_h; s.y++)
     {
-      for (s.z=0; s.z<8; s.z++)
+      for (s.z=0; s.z<THETA_GRID_SIZE; s.z++)
       {
         m_init_id_map[coord2index(s)].c=s;
       }
     }
   }
 
-  children[0][0] = make_int3(1,0,0);
-  children[0][1] = make_int3(-1,0,0);
-
-  children[1][0] = make_int3(-1,-1,0);
-  children[1][1] = make_int3(1,1,0);
-
-  children[2][0] = make_int3(0,-1,0);
-  children[2][1] = make_int3(0,1,0);
-
-  children[3][0] = make_int3(-1,1,0);
-  children[3][1] = make_int3(1,-1,0);
-
-  children[4][0] = make_int3(-1,0,0);
-  children[4][1] = make_int3(1,0,0);
-
-  children[5][0] = make_int3(1,1,0);
-  children[5][1] = make_int3(-1,-1,0);
-
-  children[6][0] = make_int3(0,-1,0);
-  children[6][1] = make_int3(0,1,0);
-
-  children[7][0] = make_int3(-1,1,0);
-  children[7][1] = make_int3(1,-1,0);
-
-  for (size_t i = 0; i <8; i++)
+  for (size_t i = 0; i< THETA_GRID_SIZE; i++)
   {
-    children[i][2] = make_int3(0,0,1);
-    children[i][3] = make_int3(0,0,-1);
+    float theta = grid2theta(static_cast<int>(i));
+    for (int wg = -1; wg<=1;wg++)
+    {
+      for (int vg = -1; vg<=1;vg++)
+      {
+        if (wg == 0 && vg == 0)
+          continue;
+
+        float w = 0.25f*static_cast<float>(wg);
+        float v = 0.6f*static_cast<float>(vg);
+        for (float dt=0.2f; dt<2.5f; dt+=0.4f)
+        {
+          shift_child child = get_shift_child(theta,w,v,dt);
+          children[i].insert(child);
+        }
+      }
+    }
   }
 }
 
@@ -311,7 +302,7 @@ void Dijkstra::bfs2D(CUDA_GEO::coord glb_tgt)
 
 void Dijkstra::dijkstra_with_theta(CUDA_GEO::coord glb_tgt)
 {
-  memcpy(m_id_map,m_init_id_map,sizeof(nodeInfo)*static_cast<size_t>(_w*_h*8));
+  memcpy(m_id_map,m_init_id_map,sizeof(nodeInfo)*static_cast<size_t>(_w*_h*THETA_GRID_SIZE));
   //Get the local Dijkstra target
   CUDA_GEO::coord mc = glb_tgt;
   CUDA_GEO::coord pc;
@@ -319,13 +310,13 @@ void Dijkstra::dijkstra_with_theta(CUDA_GEO::coord glb_tgt)
   // insert the root
   m=m_getNode(mc);
 
-  bool occupied=false;
+//  bool occupied=false;
   if (m)
   {
-    for (int z=0;z<8;z++) {
+    for (int z=0;z<THETA_GRID_SIZE;z++) {
       mc.z=z;
       m=m_getNode(mc);
-      m->g = 0 + m_obsCostAt(mc,0,occupied);
+      m->g = 0 + mm_obsCostAt(mc,0);
       _PQ.insert(m,m->g);
     }
 
@@ -336,11 +327,16 @@ void Dijkstra::dijkstra_with_theta(CUDA_GEO::coord glb_tgt)
     m->inClosed = true;
     mc = m->c;
 
-
-    for (size_t i = 0; i < 4; i++)
+    for (shift_child child : children[positive_modulo(mc.z,THETA_GRID_SIZE)])
     {
-      update_neighbour(mc, children[positive_modulo(mc.z,8)][i], m->g);
+      update_neighbour(mc, child.shift, m->g, child.cost);
     }
+
+    //children[positive_modulo(mc.z,THETA_GRID_SIZE)]
+//    for (size_t i = 0; i < 4; i++)
+//    {
+//      update_neighbour(mc, children[positive_modulo(mc.z,THETA_GRID_SIZE)][i], m->g);
+//    }
 
 
     // get all neighbours
@@ -376,23 +372,27 @@ void Dijkstra::dijkstra_with_theta(CUDA_GEO::coord glb_tgt)
   }
 }
 
-void Dijkstra::update_neighbour(const CUDA_GEO::coord &c, const int3 &shift, const float &m_g)
+void Dijkstra::update_neighbour(const CUDA_GEO::coord &c, const int3 &shift, const float &m_g, float trans_cost)
 {
   CUDA_GEO::coord pc;
   pc.x = c.x + shift.x;
   pc.y = c.y + shift.y;
   pc.z = c.z + shift.z;
 
-  pc.z = positive_modulo(pc.z,8);
+  pc.z = positive_modulo(pc.z,THETA_GRID_SIZE);
   nodeInfo* p = m_getNode(pc);
-  bool occupied;
+
   if (p)
   {
     if (!p->inClosed)
     {
-      float new_g = sqrtf(static_cast<float>(shift.x*shift.x+shift.y*shift.y))*getGridStep() +
-          fabsf(static_cast<float>(shift.z))*12*getGridStep() +
-          m_g + m_obsCostAt(pc,0,occupied);
+//      float new_g = sqrtf(static_cast<float>(shift.x*shift.x+shift.y*shift.y))*getGridStep() +
+//          fabsf(static_cast<float>(shift.z))*12*getGridStep() +
+//          m_g + m_obsCostAt(pc,0,occupied);
+      float new_g = trans_cost +
+          m_g + mm_obsCostAt(pc,0);
+
+
       if (p->g > new_g)
       {
         p->g = new_g;

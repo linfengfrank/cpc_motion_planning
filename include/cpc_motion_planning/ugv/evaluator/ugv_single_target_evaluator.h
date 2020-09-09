@@ -5,6 +5,8 @@
 #include <cpc_motion_planning/dynamic_programming.cuh>
 #include <cuda_geometry/cuda_edtmap.cuh>
 #include <cuda_geometry/cuda_nf1map.cuh>
+
+#define THETA_GRID_SIZE 16
 namespace UGV
 {
 class SingleTargetEvaluator
@@ -77,6 +79,20 @@ public:
   }
 
   __host__ __device__
+  float grid2theta(int grid) const
+  {
+    grid = positive_modulo(grid,THETA_GRID_SIZE);
+    return 2.0f*static_cast<float>(M_PI)/static_cast<float>(THETA_GRID_SIZE)*static_cast<float>(grid);
+  }
+
+  __host__ __device__
+  int theta2grid(float theta) const
+  {
+    int grid = floor(theta/(2.0f*static_cast<float>(M_PI)/static_cast<float>(THETA_GRID_SIZE)) + 0.5);
+    return positive_modulo(grid,THETA_GRID_SIZE);
+  }
+
+  __host__ __device__
   float getDesiredHeading(const CUDA_GEO::coord &c) const
   {
     float min_cost = 1e6;
@@ -112,10 +128,10 @@ public:
 
     // Collision cost
     float rd = getEDT(s.p,map);
-//    cost += expf(-7.5f*rd)*400;
+//    cost += expf(-8.5f*rd)*400;
 
-//    if (rd < 0.61f)
-//      cost += 100;
+    if (rd < 0.61f)
+      cost += 100;
 
     if (rd < 0.21f && time < 1.5f)
     {
@@ -134,18 +150,14 @@ public:
       {
         CUDA_GEO::coord c = m_nf1_map.pos2coord(make_float3(s.p.x,s.p.y,0));
         float theta = s.theta;
-        theta = theta - floorf((theta + M_PI) / (2 * M_PI)) * 2 * M_PI;
-        //theta += M_PI*0.5;
-
-        int theta_crd = floor(theta/(M_PI*0.25) + 0.5);
-        theta_crd = positive_modulo(theta_crd,8);
+        int theta_crd = theta2grid(theta);
 
         c.z = theta_crd;
 
 
 #ifdef  __CUDA_ARCH__
         // Must use c.x c.y and 0 here! Because the NF1 map has only 1 layer.
-        cost += 0.5f*m_nf1_map.nf1_const_at(c.x,c.y,c.z) + 0.1f*sqrtf(0.1f*s.v*s.v + 0.01*s.w*s.w);
+        cost += 0.5f*m_nf1_map.nf1_const_at(c.x,c.y,c.z) + 0.0f*sqrtf(3.0f*s.v*s.v + 0.05*s.w*s.w);
 #endif
       }
     }
