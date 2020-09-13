@@ -20,6 +20,7 @@ Dijkstra::Dijkstra(int maxX, int maxY, int maxZ):
     }
   }
 
+  float dt[4]={0.25f,0.6f,1.1f,2.1f};
   for (size_t i = 0; i< THETA_GRID_SIZE; i++)
   {
     float theta = grid2theta(static_cast<int>(i));
@@ -32,9 +33,12 @@ Dijkstra::Dijkstra(int maxX, int maxY, int maxZ):
 
         float w = 0.25f*static_cast<float>(wg);
         float v = 0.6f*static_cast<float>(vg);
-        for (float dt=0.2f; dt<2.5f; dt+=0.4f)
+        for (size_t k=0; k<4; k++)
         {
-          shift_child child = get_shift_child(theta,w,v,dt);
+          shift_child child = get_shift_child(theta,w,v,dt[k]);
+          if (child.shift.x == 0 && child.shift.y == 0 && child.shift.z == 0)
+            continue;
+
           children[i].insert(child);
         }
       }

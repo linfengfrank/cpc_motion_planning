@@ -145,7 +145,7 @@ private:
 
     // while doing dijkstra, we start from the goal so very thing is growing backaward
     if (v > 0.1f)
-      child.cost += fabsf(v);
+      child.cost += fabsf(2.0f*v);
 
     return child;
   }

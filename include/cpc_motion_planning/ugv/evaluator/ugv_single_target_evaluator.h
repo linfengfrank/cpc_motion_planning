@@ -157,7 +157,7 @@ public:
 
 #ifdef  __CUDA_ARCH__
         // Must use c.x c.y and 0 here! Because the NF1 map has only 1 layer.
-        cost += 0.5f*m_nf1_map.nf1_const_at(c.x,c.y,c.z) + 0.0f*sqrtf(3.0f*s.v*s.v + 0.05*s.w*s.w);
+        cost += 0.5f*m_nf1_map.nf1_const_at(c.x,c.y,c.z) + 0.025f*sqrtf(0.1f*s.v*s.v + 0.1f*s.w*s.w);
 #endif
       }
     }
