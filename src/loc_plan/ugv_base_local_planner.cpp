@@ -130,6 +130,9 @@ void UGVLocalMotionPlanner::add_to_ref_msg(cpc_motion_planning::ref_data& ref_ms
   ref_msg.ids.push_back(ref_counter);
   ref_msg.data.push_back(traj_s.v);
   ref_msg.data.push_back(traj_s.w);
+  ref_msg.data.push_back(traj_s.theta);
+  ref_msg.data.push_back(traj_s.p.x);
+  ref_msg.data.push_back(traj_s.p.y);
 }
 
 #ifdef SHOW_PC
@@ -184,6 +187,11 @@ void UGVLocalMotionPlanner::cycle_process_based_on_status()
   case UGV::FULLY_REACHED:
   {
     do_fully_reached();
+    break;
+  }
+  case UGV::DROPOFF:
+  {
+    do_dropoff();
     break;
   }
   }

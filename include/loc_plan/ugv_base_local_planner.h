@@ -16,8 +16,9 @@
 #include <cpc_motion_planning/ugv/controller/ugv_jlt_control.h>
 #include <cpc_motion_planning/ugv/swarm/ugv_swarm.h>
 #include <deque>
+#include "tf/tf.h"
 
-#define PRED_STATE
+//#define PRED_STATE
 #define SHOW_PC
 namespace UGV
 {
@@ -28,7 +29,8 @@ enum STATUS {
   EMERGENT,
   BRAKING,
   POS_REACHED,
-  FULLY_REACHED};
+  FULLY_REACHED,
+  DROPOFF};
 }
 
 class UGVLocalMotionPlanner
@@ -63,6 +65,11 @@ protected:
 
   void add_to_ref_msg(cpc_motion_planning::ref_data& ref_msg, int ref_counter, const UGV::UGVModel::State &traj);
 
+  template <typename T> int sgn(T val)
+  {
+      return (T(0) < val) - (val < T(0));
+  }
+
   template<class Model, class Controller, class Evaluator, class Swarm>
   void calculate_trajectory(PSO::Planner<Model, Controller, Evaluator, Swarm> *planner, std::vector<UGV::UGVModel::State> &traj)
   {
@@ -73,16 +80,15 @@ protected:
     traj = planner->generate_trajectory();
   }
 
-  void full_stop_trajectory(std::vector<UGV::UGVModel::State> &traj)
+  void full_stop_trajectory(std::vector<UGV::UGVModel::State> &traj, UGV::UGVModel::State curr_s)
   {
     traj.clear();
-    float dt = PSO::PSO_CTRL_DT;;
+    float dt = PSO::PSO_CTRL_DT;
+    curr_s.v = 0;
+    curr_s.w = 0;
     for (float t=0.0f; t<PSO::PSO_TOTAL_T; t+=dt)
     {
-      UGV::UGVModel::State s;
-      s.v = 0;
-      s.w = 0;
-      traj.push_back(s);
+      traj.push_back(curr_s);
     }
   }
 
@@ -115,6 +121,42 @@ protected:
     return in_pi(in-last) + last;
   }
 
+  float select_mes_ref(float mes, float ref, int& ctt,  bool is_theta = false, float th = 1.0f, int ctt_th = 5)
+  {
+    float output;
+    float err = ref - mes;
+
+    if(is_theta)
+      err = in_pi(err);
+
+    if (fabsf(err) > th)
+      ctt++;
+    else
+      ctt = 0;
+
+    if (ctt >= ctt_th)
+    {
+      ctt = 0;
+      output = mes + sgn<float>(err)*0.5f;
+    }
+    else
+    {
+      output = ref;
+    }
+    return output;
+  }
+
+  float get_heading(const nav_msgs::Odometry &odom)
+  {
+    double phi,theta,psi;
+    tf::Quaternion q(odom.pose.pose.orientation.x,
+                     odom.pose.pose.orientation.y,
+                     odom.pose.pose.orientation.z,
+                     odom.pose.pose.orientation.w);
+    tf::Matrix3x3 m(q);
+    m.getRPY(phi, theta, psi);
+    return psi;
+  }
 #ifdef SHOW_PC
   void plot_trajectory(const std::vector<UGV::UGVModel::State> &traj);
 #endif
@@ -130,7 +172,7 @@ protected:
   virtual void do_braking() = 0;
   virtual void do_pos_reached() = 0;
   virtual void do_fully_reached() = 0;
-
+  virtual void do_dropoff() = 0;
 protected:
   ros::NodeHandle m_nh;
   ros::Subscriber m_map_sub;

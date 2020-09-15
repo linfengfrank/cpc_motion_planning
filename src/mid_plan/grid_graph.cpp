@@ -50,20 +50,10 @@ float GridGraph::getCost2Come(const CUDA_GEO::coord & s, const float &default_va
   }
 }
 
-float GridGraph::obsCostAt(CUDA_GEO::coord s, float default_value, bool &occupied,
-                             const CUDA_GEO::coord *crd_shift, SeenDist *last_val_map, float obstacle_dist) const
+float GridGraph::obsCostAt(CUDA_GEO::coord s, float default_value, bool &occupied, bool extend, float obstacle_dist) const
 {
   SeenDist* map_ptr;
-  if (last_val_map != nullptr)
-  {
-    s = s + (*crd_shift);
-    default_value = 100;
-    map_ptr = last_val_map;
-  }
-  else
-  {
-    map_ptr = _val_map;
-  }
+  map_ptr = _val_map;
 
   float dist = 0.0f;
   float cost = 0.0;
@@ -85,8 +75,8 @@ float GridGraph::obsCostAt(CUDA_GEO::coord s, float default_value, bool &occupie
   }
   else
   {
-    if (dist <= obstacle_dist + 0.5f)
-      cost = 6.0f*expf(-dist*2.6f);
+    if (extend && dist <= obstacle_dist + 0.5f)
+      cost = 6.0f*expf(-dist*3.6f);
     else
       cost = 0;
     occupied = false;

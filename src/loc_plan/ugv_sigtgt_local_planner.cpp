@@ -3,11 +3,6 @@
 #include <chrono>
 #include <std_msgs/String.h>
 
-template <typename T> int sgn(T val)
-{
-    return (T(0) < val) - (val < T(0));
-}
-
 UGVSigTgtMotionPlanner::UGVSigTgtMotionPlanner():
   m_goal_received(false),
   m_mid_goal_received(false),
@@ -18,9 +13,12 @@ UGVSigTgtMotionPlanner::UGVSigTgtMotionPlanner():
   m_goal_sub = m_nh.subscribe("/move_base_simple/goal",1,&UGVSigTgtMotionPlanner::goal_call_back, this);
   m_mid_goal_sub = m_nh.subscribe("/mid_goal",1,&UGVSigTgtMotionPlanner::mid_goal_call_back, this);
   m_nf1_sub = m_nh.subscribe("/mid_layer/goal",1,&UGVSigTgtMotionPlanner::nf1_call_back, this);
+  m_dropoff_finish_sub = m_nh.subscribe("/dropoff_finish",1,&UGVSigTgtMotionPlanner::dropoff_finish_call_back, this);
 
   m_ref_pub = m_nh.advertise<cpc_motion_planning::ref_data>("ref_traj",1);
   m_status_pub = m_nh.advertise<std_msgs::String>("ref_status_string",1);
+  m_mission_status_pub = m_nh.advertise<std_msgs::Int32>("/mission_status",1);
+  m_dropoff_start_pub = m_nh.advertise<std_msgs::Int32>("/dropoff_start",1);
 
   m_planning_timer = m_nh.createTimer(ros::Duration(PSO::PSO_REPLAN_DT), &UGVSigTgtMotionPlanner::plan_call_back, this);
 
@@ -32,21 +30,28 @@ UGVSigTgtMotionPlanner::UGVSigTgtMotionPlanner():
 
   m_ref_v = 0.0f;
   m_ref_w = 0.0f;
+  m_ref_theta = 0.0f;
 
   m_v_err_reset_ctt = 0;
   m_w_err_reset_ctt = 0;
+  m_tht_err_reset_ctt = 0;
   //Initialize the control message
-  m_ref_msg.rows = 2;
+  m_ref_msg.rows = 5;
   m_plan_cycle = 0;
   m_ref_start_idx = 0;
 }
 
 UGVSigTgtMotionPlanner::~UGVSigTgtMotionPlanner()
 {
-
-
   m_pso_planner->release();
   delete m_pso_planner;
+}
+
+void UGVSigTgtMotionPlanner::dropoff_finish_call_back(const std_msgs::Int32::ConstPtr &msg)
+{
+  std_msgs::Int32 msg_out;
+  msg_out.data = 1;
+  m_mission_status_pub.publish(msg_out);
 }
 
 void UGVSigTgtMotionPlanner::nf1_call_back(const cpc_aux_mapping::grid_map::ConstPtr &msg)
@@ -91,10 +96,13 @@ void UGVSigTgtMotionPlanner::plan_call_back(const ros::TimerEvent&)
     {
       m_ref_v = traj_s.v;
       m_ref_w = traj_s.w;
+      m_ref_theta = traj_s.theta;
     }
 
     cols++;
   }
+
+  //std::cout<<m_ref_theta<<std::endl;
 
   m_ref_start_idx = next_ref_start_idx;
 
@@ -130,6 +138,10 @@ void UGVSigTgtMotionPlanner::goal_call_back(const geometry_msgs::PoseStamped::Co
 
   m_goal.s.theta = psi;
   m_goal.id++;
+
+  std_msgs::Int32 msg_out;
+  msg_out.data = 0;
+  m_mission_status_pub.publish(msg_out);
 }
 
 void UGVSigTgtMotionPlanner::mid_goal_call_back(const geometry_msgs::PoseStamped::ConstPtr &msg)
@@ -141,8 +153,15 @@ void UGVSigTgtMotionPlanner::mid_goal_call_back(const geometry_msgs::PoseStamped
 //=====================================
 void UGVSigTgtMotionPlanner::do_start()
 {
-if (m_slam_odo_received && m_raw_odo_received && m_received_map && m_goal_received)
-  m_status = UGV::NORMAL;
+  if (m_slam_odo_received && m_raw_odo_received && m_received_map && m_goal_received)
+  {
+    m_status = UGV::NORMAL;
+  }
+  else
+  {
+    if (m_slam_odo_received)
+      m_ref_theta = get_heading(m_slam_odo);
+  }
 }
 //=====================================
 void UGVSigTgtMotionPlanner::do_normal()
@@ -241,7 +260,7 @@ void UGVSigTgtMotionPlanner::do_braking()
   std::cout<<"BRAKING"<<std::endl;
 
   //Planning
-  full_stop_trajectory(m_traj);
+  full_stop_trajectory(m_traj,m_pso_planner->m_model.get_ini_state());
 
   //Goto: Normal
   if (m_plan_cycle - m_braking_start_cycle >= 10)
@@ -277,7 +296,24 @@ void UGVSigTgtMotionPlanner::do_fully_reached()
   std::cout<<"FULLY_REACHED"<<std::endl;
 
   // Planing
-  full_stop_trajectory(m_traj);
+  full_stop_trajectory(m_traj,m_pso_planner->m_model.get_ini_state());
+
+  //Publish a dropoff start message here
+  std_msgs::Int32 msg;
+  msg.data = m_goal.id;
+  m_dropoff_start_pub.publish(msg);
+
+  //Go to the dropoff state
+  m_status = UGV::DROPOFF;
+}
+//=====================================
+void UGVSigTgtMotionPlanner::do_dropoff()
+{
+  cycle_init();
+  std::cout<<"DROPOFF"<<std::endl;
+
+  // Planing
+  full_stop_trajectory(m_traj,m_pso_planner->m_model.get_ini_state());
 
   //Goto: Normal (New target)
   if (m_goal.id != m_pso_planner->m_eva.m_goal.id)
@@ -292,52 +328,12 @@ void UGVSigTgtMotionPlanner::cycle_init()
     return;
 
   cycle_initialized = true;
-  double phi,theta,psi;
-
-  tf::Quaternion q(m_slam_odo.pose.pose.orientation.x,
-                   m_slam_odo.pose.pose.orientation.y,
-                   m_slam_odo.pose.pose.orientation.z,
-                   m_slam_odo.pose.pose.orientation.w);
-  tf::Matrix3x3 m(q);
-  m.getRPY(phi, theta, psi);
+  float psi = select_mes_ref(get_heading(m_slam_odo), m_ref_theta, m_tht_err_reset_ctt, true, 0.25f);
 
   UGV::UGVModel::State s = predict_state(m_slam_odo,psi,m_ref_start_idx);
 
-
-  float v_err = m_ref_v-m_raw_odo.twist.twist.linear.x;
-  float w_err = m_ref_w-m_raw_odo.twist.twist.angular.z;
-
-  if (fabs(v_err) > 1.0 )
-    m_v_err_reset_ctt++;
-  else
-    m_v_err_reset_ctt = 0;
-
-  if (fabs(w_err) > 1.0)
-    m_w_err_reset_ctt++;
-  else
-    m_w_err_reset_ctt = 0;
-
-  if (m_v_err_reset_ctt > 5)
-  {
-    std::cout<<"------Reset v------"<<std::endl;
-    s.v = m_raw_odo.twist.twist.linear.x + sgn<float>(v_err)*0.5;
-    m_v_err_reset_ctt = 0;
-  }
-  else
-  {
-    s.v = m_ref_v;
-  }
-
-  if (m_w_err_reset_ctt > 5)
-  {
-    std::cout<<"------Reset w------"<<std::endl;
-    s.w = m_raw_odo.twist.twist.angular.z + sgn<float>(w_err)*0.5;
-    m_w_err_reset_ctt = 0;
-  }
-  else
-  {
-    s.w = m_ref_w;
-  }
+  s.v = select_mes_ref(m_raw_odo.twist.twist.linear.x, m_ref_v, m_v_err_reset_ctt);
+  s.w = select_mes_ref(m_raw_odo.twist.twist.angular.z, m_ref_w, m_w_err_reset_ctt);
 
   m_pso_planner->m_model.set_ini_state(s);
   m_traj = m_pso_planner->generate_trajectory();

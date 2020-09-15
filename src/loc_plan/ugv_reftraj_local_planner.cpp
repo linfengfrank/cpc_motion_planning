@@ -1,26 +1,24 @@
 #include "loc_plan/ugv_reftraj_local_planner.h"
 #include "tf/tf.h"
 #include <chrono>
-#include <cpc_motion_planning/astar_service.h>
 
-template <typename T> int sgn(T val)
-{
-    return (T(0) < val) - (val < T(0));
-}
-
+//#define HDL_STUCK
 UGVRefTrajMotionPlanner::UGVRefTrajMotionPlanner():
   m_goal_received(false),
   cycle_initialized(false),
-  m_braking_start_cycle(0)
+  m_braking_start_cycle(0),
+  m_dropoff_finish_id(-1)
 {
   m_goal_sub = m_nh.subscribe("/move_base_simple/goal",1,&UGVRefTrajMotionPlanner::goal_call_back, this);
 
 
   m_ref_pub = m_nh.advertise<cpc_motion_planning::ref_data>("ref_traj",1);
   m_vis_pub = m_nh.advertise<visualization_msgs::Marker>("path_viz",1);
+  m_mission_status_pub = m_nh.advertise<std_msgs::Int32>("/mission_status",1);
+  m_dropoff_start_pub = m_nh.advertise<std_msgs::Int32>("/dropoff_start",1);
 
   m_astar_client =  m_nh.serviceClient<cpc_motion_planning::astar_service>("/astar_service");
-
+  m_dropoff_finish_sub = m_nh.subscribe("/dropoff_finish",1,&UGVRefTrajMotionPlanner::dropoff_finish_call_back, this);
   m_planning_timer = m_nh.createTimer(ros::Duration(PSO::PSO_REPLAN_DT), &UGVRefTrajMotionPlanner::plan_call_back, this);
 
   m_pso_planner = new PSO::Planner<REF_UGV>(100,30,2);
@@ -31,11 +29,13 @@ UGVRefTrajMotionPlanner::UGVRefTrajMotionPlanner():
 
   m_ref_v = 0.0f;
   m_ref_w = 0.0f;
+  m_ref_theta = 0.0f;
 
   m_v_err_reset_ctt = 0;
   m_w_err_reset_ctt = 0;
+  m_tht_err_reset_ctt = 0;
   //Initialize the control message
-  m_ref_msg.rows = 2;
+  m_ref_msg.rows = 5;
   m_plan_cycle = 0;
   m_ref_start_idx = 0;
 
@@ -44,8 +44,6 @@ UGVRefTrajMotionPlanner::UGVRefTrajMotionPlanner():
 
 UGVRefTrajMotionPlanner::~UGVRefTrajMotionPlanner()
 {
-
-
   m_pso_planner->release();
   delete m_pso_planner;
 }
@@ -72,6 +70,7 @@ void UGVRefTrajMotionPlanner::plan_call_back(const ros::TimerEvent&)
     {
       m_ref_v = traj_s.v;
       m_ref_w = traj_s.w;
+      m_ref_theta = traj_s.theta;
     }
 
     cols++;
@@ -91,34 +90,41 @@ void UGVRefTrajMotionPlanner::plan_call_back(const ros::TimerEvent&)
   m_plan_cycle++;
 }
 
-
+void UGVRefTrajMotionPlanner::dropoff_finish_call_back(const std_msgs::Int32::ConstPtr &msg)
+{
+  m_dropoff_finish_id = msg->data;
+}
 
 void UGVRefTrajMotionPlanner::goal_call_back(const geometry_msgs::PoseStamped::ConstPtr &msg)
 {
-  m_goal_received = true;
   load_ref_lines();
 }
 //---
 void UGVRefTrajMotionPlanner::do_start()
 {
-if (m_slam_odo_received && m_raw_odo_received && m_received_map && m_goal_received)
-{
-  cycle_init();
-  std::cout<<"START"<<std::endl;
-
-  // Planning
-  m_pso_planner->m_eva.m_pure_turning = true;
-
-  float end_theta = m_line_list[0].front().tht;
-  m_tgt.s.theta = end_theta;
-  m_pso_planner->m_eva.setTarget(m_tgt);
-  calculate_trajectory<REF_UGV>(m_pso_planner, m_traj);
-
-  if(is_heading_reached(m_pso_planner->m_model.get_ini_state(),m_tgt.s))
+  if (m_slam_odo_received && m_raw_odo_received && m_received_map && m_goal_received)
   {
-    m_status = UGV::NORMAL;
+    cycle_init();
+    std::cout<<"START"<<std::endl;
+
+    // Planning
+    m_pso_planner->m_eva.m_pure_turning = true;
+
+    float end_theta = m_loc_lines[0].front().tht;
+    m_tgt.s.theta = end_theta;
+    m_pso_planner->m_eva.setTarget(m_tgt);
+    calculate_trajectory<REF_UGV>(m_pso_planner, m_traj);
+
+    if(is_heading_reached(m_pso_planner->m_model.get_ini_state(),m_tgt.s))
+    {
+      m_status = UGV::NORMAL;
+    }
   }
-}
+  else
+  {
+    if (m_slam_odo_received)
+      m_ref_theta = get_heading(m_slam_odo);
+  }
 }
 //---
 void UGVRefTrajMotionPlanner::do_normal()
@@ -139,11 +145,58 @@ void UGVRefTrajMotionPlanner::do_normal()
   }
   else
   {
+#ifdef HDL_STUCK
     //Goto: Stuck
     if(is_stuck(m_traj,m_tgt.s))
     {
+      //Find the target point as the next waypoint that is
+      //1. As a turning point
+      //2. On the global waypoint list
+      waypoint astar_tgt = m_loc_lines[m_path_idx].back().b;
+      for (size_t i=m_path_idx;i<m_loc_lines.size();i++)
+      {
+        if (m_loc_lines[i].back().b.id > 0)
+        {
+          astar_tgt = m_loc_lines[i].back().b;
+          break;
+        }
+      }
+
+      // Construct and call the services
+      cpc_motion_planning::astar_service srv;
+      call_a_star_service(srv,astar_tgt);
+
+      // If the target cannot be reached, go to the next target
+      if(!srv.response.reachable)
+      {
+        int tgt_glb_wp_id = min(astar_tgt.id+1, m_glb_wps.size());
+        astar_tgt = m_glb_wps[tgt_glb_wp_id];
+        call_a_star_service(srv,astar_tgt);
+      }
+
+      // Get the A star path
+      std::vector<waypoint> wps;
+      for(geometry_msgs::Pose pose : srv.response.wps)
+      {
+        wps.push_back(waypoint(make_float2(pose.position.x,pose.position.y),-1));
+      }
+
+      // Add in the rest of the original plan
+      float2 diff = wps.back().p - astar_tgt.p;
+      if (sqrt(dot(diff,diff))>0.5f)
+        wps.push_back(astar_tgt);
+
+      for (size_t i = astar_tgt.id+1; i<m_glb_wps.size(); i++)
+      {
+        wps.push_back(m_glb_wps[i]);
+      }
+
+      update_path(wps);
+      show_path(wps);
       m_status = UGV::STUCK;
+
     }
+#endif
     //Goto: Pos_reached
     if(is_pos_reached(m_pso_planner->m_model.get_ini_state(),m_tgt.s))
     {
@@ -156,36 +209,20 @@ void UGVRefTrajMotionPlanner::do_normal()
 void UGVRefTrajMotionPlanner::do_stuck()
 {
   cycle_init();
-  cpc_motion_planning::astar_service srv;
-  srv.request.target.position.x = m_path_list[m_path_idx].back().x;
-  srv.request.target.position.y = m_path_list[m_path_idx].back().y;
-  srv.request.target.position.z = 0;
 
-  m_astar_client.call(srv);
-//  auto start = std::chrono::steady_clock::now();
-//  m_traj.clear();
-//  float dt = PSO::PSO_CTRL_DT;;
-//  for (float t=0.0f; t<PSO::PSO_TOTAL_T; t+=dt)
-//  {
-//    UGV::UGVModel::State s;
-//    s.v = 0;
-//    s.w = 0.5;
-//    m_traj.push_back(s);
-//  }
+  std::cout<<"STUCK"<<std::endl;
+  // Planning
+  m_pso_planner->m_eva.m_pure_turning = true;
 
-//  std::vector<UGV::UGVModel::State> tmp_traj;
-//  calculate_trajectory<REF_UGV>(m_pso_planner, tmp_traj);
-//  UGV::UGVModel::State tmp_goal = float3_to_goal_state(m_ref_traj.tarj[40]);
-//  if(!is_stuck_instant_horizon(tmp_traj,tmp_goal))
-//  {
-//    m_status = UGV::NORMAL;
-//    m_traj = tmp_traj;
-//  }
-//  auto end = std::chrono::steady_clock::now();
-//  std::cout << "local planner (STUCK): "
-//            << std::chrono::duration_cast<std::chrono::milliseconds>(end - start).count()
-//            << "ms, " << m_pso_planner->result.best_cost
-//            << ", collision: " << m_pso_planner->result.collision<<std::endl;
+  float end_theta = m_loc_lines[0].front().tht;
+  m_tgt.s.theta = end_theta;
+  m_pso_planner->m_eva.setTarget(m_tgt);
+  calculate_trajectory<REF_UGV>(m_pso_planner, m_traj);
+
+  if(is_heading_reached(m_pso_planner->m_model.get_ini_state(),m_tgt.s))
+  {
+    m_status = UGV::NORMAL;
+  }
 }
 //---
 void UGVRefTrajMotionPlanner::do_emergent()
@@ -226,13 +263,13 @@ void UGVRefTrajMotionPlanner::do_pos_reached()
   m_pso_planner->m_eva.m_pure_turning = true;
 
   float end_theta;
-  if (m_path_idx + 1 < m_line_list.size())
+  if (m_path_idx + 1 < m_loc_lines.size())
   {
-    end_theta = m_line_list[m_path_idx+1].front().tht;
+    end_theta = m_loc_lines[m_path_idx+1].front().tht;
   }
   else
   {
-    end_theta = m_line_list[m_path_idx].back().tht;
+    end_theta = m_loc_lines[m_path_idx].back().tht;
   }
   m_tgt.s.theta = end_theta;
   m_pso_planner->m_eva.setTarget(m_tgt);
@@ -250,12 +287,51 @@ void UGVRefTrajMotionPlanner::do_fully_reached()
   std::cout<<"FULLY_REACHED"<<std::endl;
 
   // Planing
-  full_stop_trajectory(m_traj);
+  full_stop_trajectory(m_traj,m_pso_planner->m_model.get_ini_state());
 
-  if (m_path_idx + 1 < m_line_list.size())
+  // If the current targeting wp is a dropoff point stop until received a msg
+  if (m_loc_lines[m_path_idx].back().b.mission_type > 0)
+  {
+    //Publish a reaching message here
+    std_msgs::Int32 msg;
+    msg.data = m_loc_lines[m_path_idx].back().b.id;
+    m_dropoff_start_pub.publish(msg);
+
+    //Go to the dropoff state
+    m_dropoff_finish_id = -1;
+    m_status = UGV::DROPOFF;
+  }
+  else
+  {
+    go_to_next_chain();
+  }
+}
+
+void UGVRefTrajMotionPlanner::do_dropoff()
+{
+  cycle_init();
+  std::cout<<"DROPOFF"<<std::endl;
+
+  // Planing
+  full_stop_trajectory(m_traj,m_pso_planner->m_model.get_ini_state());
+
+  if (m_dropoff_finish_id == m_loc_lines[m_path_idx].back().b.id)
+    go_to_next_chain();
+
+}
+
+void UGVRefTrajMotionPlanner::go_to_next_chain()
+{
+  if (m_path_idx + 1 < m_loc_lines.size())
   {
     m_path_idx++;
     m_status = UGV::NORMAL;
+  }
+  else
+  {
+    std_msgs::Int32 msg;
+    msg.data = 1;
+    m_mission_status_pub.publish(msg);
   }
 }
 
@@ -265,52 +341,12 @@ void UGVRefTrajMotionPlanner::cycle_init()
     return;
 
   cycle_initialized = true;
-  double phi,theta,psi;
-
-  tf::Quaternion q(m_slam_odo.pose.pose.orientation.x,
-                   m_slam_odo.pose.pose.orientation.y,
-                   m_slam_odo.pose.pose.orientation.z,
-                   m_slam_odo.pose.pose.orientation.w);
-  tf::Matrix3x3 m(q);
-  m.getRPY(phi, theta, psi);
+  float psi = select_mes_ref(get_heading(m_slam_odo), m_ref_theta, m_tht_err_reset_ctt, true, 0.25f);
 
   UGV::UGVModel::State s = predict_state(m_slam_odo,psi,m_ref_start_idx);
 
-
-  float v_err = m_ref_v-m_raw_odo.twist.twist.linear.x;
-  float w_err = m_ref_w-m_raw_odo.twist.twist.angular.z;
-
-  if (fabs(v_err) > 1.0 )
-    m_v_err_reset_ctt++;
-  else
-    m_v_err_reset_ctt = 0;
-
-  if (fabs(w_err) > 1.0)
-    m_w_err_reset_ctt++;
-  else
-    m_w_err_reset_ctt = 0;
-
-  if (m_v_err_reset_ctt > 5)
-  {
-    std::cout<<"------Reset v------"<<std::endl;
-    s.v = m_raw_odo.twist.twist.linear.x + sgn<float>(v_err)*0.5;
-    m_v_err_reset_ctt = 0;
-  }
-  else
-  {
-    s.v = m_ref_v;
-  }
-
-  if (m_w_err_reset_ctt > 5)
-  {
-    std::cout<<"------Reset w------"<<std::endl;
-    s.w = m_raw_odo.twist.twist.angular.z + sgn<float>(w_err)*0.5;
-    m_w_err_reset_ctt = 0;
-  }
-  else
-  {
-    s.w = m_ref_w;
-  }
+  s.v = select_mes_ref(m_raw_odo.twist.twist.linear.x, m_ref_v, m_v_err_reset_ctt);
+  s.w = select_mes_ref(m_raw_odo.twist.twist.angular.z, m_ref_w, m_w_err_reset_ctt);
 
   calculate_ref_traj(s.p);
   m_pso_planner->m_model.set_ini_state(s);
@@ -322,27 +358,30 @@ void UGVRefTrajMotionPlanner::load_ref_lines()
   if(!(m_slam_odo_received && m_raw_odo_received && m_received_map))
     return;
 
+  // Read in the data files
   std::ifstream corridor_file;
-  corridor_file.open("/home/sp/nndp/Learning_part/tripple_integrator/pso/in.txt");
-  float data[6];
-  std::vector<float2> wps;
+  float data[3];
+  std::vector<waypoint> wps;
   float2 vehicle_pos = make_float2(m_slam_odo.pose.pose.position.x,m_slam_odo.pose.pose.position.y);
+  int wp_id = 0;
+
+  corridor_file.open("/home/sp/nndp/Learning_part/tripple_integrator/pso/in.txt");
   std::cout<<"Read in data"<<std::endl;
   while(1)
   {
-    if (corridor_file>>data[0]>>data[1])
+    if (corridor_file>>data[0]>>data[1]>>data[2])
     {
       if(wps.empty())
       {
         // Check whether the vehicle is far from the first wp
         float2 first_wp = make_float2(data[0],data[1]);
-        if (sqrt(dot(vehicle_pos-first_wp,vehicle_pos-first_wp))>1)
+        if (sqrt(dot(vehicle_pos-first_wp,vehicle_pos-first_wp))>1 || static_cast<int>(data[2]) > 0)
         {
-          wps.push_back(vehicle_pos);
+          wps.push_back(waypoint(vehicle_pos,wp_id++,-1));
         }
       }
-      wps.push_back(make_float2(data[0],data[1]));
-      std::cout<<data[0]<<" "<<data[1]<<std::endl;
+      wps.push_back(waypoint(make_float2(data[0],data[1]),wp_id++,static_cast<int>(data[2])));
+      std::cout<<data[0]<<" "<<data[1]<<" "<<static_cast<int>(data[2])<<std::endl;
     }
     else
     {
@@ -350,87 +389,28 @@ void UGVRefTrajMotionPlanner::load_ref_lines()
     }
   }
 
-  // Use split & merge to identify the wps of sharp turning
-  std::set<size_t> split_sharp_wp_ids;
-  std::vector<size_t> split_wp_ids = findSplitCoords(wps, 3.0f);
-  for (size_t i = 1; i< split_wp_ids.size()-1; i++)
+  // We need at least two waypoint to form a line
+  if(wps.size()>1)
   {
-    line_seg l1(wps[split_wp_ids[i-1]],wps[split_wp_ids[i]]);
-    line_seg l2(wps[split_wp_ids[i]],wps[split_wp_ids[i+1]]);
-
-    if (fabsf(in_pi(l1.tht-l2.tht)) > 0.25*M_PI)
-    {
-      split_sharp_wp_ids.insert(split_wp_ids[i]);
-      //std::cout<<split_wp_ids[i]<<std::endl;
-    }
+    m_glb_wps = wps;
+    update_path(wps);
+    show_path(wps);
+    m_goal_received = true;
+    std_msgs::Int32 msg;
+    msg.data = 0;
+    m_mission_status_pub.publish(msg);
   }
-
-  // Construct the line list
-  std::vector<line_seg> lines;
-  for (size_t i = 0; i < wps.size()-1; i++)
+  else
   {
-    lines.push_back(line_seg(wps[i],wps[i+1]));
+    std_msgs::Int32 msg;
+    msg.data = -1;
+    m_mission_status_pub.publish(msg);
   }
-
-  m_line_list.clear();
-  std::vector<line_seg> tmp;
-  for (size_t i = 0; i < lines.size()-1; i++)
-  {
-    tmp.push_back(lines[i]);
-    if (fabsf(in_pi(lines[i].tht-lines[i+1].tht)) > 0.25*M_PI || split_sharp_wp_ids.count(i+1) != 0)
-    {
-      m_line_list.push_back(tmp);
-      tmp.clear();
-    }
-  }
-  tmp.push_back((lines.back()));
-  m_line_list.push_back(tmp);
-
-  // Construct the path
-  m_path_list.clear();
-  for (size_t i = 0; i < m_line_list.size(); i++)
-  {
-    std::vector<float2> path;
-    for (size_t j = 0; j < m_line_list[i].size(); j++)
-    {
-      std::vector<float2> tmp_pol = interpol(m_line_list[i][j].a,m_line_list[i][j].b,0.8f);
-      for (float2 pol : tmp_pol)
-      {
-        path.push_back(pol);
-      }
-    }
-    m_path_list.push_back(path);
-  }
-
-  m_path_idx = 0;
-
-  // For visulization
-  visualization_msgs::Marker line_strip;
-  line_strip.header.frame_id = "world";
-  line_strip.ns = "points_and_lines";
-  line_strip.action = visualization_msgs::Marker::ADD;
-  line_strip.pose.orientation.w = 1.0;
-  line_strip.id = 1;
-  line_strip.type = visualization_msgs::Marker::LINE_STRIP;
-  line_strip.scale.x = 0.1;
-  line_strip.color.g = 1.0;
-  line_strip.color.a = 1.0;
-
-  for (float2 p: wps)
-  {
-    geometry_msgs::Point pnt;
-    pnt.x = p.x;
-    pnt.y = p.y;
-    pnt.z = 0;
-    line_strip.points.push_back(pnt);
-  }
-  m_vis_pub.publish(line_strip);
-
 }
 
 void UGVRefTrajMotionPlanner::calculate_ref_traj(float2 c)
 {
-  std::vector<float2> &path = m_path_list[m_path_idx];
+  std::vector<waypoint> &path = m_loc_paths[m_path_idx];
   //c=[x y theta]
 
   //Find nearest point
@@ -441,13 +421,13 @@ void UGVRefTrajMotionPlanner::calculate_ref_traj(float2 c)
   float2 nearest_pnt;
   for (size_t i=0;i<path.size();i++)
   {
-    delta = path[i]-c;
+    delta = path[i].p-c;
     len = sqrtf(dot(delta,delta));
     if (len < min_len)
     {
       min_len = len;
       min_idx = i;
-      nearest_pnt = path[i];
+      nearest_pnt = path[i].p;
     }
   }
 
@@ -455,10 +435,10 @@ void UGVRefTrajMotionPlanner::calculate_ref_traj(float2 c)
   float2 carrot = nearest_pnt;
   for (size_t i=min_idx;i<path.size();i++)
   {
-    delta = path[i]-c;
+    delta = path[i].p-c;
     len = sqrtf(dot(delta,delta));
-    if (len < 2.8)
-      carrot = path[i];
+    if (len < 1.8)
+      carrot = path[i].p;
     else
       break;
   }

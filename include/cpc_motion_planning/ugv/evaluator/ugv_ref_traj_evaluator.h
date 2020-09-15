@@ -79,13 +79,13 @@ public:
     float cost = 0;
 
     // Collision cost
-    float rd = getMinDist(s,map);
-    cost += expf(-(7.5f-time)*rd)*400;
+    float rd = getEDT(s.p,map);
+    cost += expf(-8.5f*rd)*400;
 
-    if (rd < 0.37f)
+    if (rd < 0.61f)
       cost += 100;
 
-    if (rd < 0.11f && time < 1.5f)
+    if (rd < 0.21f && time < 1.5f)
     {
       collision = true;
     }
