@@ -55,7 +55,7 @@ void UGVLocalMotionPlanner::slam_odo_call_back(const nav_msgs::Odometry::ConstPt
   m_slam_odo = *msg;
 }
 
-UGV::UGVModel::State UGVLocalMotionPlanner::predict_state(const nav_msgs::Odometry &odom, const double &psi, const int &ref_start_idx)
+UGV::UGVModel::State UGVLocalMotionPlanner::predict_state(const nav_msgs::Odometry &odom, const double &psi, const int &ref_start_idx, bool is_heading_ref)
 {
   UGV::UGVModel::State s;
   s.p.x = odom.pose.pose.position.x;
@@ -76,9 +76,17 @@ UGV::UGVModel::State UGVLocalMotionPlanner::predict_state(const nav_msgs::Odomet
   {
     if (tmp.id < ref_start_idx)
     {
-      s.p.x = s.p.x + tmp.v*cos(s.theta)*PSO::PSO_CTRL_DT;
-      s.p.y = s.p.y + tmp.v*sin(s.theta)*PSO::PSO_CTRL_DT;
-      s.theta = s.theta + tmp.w*PSO::PSO_CTRL_DT;
+      if (!is_heading_ref)
+      {
+        s.p.x = s.p.x + tmp.v*cos(s.theta)*PSO::PSO_CTRL_DT;
+        s.p.y = s.p.y + tmp.v*sin(s.theta)*PSO::PSO_CTRL_DT;
+        s.theta = s.theta + tmp.w*PSO::PSO_CTRL_DT;
+      }
+      else
+      {
+        s.p.x = s.p.x + tmp.v*cos(tmp.theta)*PSO::PSO_CTRL_DT;
+        s.p.y = s.p.y + tmp.v*sin(tmp.theta)*PSO::PSO_CTRL_DT;
+      }
     }
     else
     {
@@ -119,6 +127,7 @@ void UGVLocalMotionPlanner::load_into_queue(const cpc_motion_planning::ref_data 
     tmp.id = ref.ids[i];
     tmp.v = ref.data[i*ref.rows];
     tmp.w = ref.data[i*ref.rows + 1];
+    tmp.theta = ref.data[i*ref.rows + 2];
     //std::cout<<"id: "<<ref.ids[i]<<", "<<tmp.t<<std::endl;
     m_cmd_q.push_back(tmp);
   }
