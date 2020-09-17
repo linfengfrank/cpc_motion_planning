@@ -18,7 +18,7 @@
 #include <deque>
 #include "tf/tf.h"
 
-//#define PRED_STATE
+#define PRED_STATE
 #define SHOW_PC
 namespace UGV
 {
