@@ -43,6 +43,7 @@ public:
     int id;
     float v;
     float w;
+    float theta;
   };
 #endif
 
@@ -61,8 +62,7 @@ protected:
   void load_into_queue(const cpc_motion_planning::ref_data &ref, const ros::Time &curr_t);
 #endif
   void update_reference_log(const cpc_motion_planning::ref_data &ref, const ros::Time &curr_t);
-  UGV::UGVModel::State predict_state(const nav_msgs::Odometry &odom, const double &psi, const int &ref_start_idx);
-
+  UGV::UGVModel::State predict_state(const nav_msgs::Odometry &odom, const double &psi, const int &ref_start_idx, bool is_heading_ref);
   void add_to_ref_msg(cpc_motion_planning::ref_data& ref_msg, int ref_counter, const UGV::UGVModel::State &traj);
 
   template <typename T> int sgn(T val)
@@ -121,13 +121,10 @@ protected:
     return in_pi(in-last) + last;
   }
 
-  float select_mes_ref(float mes, float ref, int& ctt,  bool is_theta = false, float th = 1.0f, int ctt_th = 5)
+  float select_mes_ref(float mes, float ref, int& ctt, float th = 1.0f, int ctt_th = 5)
   {
     float output;
     float err = ref - mes;
-
-    if(is_theta)
-      err = in_pi(err);
 
     if (fabsf(err) > th)
       ctt++;
@@ -144,6 +141,30 @@ protected:
       output = ref;
     }
     return output;
+  }
+
+  float select_mes_ref_heading(bool &is_heading_ref, float mes, float ref, int& ctt, float th = 1.0f, int ctt_th = 5)
+  {
+    float output;
+    float err = in_pi(ref - mes);
+
+    if (fabsf(err) > th)
+      ctt++;
+    else
+      ctt = 0;
+
+    if (ctt >= ctt_th)
+    {
+      ctt = 0;
+      output = mes + sgn<float>(err)*0.5f;
+      is_heading_ref = false;
+    }
+    else
+    {
+      output = ref;
+      is_heading_ref = true;
+    }
+    return in_pi(output);
   }
 
   float get_heading(const nav_msgs::Odometry &odom)
