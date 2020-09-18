@@ -6,7 +6,7 @@
 #include <cuda_geometry/cuda_edtmap.cuh>
 #include <cuda_geometry/cuda_nf1map.cuh>
 
-#define THETA_GRID_SIZE 16
+#define THETA_GRID_SIZE 24
 namespace UGV
 {
 class SingleTargetEvaluator
@@ -128,7 +128,7 @@ public:
 
     // Collision cost
     float rd = getEDT(s.p,map);
-//    cost += expf(-8.5f*rd)*400;
+    cost += expf(-8.5f*rd)*200;
 
     if (rd < 0.61f)
       cost += 100;
@@ -157,7 +157,7 @@ public:
 
 #ifdef  __CUDA_ARCH__
         // Must use c.x c.y and 0 here! Because the NF1 map has only 1 layer.
-        cost += 0.5f*m_nf1_map.nf1_const_at(c.x,c.y,c.z) + 0.025f*sqrtf(0.1f*s.v*s.v + 0.1f*s.w*s.w);
+        cost += 0.5f*m_nf1_map.nf1_const_at(c.x,c.y,c.z) + 0.01f*sqrtf(0.1f*s.v*s.v + 0.1f*s.w*s.w);
 #endif
       }
     }

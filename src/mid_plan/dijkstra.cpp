@@ -20,28 +20,25 @@ Dijkstra::Dijkstra(int maxX, int maxY, int maxZ):
     }
   }
 
-  float dt[4]={0.25f,0.6f,1.1f,2.1f};
+  std::vector<float3> mps;
+  add_motion_primitives(mps,0.2618f, 0.15f, 1.0f);
+  add_motion_primitives(mps,0.2618f, 0.0f, 1.0f);
+  add_motion_primitives(mps,0.0f, 0.15f, 1.0f);
+
   for (size_t i = 0; i< THETA_GRID_SIZE; i++)
   {
     float theta = grid2theta(static_cast<int>(i));
-    for (int wg = -1; wg<=1;wg++)
+
+    for (float3 mp : mps)
     {
-      for (int vg = -1; vg<=1;vg++)
-      {
-        if (wg == 0 && vg == 0)
-          continue;
+      float v = mp.y;
+      float w = mp.x;
+      float dt = mp.z;
+      shift_child child = get_shift_child(theta,w,v,dt);
+      if (child.shift.x == 0 && child.shift.y == 0 && child.shift.z == 0)
+        continue;
 
-        float w = 0.25f*static_cast<float>(wg);
-        float v = 0.6f*static_cast<float>(vg);
-        for (size_t k=0; k<4; k++)
-        {
-          shift_child child = get_shift_child(theta,w,v,dt[k]);
-          if (child.shift.x == 0 && child.shift.y == 0 && child.shift.z == 0)
-            continue;
-
-          children[i].insert(child);
-        }
-      }
+      children[i].insert(child);
     }
   }
 }

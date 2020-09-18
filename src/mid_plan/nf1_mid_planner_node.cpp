@@ -13,7 +13,7 @@
 #include <mid_plan/dijkstra.h>
 #include <mid_plan/a_star.h>
 #define SHOWPC
-
+//#define DEBUG_COST
 typedef pcl::PointCloud<pcl::PointXYZRGB> PointCloud;
 PointCloud::Ptr pclOut (new PointCloud);
 ros::Publisher* nf1_pub;
@@ -120,6 +120,10 @@ void setup_map_msg(cpc_aux_mapping::grid_map &msg, GridGraph* map, bool resize)
 void copy_map_to_msg(cpc_aux_mapping::grid_map &msg, GridGraph* map,int tgt_height_coord)
 {
   CUDA_GEO::coord c;
+#ifdef DEBUG_COST
+  std::ofstream mylog;
+  mylog.open("/home/sp/test/dj.txt");
+#endif
   float *tmp = static_cast<float*>(static_cast<void*>(msg.payload8.data()));
   int i=0;
   for (int z=0;z<THETA_GRID_SIZE;z++)
@@ -133,9 +137,15 @@ void copy_map_to_msg(cpc_aux_mapping::grid_map &msg, GridGraph* map,int tgt_heig
         c.z = z;
         float d_c = mid_map->m_getCost2Come(c,0.0);
         tmp[i++]=d_c;
+#ifdef DEBUG_COST
+        mylog<<d_c<<" ";
+#endif
       }
     }
   }
+#ifdef DEBUG_COST
+  mylog.close();
+#endif
 }
 //---
 void mapCallback(const cpc_aux_mapping::grid_map::ConstPtr& msg)
@@ -178,37 +188,41 @@ void glb_plan(const ros::TimerEvent&)
   glb_tgt.z = tgt_height_coord;
   glb_tgt = mid_map->rayCast(start,glb_tgt).back();
 
+#ifdef DEBUG_COST
+  static bool done = false;
+  if (done) return;
+  done = true;
+#endif
+
   float length = 0.0f;
   std::vector<CUDA_GEO::coord> path = a_map->AStar2D(glb_tgt,start,false,length);
 
+  mid_map->dijkstra_with_theta(path[0]);
 
+  setup_map_msg(nf1_map_msg,mid_map,false);
+  copy_map_to_msg(nf1_map_msg,mid_map,tgt_height_coord);
+  nf1_pub->publish(nf1_map_msg);
 
-    mid_map->dijkstra_with_theta(path[0]);
-
-    setup_map_msg(nf1_map_msg,mid_map,false);
-    copy_map_to_msg(nf1_map_msg,mid_map,tgt_height_coord);
-    nf1_pub->publish(nf1_map_msg);
-
-    //Get the mid goal
-    //std::reverse(path.begin(),path.end());
-    unsigned int tgt_idx = a_map->findTargetCoord(path);
-    geometry_msgs::PoseStamped mid_goal_pose;
-    CUDA_GEO::pos mid_goal_pos = mid_map->coord2pos(path[tgt_idx]);
-    mid_goal_pose.header.frame_id="world";
-    mid_goal_pose.pose.position.x = mid_goal_pos.x;
-    mid_goal_pose.pose.position.y = mid_goal_pos.y;
-    mid_goal_pose.pose.position.z = mid_goal_pos.z;
-    mid_goal_pub->publish(mid_goal_pose);
+  //Get the mid goal
+  //std::reverse(path.begin(),path.end());
+  unsigned int tgt_idx = a_map->findTargetCoord(path);
+  geometry_msgs::PoseStamped mid_goal_pose;
+  CUDA_GEO::pos mid_goal_pos = mid_map->coord2pos(path[tgt_idx]);
+  mid_goal_pose.header.frame_id="world";
+  mid_goal_pose.pose.position.x = mid_goal_pos.x;
+  mid_goal_pose.pose.position.y = mid_goal_pos.y;
+  mid_goal_pose.pose.position.z = mid_goal_pos.z;
+  mid_goal_pub->publish(mid_goal_pose);
 
 #ifdef SHOWPC
-    publishMap(tgt_height_coord);
+  publishMap(tgt_height_coord);
 #endif
 
 
   auto end_time = std::chrono::steady_clock::now();
-      std::cout << "Middle planning time: "
-                << std::chrono::duration_cast<std::chrono::milliseconds>(end_time - start_time).count()
-                << " ms" << std::endl;
+  std::cout << "Middle planning time: "
+            << std::chrono::duration_cast<std::chrono::milliseconds>(end_time - start_time).count()
+            << " ms" << std::endl;
 
   first_run = false;
 }

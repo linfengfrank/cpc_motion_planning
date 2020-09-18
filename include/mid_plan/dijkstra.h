@@ -4,7 +4,7 @@
 #include <mid_plan/grid_graph.h>
 #include <queue>
 
-#define THETA_GRID_SIZE 16
+#define THETA_GRID_SIZE 24
 class Dijkstra : public GridGraph
 {
 public:
@@ -141,13 +141,21 @@ private:
       child.shift.y = float2grid(dy);
       //child.cost = fabsf(R*w*dt);// + 2*fabsf(w*dt);
     }
-    child.cost = 0.5f*fabsf(dt);
+    child.cost = 0.2f*fabsf(dt);
 
     // while doing dijkstra, we start from the goal so very thing is growing backaward
     if (v > 0.1f)
       child.cost += fabsf(2.0f*v);
 
     return child;
+  }
+
+  void add_motion_primitives(std::vector<float3> &mps, float w, float v, float t)
+  {
+    mps.push_back(make_float3(w,v,t));
+    mps.push_back(make_float3(-w,v,t));
+    mps.push_back(make_float3(w,-v,t));
+    mps.push_back(make_float3(-w,-v,t));
   }
 
   float mm_obsCostAt(CUDA_GEO::coord s, float default_value) const
@@ -168,18 +176,18 @@ private:
     }
     dist *= static_cast<float>(getGridStep());
 
- //   cost += expf(-7.0f*dist)*40;
+    cost += expf(-4.4f*dist)*200;
     if (dist < 0.61f)
       cost += 100;
 
-    if (dist <= 0.71f)
-    {
-      cost += (150.0f-210.0f*dist);
-    }
-    else if (dist < 1.5f)
-    {
-      cost += (3.75f-2.5f*dist);
-    }
+//    if (dist <= 0.71f)
+//    {
+//      cost += (150.0f-210.0f*dist);
+//    }
+//    else if (dist < 1.5f)
+//    {
+//      cost += (3.75f-2.5f*dist);
+//    }
 
 
     return cost;
