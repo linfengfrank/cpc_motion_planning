@@ -142,6 +142,11 @@ public:
     return d_cost_to_go[z*m_map_size.x*m_map_size.y+y*m_map_size.x+x];
   }
 
+  __device__
+  int& int_cost(int x, int y, int z)
+  {
+    return d_cost_int[z*m_map_size.x*m_map_size.y+y*m_map_size.x+x];
+  }
 
   __device__
   int& level(int x, int y, int z)
@@ -188,6 +193,9 @@ public:
 //      d_obsflg[idx_1d] = false;
       d_obs[idx_1d] =EMPTY_KEY;
     }
+    // for profile
+    d_cost_int = 0;
+
     return d_cost_to_go[idx_1d];
   }
   __device__
@@ -232,6 +240,7 @@ public:
 public:
   SeenDist *d_val_map;
   float *d_cost_to_go, *h_cost_to_go;
+  int *d_cost_int;
   int *d_color;
 //  bool *d_obsflg;
   int3* d_dirs_3d;

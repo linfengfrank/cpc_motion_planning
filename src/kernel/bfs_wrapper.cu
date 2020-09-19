@@ -18,6 +18,9 @@ ubfs_cls::ubfs_cls(int ne, int nv)
 void ubfs_cls::ubfs_sssp3d_wrapper(int3 &src,
                                    NF1Map3D * nf1map3d)
 {
+
+
+
   GpuTimer tm1;
   tm1.Start();
   nf1map3d->setDefaut();

@@ -16,6 +16,8 @@ NF1Map3D::NF1Map3D(int3 m_map_size_, float grid_step_):
 void NF1Map3D::setDefaut()
 {
   CUDA_DEV_MEMSET(d_cost_to_go,FLT_MAX,static_cast<size_t>(m_byte_size));
+  // for profile
+    CUDA_DEV_MEMSET(d_cost_int,INT_MAX,static_cast<size_t>(m_color_size));
   CUDA_DEV_MEMSET(d_color,WHITE,static_cast<size_t>(m_color_size));
 //  CUDA_DEV_MEMSET(d_obsflg,0,static_cast<size_t>(m_flg_size));
   //    CUDA_DEV_MEMSET(d_val_map,0,static_cast<size_t>(m_edt_size));
@@ -30,6 +32,10 @@ void NF1Map3D::setup_device()
 
   CUDA_ALLOC_DEV_MEM(&d_color,static_cast<size_t>(m_color_size));
   CUDA_DEV_MEMSET(d_color,WHITE,static_cast<size_t>(m_color_size));
+
+  // for profile
+  CUDA_ALLOC_DEV_MEM(&d_cost_int,static_cast<size_t>(m_color_size));
+  CUDA_DEV_MEMSET(d_cost_int,INT_MAX,static_cast<size_t>(m_color_size));
 
 //  CUDA_ALLOC_DEV_MEM(&d_obsflg,static_cast<size_t>(m_flg_size));
 //  CUDA_DEV_MEMSET(d_obsflg,0,static_cast<size_t>(m_flg_size));
@@ -58,6 +64,8 @@ void NF1Map3D::setup_device()
 void NF1Map3D::free_device()
 {
   CUDA_FREE_DEV_MEM(d_cost_to_go);
+  // for profile
+    CUDA_FREE_DEV_MEM(d_cost_int);
   CUDA_FREE_DEV_MEM(d_color);
 //  CUDA_FREE_DEV_MEM(d_obsflg);
   CUDA_FREE_DEV_MEM(d_val_map);

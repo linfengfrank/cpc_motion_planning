@@ -44,6 +44,7 @@ bool received_map = false;
 bool received_ref = false;
 CUDA_GEO::pos goal;
 ros::Timer glb_plan_timer;
+ros::Timer profile_timer;
 cpc_motion_planning::ref_data ref;
 cpc_aux_mapping::grid_map nf1_map_msg;
 
@@ -263,6 +264,18 @@ void goalCallback(const geometry_msgs::PoseStamped::ConstPtr &msg)
   goal.y = msg->pose.position.y;
   goal.z = msg->pose.position.z;
 }
+
+void profile_sssp(const ros::TimerEvent&)
+{
+
+  int3 tgt_i3{50,50,50};
+ auto start_time = std::chrono::steady_clock::now();
+  ubfssb->ubfs_sssp3d_wrapper(tgt_i3,nf1map3d);
+    auto end_time = std::chrono::steady_clock::now();
+        std::cout << "Middle planning time: "
+                  << std::chrono::duration_cast<std::chrono::milliseconds>(end_time - start_time).count()
+                  << " ms" << std::endl;
+}
 //---
 void glb_plan(const ros::TimerEvent&)
 {
@@ -315,7 +328,7 @@ int main(int argc, char **argv)
 {
   ros::init(argc, argv, "mid_layer_node");
 
-  int3 map_size = int3{100,100,30};
+  int3 map_size = int3{100,100,100};
   nf1map3d =new NF1Map3D(map_size,0.2);
   nf1map3d->setup_device();
   ubfssb = new ubfs_cls(0,nf1map3d->m_volume);
@@ -340,6 +353,7 @@ int main(int argc, char **argv)
 
 
   glb_plan_timer = nh.createTimer(ros::Duration(1), glb_plan);
+  profile_timer = nh.createTimer(ros::Duration(1), profile_sssp);
 
   ros::spin();
 
