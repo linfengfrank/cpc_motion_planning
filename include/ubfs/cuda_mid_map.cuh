@@ -194,7 +194,7 @@ public:
       d_obs[idx_1d] =EMPTY_KEY;
     }
     // for profile
-    d_cost_int = 0;
+    d_cost_int[idx_1d] = 0;
 
     return d_cost_to_go[idx_1d];
   }
