@@ -22,7 +22,7 @@ UGVSigTgtMotionPlanner::UGVSigTgtMotionPlanner():
 
   m_planning_timer = m_nh.createTimer(ros::Duration(PSO::PSO_REPLAN_DT), &UGVSigTgtMotionPlanner::plan_call_back, this);
 
-  m_pso_planner = new PSO::Planner<SIMPLE_UGV>(120,40,1);
+  m_pso_planner = new PSO::Planner<SIMPLE_UGV>(120,50,2);
   m_pso_planner->initialize();
 
 
