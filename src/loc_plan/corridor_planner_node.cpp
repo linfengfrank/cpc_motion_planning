@@ -41,7 +41,7 @@ int main(int argc, char *argv[])
 
   UGV::UGVModel::State s;
   s.p = make_float2(-2.5,1.5);
-  s.theta = -M_PI*0.5f;
+  s.theta = -M_PI*0.0f;
 
 
   float dt = 0.05;
@@ -52,7 +52,7 @@ int main(int argc, char *argv[])
 
   //--------------------------------------------------------------------
   std::ifstream corridor_file;
-  corridor_file.open("/home/sp/nndp/Learning_part/tripple_integrator/pso/in.txt");
+  corridor_file.open("/home/sp/nndp/Learning_part/tripple_integrator/pso/in2.txt");
   std::vector<float3> way_points;
   std::vector<float3> sfc_dists;
   float data[6];
@@ -75,17 +75,16 @@ int main(int argc, char *argv[])
 
   //---
   std::cout<<"Constructing the corridor"<<std::endl;
-  p.m_eva.m_sfc.n = way_points.size()-1;
-  UGV::CorridorEvaluator::Corridor *sfc=  new UGV::CorridorEvaluator::Corridor[p.m_eva.m_sfc.n];
+
+  std::vector<UGV::CorridorEvaluator::Corridor> sfc;
   for (uint i=0; i<way_points.size()-1; i++)
   {
-    sfc[i].set_data(way_points[i],way_points[i+1],sfc_dists[i].x);
+    UGV::CorridorEvaluator::Corridor tmp;
+    tmp.set_data(way_points[i],way_points[i+1],sfc_dists[i].x);
+    sfc.push_back(tmp);
   }
-  CUDA_ALLOC_DEV_MEM(&p.m_eva.m_sfc.c,sizeof(UGV::CorridorEvaluator::Corridor)*p.m_eva.m_sfc.n);
-  CUDA_MEMCPY_H2D(p.m_eva.m_sfc.c,sfc,sizeof(UGV::CorridorEvaluator::Corridor)*p.m_eva.m_sfc.n);
 
-  delete [] sfc;
-  std::cout<<"There are "<<p.m_eva.m_sfc.n<<" corridors."<<std::endl;
+  std::cout<<"There are "<<sfc.size()<<" corridors."<<std::endl;
 
   //--------------------------------------------------------------------
 
@@ -95,9 +94,12 @@ int main(int argc, char *argv[])
   //  m_pso_planner->m_eva.m_curr_yaw = m_yaw_state.p;
   //  m_ref_gen_planner->set_problem(s,m_goal);
 
+  int tgt_ctt = 0;
+  p.m_eva.m_sfc.c = sfc[tgt_ctt];
+
   std::ofstream log_file;
   log_file.open("/home/sp/nndp/Learning_part/tripple_integrator/pso/out.txt");
-  for (int ctt = 0; ctt<120; ctt++)
+  for (int ctt = 0; ctt<300; ctt++)
   {
     auto start = std::chrono::steady_clock::now();
     p.plan(m_edt_map);
@@ -116,12 +118,19 @@ int main(int argc, char *argv[])
       p.m_model.set_ini_state(s);
       // std::cout<<p.result.best_cost<<std::endl;
       // std::cout<<s.p.x<<" "<<s.p.y<<" "<<s.p.z<<" "<<p.result.best_cost<<std::endl;
-      log_file<<s.p.x<<" "<<s.p.y<<" "<<p.result.best_cost<<std::endl;
+      log_file<<s.p.x<<" "<<s.p.y<<" "<<s.theta<<" "<<p.result.best_cost<<std::endl;
     }
+
+    float2 diff = s.p - make_float2(sfc[tgt_ctt].b.x,sfc[tgt_ctt].b.y);
+    if (sqrtf(dot(diff,diff)) < 1.0f && tgt_ctt + 1 < sfc.size())
+    {
+      tgt_ctt++;
+      p.m_eva.m_sfc.c = sfc[tgt_ctt];
+    }
+
   }
   log_file.close();
 
-  CUDA_FREE_DEV_MEM(p.m_eva.m_sfc.c);
   std::cout<<"Finish"<<std::endl;
 
   return 0;
