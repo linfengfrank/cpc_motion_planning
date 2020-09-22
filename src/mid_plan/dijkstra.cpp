@@ -46,7 +46,7 @@ void Dijkstra::dijkstra2D(CUDA_GEO::coord glb_tgt)
           if (!p->inClosed)
           {
             float new_g = sqrtf(static_cast<float>(ix*ix+iy*iy))*getGridStep() +
-                m->g + obsCostAt(pc,0,occupied,true);
+                m->g + obsCostAt(pc,0);
 
             if (p->g > new_g)
             {
@@ -105,7 +105,7 @@ void Dijkstra::dijkstra2D_with_line(CUDA_GEO::coord glb_tgt, CUDA_GEO::pos seg_a
 
             pc_pos = coord2pos(pc);
             lat_dist = straight_line_proj(seg_a,seg_b,pc_pos);
-            new_g += lat_dist*lat_dist;
+            new_g += 0.2f*lat_dist*lat_dist;
 
             if (p->g > new_g)
             {
