@@ -6,7 +6,7 @@
 #include <cuda_geometry/cuda_edtmap.cuh>
 #include <cuda_geometry/cuda_nf1map.cuh>
 
-#define THETA_GRID_SIZE 24
+#define THETA_GRID_SIZE 16
 namespace UGV
 {
 class SingleTargetEvaluator
@@ -178,48 +178,46 @@ public:
   {
     float cost = 0;
 
-    // Collision cost
-    float rd = getEDT(s.p,map);
-    cost += expf(-8.5f*rd)*200;
+//    // Collision cost
+//    float rd = getEDT(s.p,map);
+//    cost += expf(-8.5f*rd)*200;
 
-    if (rd < 0.61f)
-      cost += 100;
+//    if (rd < 0.61f)
+//      cost += 100;
 
-    if(!m_pure_turning)
-    {
-      //Distance cost
-      if (!m_nf1_received)
-      {
-        float2 dist_err = s.p - m_goal.s.p;
-        cost += 0.5f*sqrtf(dist_err.x*dist_err.x + dist_err.y*dist_err.y) + 0.2f*sqrtf(3.0f*s.v*s.v + 0.2*s.w*s.w);
-      }
-      else
-      {
-        CUDA_GEO::coord c = m_nf1_map.pos2coord(make_float3(s.p.x,s.p.y,0));
-        float theta = s.theta;
-        int theta_crd = theta2grid(theta);
+//    if(!m_pure_turning)
+//    {
+//      //Distance cost
+//      if (!m_nf1_received)
+//      {
+//        float2 dist_err = s.p - m_goal.s.p;
+//        cost += 0.5f*sqrtf(dist_err.x*dist_err.x + dist_err.y*dist_err.y) + 0.2f*sqrtf(3.0f*s.v*s.v + 0.2*s.w*s.w);
+//      }
+//      else
+//      {
+//        CUDA_GEO::coord c = m_nf1_map.pos2coord(make_float3(s.p.x,s.p.y,0));
+//        float theta = s.theta;
+//        int theta_crd = theta2grid(theta);
 
-        c.z = theta_crd;
+//        c.z = theta_crd;
 
 
-#ifdef  __CUDA_ARCH__
-        // Must use c.x c.y and 0 here! Because the NF1 map has only 1 layer.
-        cost += 10.0f*m_nf1_map.nf1_const_at(c.x,c.y,c.z) + 0.01f*sqrtf(0.1f*s.v*s.v + 0.1f*s.w*s.w);
-#endif
-      }
-    }
-    else
-    {
-      //Pure heading cost
-      cost += 5.0f*sqrtf(s.v*s.v); // stay still during turning
-      float yaw_diff = s.theta - m_goal.s.theta;
-      yaw_diff = yaw_diff - floorf((yaw_diff + M_PI) / (2 * M_PI)) * 2 * M_PI;
-      cost += 0.5f*fabsf(yaw_diff);
-    }
+//#ifdef  __CUDA_ARCH__
+//        // Must use c.x c.y and 0 here! Because the NF1 map has only 1 layer.
+//        cost += 10.0f*m_nf1_map.nf1_const_at(c.x,c.y,c.z) + 0.01f*sqrtf(0.1f*s.v*s.v + 0.1f*s.w*s.w);
+//#endif
+//      }
+//    }
+//    else
+//    {
+//      //Pure heading cost
+//      cost += 5.0f*sqrtf(s.v*s.v); // stay still during turning
+//      float yaw_diff = s.theta - m_goal.s.theta;
+//      yaw_diff = yaw_diff - floorf((yaw_diff + M_PI) / (2 * M_PI)) * 2 * M_PI;
+//      cost += 0.5f*fabsf(yaw_diff);
+//    }
 
     return  cost;
-
-     return  cost;
   }
 
   Target m_goal;

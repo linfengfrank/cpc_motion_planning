@@ -4,7 +4,7 @@
 #include <mid_plan/grid_graph.h>
 #include <queue>
 
-#define THETA_GRID_SIZE 24
+#define THETA_GRID_SIZE 16
 class Dijkstra : public GridGraph
 {
 public:
