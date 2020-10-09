@@ -61,7 +61,7 @@ void UGVSigTgtMotionPlanner::nf1_call_back(const cpc_aux_mapping::grid_map::Cons
   {
     CUDA_GEO::pos origin(msg->x_origin,msg->y_origin,msg->z_origin);
     int3 m_nf1_map_size = make_int3(msg->x_size,msg->y_size,msg->z_size);
-    m_nf1_map = new NF1Map(origin,msg->width,m_nf1_map_size);
+    m_nf1_map = new NF1MapDT(origin,msg->width,m_nf1_map_size);
     m_nf1_map->setup_device();
   }
   else

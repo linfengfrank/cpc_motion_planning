@@ -12,6 +12,7 @@ struct nodeInfo
   bool inQ;
   float g;
   float h;
+  float theta;
   CUDA_GEO::coord c;
   nodeInfo* ptr2parent;
   std::multiset<std::pair<float, nodeInfo*>>::iterator it;
@@ -20,6 +21,7 @@ struct nodeInfo
     inQ(false),
     g(std::numeric_limits<float>::infinity()),
     h(std::numeric_limits<float>::infinity()),
+    theta(0),
     ptr2parent(nullptr)
   {
 
@@ -41,6 +43,7 @@ public:
   int getMaxY() {return _h;}
   int getMaxZ() {return _d;}
   float getCost2Come(const CUDA_GEO::coord & s, const float &default_value) const;
+  float getTheta(const CUDA_GEO::coord & s, const float &default_value) const;
 
   void copyIdData(const cpc_aux_mapping::grid_map::ConstPtr &msg);
   void copyEdtData(const cpc_aux_mapping::grid_map::ConstPtr &msg);

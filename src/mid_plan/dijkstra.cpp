@@ -51,6 +51,7 @@ void Dijkstra::dijkstra2D(CUDA_GEO::coord glb_tgt)
             {
               p->g = new_g;
               _PQ.insert(p,p->g);
+              p->theta = atan2f(-iy,-ix);
             }
           }
         }
@@ -109,6 +110,7 @@ void Dijkstra::dijkstra2D_with_line(CUDA_GEO::coord glb_tgt, CUDA_GEO::pos seg_a
             {
               p->g = new_g;
               _PQ.insert(p,p->g);
+              p->theta = atan2f(-iy,-ix);
             }
           }
         }

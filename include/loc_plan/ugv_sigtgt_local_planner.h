@@ -52,7 +52,7 @@ private:
   std::vector<UGV::UGVModel::State> m_traj;
   bool cycle_initialized;
   int m_braking_start_cycle;
-  NF1Map *m_nf1_map;
+  NF1MapDT *m_nf1_map;
 };
 
 #endif // UGV_MOTION_PLANNER_H

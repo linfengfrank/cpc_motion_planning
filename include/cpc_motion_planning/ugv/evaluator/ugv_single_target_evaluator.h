@@ -4,7 +4,7 @@
 #include <cpc_motion_planning/ugv/model/ugv_model.h>
 #include <cpc_motion_planning/dynamic_programming.cuh>
 #include <cuda_geometry/cuda_edtmap.cuh>
-#include <cuda_geometry/cuda_nf1map.cuh>
+#include <cuda_geometry/cuda_nf1_desired_theta.cuh>
 namespace UGV
 {
 class SingleTargetEvaluator
@@ -79,24 +79,11 @@ public:
   __host__ __device__
   float getDesiredHeading(const CUDA_GEO::coord &c) const
   {
-    float min_cost = 1e6;
-    float cost = 0;
-    float2 dir = make_float2(0,0);
 #ifdef  __CUDA_ARCH__
-    for (int x=-1;x<=1;x++)
-    {
-      for (int y=-1;y<=1;y++)
-      {
-        cost = m_nf1_map.nf1_const_at(c.x+x,c.y+y,0);
-        if (cost < min_cost)
-        {
-          min_cost = cost;
-          dir = make_float2(x,y);
-        }
-      }
-    }
+    return m_nf1_map.theta_const_at(c.x,c.y,0);
+#else
+    return 0;
 #endif
-    return atan2f(dir.y,dir.x);
   }
 
   __host__ __device__
@@ -202,7 +189,7 @@ public:
 
   Target m_goal;
   bool m_pure_turning;
-  NF1Map m_nf1_map;
+  NF1MapDT m_nf1_map;
   bool m_nf1_received;
 };
 }

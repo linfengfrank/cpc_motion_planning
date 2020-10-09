@@ -15,6 +15,7 @@
 #include <std_msgs/Int32.h>
 #include <tf/tf.h>
 #include <visualization_msgs/Marker.h>
+#include <cuda_geometry/cuda_nf1_desired_theta.cuh>
 #define SHOWPC
 
 typedef pcl::PointCloud<pcl::PointXYZRGB> PointCloud;
@@ -138,7 +139,7 @@ void setup_map_msg(cpc_aux_mapping::grid_map &msg, GridGraph* map, bool resize)
     msg.x_size = map->getMaxX();
     msg.y_size = map->getMaxY();
     msg.z_size = 1;
-    msg.payload8.resize(sizeof(float)*static_cast<unsigned int>(msg.x_size*msg.y_size*msg.z_size));
+    msg.payload8.resize(sizeof(CostTheta)*static_cast<unsigned int>(msg.x_size*msg.y_size*msg.z_size));
   }
 
   msg.type = cpc_aux_mapping::grid_map::TYPE_NF1;
@@ -147,7 +148,7 @@ void setup_map_msg(cpc_aux_mapping::grid_map &msg, GridGraph* map, bool resize)
 void copy_map_to_msg(cpc_aux_mapping::grid_map &msg, GridGraph* map,int tgt_height_coord)
 {
   CUDA_GEO::coord c;
-  float *tmp = static_cast<float*>(static_cast<void*>(msg.payload8.data()));
+  CostTheta *tmp = static_cast<CostTheta*>(static_cast<void*>(msg.payload8.data()));
   int i=0;
   for (int y=0;y<map->getMaxY();y++)
   {
@@ -158,8 +159,9 @@ void copy_map_to_msg(cpc_aux_mapping::grid_map &msg, GridGraph* map,int tgt_heig
         c.x = x;
         c.y = y;
         c.z = tgt_height_coord;
-        float d_c = mid_map->getCost2Come(c,0.0);
-        tmp[i++]=d_c;
+        tmp[i].c=mid_map->getCost2Come(c,0.0f);
+        tmp[i].t=mid_map->getTheta(c,0.0f);
+        i++;
       }
     }
   }
