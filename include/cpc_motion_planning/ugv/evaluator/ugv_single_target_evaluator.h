@@ -6,7 +6,7 @@
 #include <cuda_geometry/cuda_edtmap.cuh>
 #include <cuda_geometry/cuda_nf1map.cuh>
 
-#define THETA_GRID_SIZE 32
+#define THETA_GRID_SIZE 24
 namespace UGV
 {
 class SingleTargetEvaluator

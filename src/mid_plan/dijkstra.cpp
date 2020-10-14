@@ -288,8 +288,6 @@ void Dijkstra::dijkstra_with_theta(CUDA_GEO::coord glb_tgt)
   nodeInfo* m;
   // insert the root
   m=m_getNode(mc);
-
-//  bool occupied=false;
   if (m)
   {
     for (int z=0;z<THETA_GRID_SIZE;z++) {
@@ -305,88 +303,10 @@ void Dijkstra::dijkstra_with_theta(CUDA_GEO::coord glb_tgt)
     m=_PQ.pop();
     m->inClosed = true;
     mc = m->c;
-
-//    // get all neighbours
-//    for (int ix=-1;ix<=1;ix++)
-//    {
-//      for (int iy=-1;iy<=1;iy++)
-//      {
-//        for (int iz=-1;iz<=1;iz++)
-//        {
-//          if (ix==0 && iy ==0 && iz == 0)
-//            continue;
-
-//          pc.x = mc.x + ix;
-//          pc.y = mc.y + iy;
-//          pc.z = mc.z + iz;
-//          pc.z = positive_modulo(pc.z,THETA_GRID_SIZE);
-//          nodeInfo* p = m_getNode(pc);
-//          if (p)
-//          {
-//            if (!p->inClosed)
-//            {
-//              float theta = atan2(-iy,-ix);
-//              float alpha = theta-grid2theta(mc.z);
-//              alpha = alpha - floorf((alpha + M_PI) / (2 * M_PI)) * 2 * M_PI;
-//              float beta = grid2theta(pc.z) - theta;
-//              beta = beta - floorf((beta + M_PI) / (2 * M_PI)) * 2 * M_PI;
-//              float new_g = sqrtf(static_cast<float>(ix*ix+iy*iy))*getGridStep() + 2.0f*(fabsf(alpha) + fabsf(beta))+
-//                  m->g + mm_obsCostAt(pc,0);
-
-
-//              if (p->g > new_g)
-//              {
-//                p->g = new_g;
-//                _PQ.insert(p,p->g);
-//              }
-//            }
-//          }
-//        }
-//      }
-//    }
-
     for (shift_child child : children[positive_modulo(mc.z,THETA_GRID_SIZE)])
     {
       update_neighbour(mc, child.shift, m->g, child.cost);
     }
-
-    //children[positive_modulo(mc.z,THETA_GRID_SIZE)]
-//    for (size_t i = 0; i < 4; i++)
-//    {
-//      update_neighbour(mc, children[positive_modulo(mc.z,THETA_GRID_SIZE)][i], m->g);
-//    }
-
-
-    // get all neighbours
-//    for (int ix=-1;ix<=1;ix++)
-//    {
-//      for (int iy=-1;iy<=1;iy++)
-//      {
-//        for (int iz=-1;iz<=1;iz++)
-//        {
-//          if (ix==0 && iy ==0 && iz == 0)
-//            continue;
-
-//          pc.x = mc.x + ix;
-//          pc.y = mc.y + iy;
-//          pc.z = mc.z + iz;
-//          nodeInfo* p = getNode(pc);
-//          if (p)
-//          {
-//            if (!p->inClosed)
-//            {
-//              float new_g = sqrtf(static_cast<float>(ix*ix+iy*iy+iz*iz))*getGridStep() +
-//                  m->g + obsCostAt(pc,0,occupied);
-//              if (p->g > new_g)
-//              {
-//                p->g = new_g;
-//                _PQ.insert(p,p->g);
-//              }
-//            }
-//          }
-//        }
-//      }
-//    }
   }
 }
 
