@@ -12,12 +12,15 @@
 #include "cpc_motion_planning/ref_data.h"
 #include <mid_plan/dijkstra.h>
 #include <mid_plan/a_star.h>
+#include <nav_msgs/Odometry.h>
+#include <tf/tf.h>
 #define SHOWPC
 //#define DEBUG_COST
 typedef pcl::PointCloud<pcl::PointXYZRGB> PointCloud;
 PointCloud::Ptr pclOut (new PointCloud);
 ros::Publisher* nf1_pub;
 ros::Publisher* pc_pub;
+ros::Publisher* path_pub;
 ros::Publisher* mid_goal_pub;
 Dijkstra *mid_map=nullptr;
 Astar *a_map=nullptr;
@@ -33,6 +36,7 @@ CUDA_GEO::pos goal;
 ros::Timer glb_plan_timer;
 cpc_motion_planning::ref_data ref;
 cpc_aux_mapping::grid_map nf1_map_msg;
+float3 curr_pose;
 //---
 void publishMap(int tgt_height_coord)
 {
@@ -151,16 +155,21 @@ void copy_map_to_msg(cpc_aux_mapping::grid_map &msg, GridGraph* map,int tgt_heig
 void mapCallback(const cpc_aux_mapping::grid_map::ConstPtr& msg)
 {
   received_map = true;
-  CUDA_GEO::pos origin;
   if (mid_map == nullptr)
   {
     mid_map = new Dijkstra(msg->x_size,msg->y_size,msg->z_size);
+    mid_map->copyEdtData(msg);
+    mid_map->set_neighbours();
     setup_map_msg(nf1_map_msg,mid_map,true);
 
     a_map = new Astar(msg->x_size,msg->y_size,msg->z_size);
+    a_map->copyEdtData(msg);
   }
-  mid_map->copyEdtData(msg);
-  a_map->copyEdtData(msg);
+  else
+  {
+    mid_map->copyEdtData(msg);
+    a_map->copyEdtData(msg);
+  }
 }
 //---
 void goalCallback(const geometry_msgs::PoseStamped::ConstPtr &msg)
@@ -186,7 +195,7 @@ void glb_plan(const ros::TimerEvent&)
 
   CUDA_GEO::coord glb_tgt = mid_map->pos2coord(goal);
   glb_tgt.z = tgt_height_coord;
-  glb_tgt = mid_map->rayCast(start,glb_tgt).back();
+  glb_tgt = mid_map->rayCast(start,glb_tgt,4.5f).back();
 
 #ifdef DEBUG_COST
   static bool done = false;
@@ -216,6 +225,23 @@ void glb_plan(const ros::TimerEvent&)
 
 #ifdef SHOWPC
   publishMap(tgt_height_coord);
+  std::vector<float3> shortest_path = mid_map->get_shortest_path(curr_pose);
+//  std::cout<<"****"<<shortest_path.size()<<std::endl;
+  for (size_t i=0;i<shortest_path.size();i++)
+  {
+    pcl::PointXYZRGB clrP;
+    clrP.x = shortest_path[i].x;
+    clrP.y = shortest_path[i].y;
+    clrP.z = 0;
+    pclOut->points.push_back (clrP);
+  }
+
+  pcl_conversions::toPCL(ros::Time::now(), pclOut->header.stamp);
+
+  path_pub->publish (pclOut);
+
+  pclOut->clear();
+
 #endif
 
 
@@ -227,18 +253,40 @@ void glb_plan(const ros::TimerEvent&)
   first_run = false;
 }
 //---
+float get_heading(const nav_msgs::Odometry &odom)
+{
+  double phi,theta,psi;
+  tf::Quaternion q(odom.pose.pose.orientation.x,
+                   odom.pose.pose.orientation.y,
+                   odom.pose.pose.orientation.z,
+                   odom.pose.pose.orientation.w);
+  tf::Matrix3x3 m(q);
+  m.getRPY(phi, theta, psi);
+  return psi;
+}
+//---
+void slam_odo_call_back(const nav_msgs::Odometry::ConstPtr &msg)
+{
+  curr_pose.x = msg->pose.pose.position.x;
+  curr_pose.y = msg->pose.pose.position.y;
+  curr_pose.z = get_heading(*msg);
+}
+//---
 int main(int argc, char **argv)
 {
   ros::init(argc, argv, "mid_layer_node");
   pc_pub = new ros::Publisher;
+  path_pub = new ros::Publisher;
   nf1_pub = new ros::Publisher;
   mid_goal_pub = new ros::Publisher;
   ros::NodeHandle nh;
   ros::Subscriber map_sub = nh.subscribe("/lowres_map", 1, &mapCallback);
   ros::Subscriber stuck_sub = nh.subscribe("/stuck", 1, &stuckCallback);
   ros::Subscriber glb_tgt_sub = nh.subscribe("/move_base_simple/goal", 1, &goalCallback);
+  ros::Subscriber slam_odom_sub = nh.subscribe("/UgvOdomTopic", 1, &slam_odo_call_back);
 
   *pc_pub = nh.advertise<PointCloud> ("/nf1", 1);
+  *path_pub = nh.advertise<PointCloud> ("/path", 1);
   *mid_goal_pub = nh.advertise<geometry_msgs::PoseStamped> ("/mid_goal", 1);
   *nf1_pub = nh.advertise<cpc_aux_mapping::grid_map>("/mid_layer/goal",1);
 
@@ -252,6 +300,7 @@ int main(int argc, char **argv)
 
   delete pc_pub;
   delete nf1_pub;
+  delete path_pub;
 
   if (mid_map)
   {

@@ -19,28 +19,6 @@ Dijkstra::Dijkstra(int maxX, int maxY, int maxZ):
       }
     }
   }
-
-  std::vector<float3> mps;
-  add_motion_primitives(mps,0.2618f, 0.15f, 1.0f);
-  add_motion_primitives(mps,0.2618f, 0.0f, 1.0f);
-  add_motion_primitives(mps,0.0f, 0.15f, 1.0f);
-
-  for (size_t i = 0; i< THETA_GRID_SIZE; i++)
-  {
-    float theta = grid2theta(static_cast<int>(i));
-
-    for (float3 mp : mps)
-    {
-      float v = mp.y;
-      float w = mp.x;
-      float dt = mp.z;
-      shift_child child = get_shift_child(theta,w,v,dt);
-      if (child.shift.x == 0 && child.shift.y == 0 && child.shift.z == 0)
-        continue;
-
-      children[i].insert(child);
-    }
-  }
 }
 
 void Dijkstra::dijkstra2D(CUDA_GEO::coord glb_tgt)
@@ -328,49 +306,49 @@ void Dijkstra::dijkstra_with_theta(CUDA_GEO::coord glb_tgt)
     m->inClosed = true;
     mc = m->c;
 
-    // get all neighbours
-    for (int ix=-1;ix<=1;ix++)
-    {
-      for (int iy=-1;iy<=1;iy++)
-      {
-        for (int iz=-1;iz<=1;iz++)
-        {
-          if (ix==0 && iy ==0 && iz == 0)
-            continue;
-
-          pc.x = mc.x + ix;
-          pc.y = mc.y + iy;
-          pc.z = mc.z + iz;
-          pc.z = positive_modulo(pc.z,THETA_GRID_SIZE);
-          nodeInfo* p = m_getNode(pc);
-          if (p)
-          {
-            if (!p->inClosed)
-            {
-              float theta = atan2(-iy,-ix);
-              float alpha = theta-grid2theta(mc.z);
-              alpha = alpha - floorf((alpha + M_PI) / (2 * M_PI)) * 2 * M_PI;
-              float beta = grid2theta(pc.z) - theta;
-              beta = beta - floorf((beta + M_PI) / (2 * M_PI)) * 2 * M_PI;
-              float new_g = sqrtf(static_cast<float>(ix*ix+iy*iy))*getGridStep() + 2.0f*(fabsf(alpha) + fabsf(beta))+
-                  m->g + mm_obsCostAt(pc,0);
-
-
-              if (p->g > new_g)
-              {
-                p->g = new_g;
-                _PQ.insert(p,p->g);
-              }
-            }
-          }
-        }
-      }
-    }
-
-//    for (shift_child child : children[positive_modulo(mc.z,THETA_GRID_SIZE)])
+//    // get all neighbours
+//    for (int ix=-1;ix<=1;ix++)
 //    {
-//      update_neighbour(mc, child.shift, m->g, child.cost);
+//      for (int iy=-1;iy<=1;iy++)
+//      {
+//        for (int iz=-1;iz<=1;iz++)
+//        {
+//          if (ix==0 && iy ==0 && iz == 0)
+//            continue;
+
+//          pc.x = mc.x + ix;
+//          pc.y = mc.y + iy;
+//          pc.z = mc.z + iz;
+//          pc.z = positive_modulo(pc.z,THETA_GRID_SIZE);
+//          nodeInfo* p = m_getNode(pc);
+//          if (p)
+//          {
+//            if (!p->inClosed)
+//            {
+//              float theta = atan2(-iy,-ix);
+//              float alpha = theta-grid2theta(mc.z);
+//              alpha = alpha - floorf((alpha + M_PI) / (2 * M_PI)) * 2 * M_PI;
+//              float beta = grid2theta(pc.z) - theta;
+//              beta = beta - floorf((beta + M_PI) / (2 * M_PI)) * 2 * M_PI;
+//              float new_g = sqrtf(static_cast<float>(ix*ix+iy*iy))*getGridStep() + 2.0f*(fabsf(alpha) + fabsf(beta))+
+//                  m->g + mm_obsCostAt(pc,0);
+
+
+//              if (p->g > new_g)
+//              {
+//                p->g = new_g;
+//                _PQ.insert(p,p->g);
+//              }
+//            }
+//          }
+//        }
+//      }
 //    }
+
+    for (shift_child child : children[positive_modulo(mc.z,THETA_GRID_SIZE)])
+    {
+      update_neighbour(mc, child.shift, m->g, child.cost);
+    }
 
     //children[positive_modulo(mc.z,THETA_GRID_SIZE)]
 //    for (size_t i = 0; i < 4; i++)

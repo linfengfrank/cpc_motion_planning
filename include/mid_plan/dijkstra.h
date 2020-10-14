@@ -4,7 +4,7 @@
 #include <mid_plan/grid_graph.h>
 #include <queue>
 
-#define THETA_GRID_SIZE 16
+#define THETA_GRID_SIZE 32
 class Dijkstra : public GridGraph
 {
 public:
@@ -60,6 +60,85 @@ public:
     }
   };
 
+  //---
+  std::vector<float3> get_shortest_path(const float3 &in)
+  {
+    std::vector<float3> output;
+    CUDA_GEO::coord s;
+    s.x = floorf( (in.x - _origin.x) / _gridstep + 0.5f);
+    s.y = floorf( (in.y - _origin.y) / _gridstep + 0.5f);
+    s.z = theta2grid(in.z);
+
+
+    output.push_back(coord2float3(s));
+
+    //Find the next minimum coord
+    CUDA_GEO::coord pc;
+    float min_val = 1e6;
+    CUDA_GEO::coord min_coord;
+    bool found_min;
+    while(1)
+    {
+      found_min = false;
+      for (shift_child child : children[positive_modulo(s.z,THETA_GRID_SIZE)])
+      {
+        pc.x = s.x + child.shift.x;
+        pc.y = s.y + child.shift.y;
+        pc.z = s.z + child.shift.z;
+        pc.z = positive_modulo(pc.z,THETA_GRID_SIZE);
+        nodeInfo* p = m_getNode(pc);
+
+        if (p && p->g < min_val)
+        {
+          min_val = p->g;
+          min_coord = pc;
+          found_min = true;
+        }
+      }
+
+      if (found_min)
+      {
+        s = min_coord;
+        output.push_back(coord2float3(s));
+      }
+      else
+      {
+        break;
+      }
+    }
+
+    return output;
+  }
+
+  //---
+  void set_neighbours()
+  {
+    std::vector<float3> mps;
+    float delta_t = 0;
+    delta_t = 1.0f;
+    add_motion_primitives(mps, 2.0f*M_PI/(delta_t*static_cast<float>(THETA_GRID_SIZE)), 0.0f, delta_t);
+    delta_t = 0.4f;
+    add_motion_primitives(mps, 0.0f, getGridStep()/delta_t, delta_t);
+
+    for (size_t i = 0; i< THETA_GRID_SIZE; i++)
+    {
+      float theta = grid2theta(static_cast<int>(i));
+
+      for (float3 mp : mps)
+      {
+        float v = mp.y;
+        float w = mp.x;
+        float dt = mp.z;
+        shift_child child = get_shift_child(theta,w,v,dt);
+
+        if (child.shift.x == 0 && child.shift.y == 0 && child.shift.z == 0)
+          continue;
+
+        children[i].insert(child);
+      }
+    }
+  }
+
 private:
   std::set<shift_child> children[THETA_GRID_SIZE];
 //  int3 children[THETA_GRID_SIZE][4];
@@ -68,7 +147,7 @@ private:
   std::queue<nodeInfo*> _Q;
   SortedSet<nodeInfo*> _OQ;
 
-  int positive_modulo(int i, int n)
+  int positive_modulo(int i, int n) const
   {
     return (i % n + n) % n;
   }
@@ -90,24 +169,24 @@ private:
     return obsCostAt(s,default_value,occupied);
   }
 
-  float grid2theta(int grid)
+  float grid2theta(int grid) const
   {
     grid = positive_modulo(grid,THETA_GRID_SIZE);
     return 2.0f*static_cast<float>(M_PI)/static_cast<float>(THETA_GRID_SIZE)*static_cast<float>(grid);
   }
 
-  int theta2grid(float theta)
+  int theta2grid(float theta) const
   {
     int grid = floor(theta/(2.0f*static_cast<float>(M_PI)/static_cast<float>(THETA_GRID_SIZE)) + 0.5);
     return positive_modulo(grid,THETA_GRID_SIZE);
   }
 
-  int float2grid(float p)
+  int float2grid(float p) const
   {
     return floorf( p / getGridStep() + 0.5f);
   }
 
-  int theta2grid_raw(float theta)
+  int theta2grid_raw(float theta) const
   {
     return floor(theta/(2.0f*static_cast<float>(M_PI)/static_cast<float>(THETA_GRID_SIZE)) + 0.5);
   }
@@ -150,6 +229,21 @@ private:
     return child;
   }
 
+  shift_child get_shift_child(int coord_z, const int3 &shift)
+  {
+    shift_child child;
+    child.shift = shift;
+
+    float theta = atan2f(-shift.y,-shift.x);
+    float alpha = theta-grid2theta(coord_z);
+    alpha = alpha - floorf((alpha + M_PI) / (2 * M_PI)) * 2 * M_PI;
+    float beta = grid2theta(coord_z + shift.z) - theta;
+    beta = beta - floorf((beta + M_PI) / (2 * M_PI)) * 2 * M_PI;
+
+    child.cost  = sqrtf(static_cast<float>(shift.x*shift.x+shift.y*shift.y))*getGridStep() + 3.3f*(fabsf(alpha) + fabsf(beta));
+    return child;
+  }
+
   void add_motion_primitives(std::vector<float3> &mps, float w, float v, float t)
   {
     mps.push_back(make_float3(w,v,t));
@@ -160,37 +254,57 @@ private:
 
   float mm_obsCostAt(CUDA_GEO::coord s, float default_value) const
   {
-    SeenDist* map_ptr;
-    map_ptr = _val_map;
-    s.z = 0;
+    float cost = 0;
+    float dist = getMinDist(s);
+    cost += expf(-9.5f*dist)*50;
+    if (dist < 0.36f)
+      cost += 100;
+    return cost;
+  }
 
-    float dist = 0.0f;
-    float cost = 0.0;
-    if (s.x<0 || s.x>=_w || s.y<0 || s.y>=_h || s.z<0 || s.z>=_d)
+  float getEDT(const float2 &p) const
+  {
+    CUDA_GEO::coord s;
+    s.x = floorf( (p.x - _origin.x) / _gridstep + 0.5f);
+    s.y = floorf( (p.y - _origin.y) / _gridstep + 0.5f);
+    s.z = 0;
+    if (s.x<0 || s.x>=_w ||
+        s.y<0 || s.y>=_h ||
+        s.z<0 || s.z>=_d)
     {
-      dist = default_value;
+      return 0;
     }
     else
     {
-      dist = map_ptr[coord2index(s)].d;
+      return _val_map[coord2index(s)].d * _gridstep;
     }
-    dist *= static_cast<float>(getGridStep());
+  }
 
-    cost += expf(-4.4f*dist)*200;
-    if (dist < 0.61f)
-      cost += 100;
+  void calculate_bounding_centres(const CUDA_GEO::coord &s, float2 &c_r, float2 &c_f) const
+  {
+    float theta = grid2theta(s.z);
+    float2 p;
+    p.x = s.x * _gridstep + _origin.x;
+    p.y = s.y * _gridstep + _origin.y;
+    float2 uni_dir = make_float2(cosf(theta),sinf(theta));
+    c_f = p + 0.25f*uni_dir;
+    c_r = p - 0.25f*uni_dir;
+  }
 
-//    if (dist <= 0.71f)
-//    {
-//      cost += (150.0f-210.0f*dist);
-//    }
-//    else if (dist < 1.5f)
-//    {
-//      cost += (3.75f-2.5f*dist);
-//    }
+  float getMinDist(const CUDA_GEO::coord &s) const
+  {
+    float2 c_f,c_r;
+    calculate_bounding_centres(s, c_r, c_f);
+    return min(getEDT(c_r),getEDT(c_f));
+  }
 
-
-    return cost;
+  float3 coord2float3(const CUDA_GEO::coord &s)
+  {
+    float3 output;
+    output.x = s.x * _gridstep + _origin.x;
+    output.y = s.y * _gridstep + _origin.y;
+    output.z = grid2theta(s.z);
+    return output;
   }
 };
 

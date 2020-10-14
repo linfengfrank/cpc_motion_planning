@@ -6,7 +6,7 @@
 #include <cuda_geometry/cuda_edtmap.cuh>
 #include <cuda_geometry/cuda_nf1map.cuh>
 
-#define THETA_GRID_SIZE 16
+#define THETA_GRID_SIZE 32
 namespace UGV
 {
 class SingleTargetEvaluator
@@ -127,13 +127,13 @@ public:
     float cost = 0;
 
     // Collision cost
-    float rd = getEDT(s.p,map);
-    cost += expf(-8.5f*rd)*200;
+    float rd = getMinDist(s,map);
+    cost += expf(-10.5f*rd)*50;
 
-    if (rd < 0.61f)
+    if (rd < 0.31f)
       cost += 100;
 
-    if (rd < 0.21f && time < 1.5f)
+    if (rd < 0.11f && time < 1.5f)
     {
       collision = true;
     }
