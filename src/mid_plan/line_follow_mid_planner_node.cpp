@@ -304,7 +304,7 @@ void glb_plan(const ros::TimerEvent&)
 //  if (!use_line)
 //    mid_map->dijkstra2D(path[0]);
 //  else
-    mid_map->dijkstra2D_with_line(path[0],seg_a,seg_b);
+//    mid_map->dijkstra2D_with_line(path[0],seg_a,seg_b);
 
   setup_map_msg(nf1_map_msg,mid_map,false);
   copy_map_to_msg(nf1_map_msg,mid_map,tgt_height_coord);

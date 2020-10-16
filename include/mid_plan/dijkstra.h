@@ -9,12 +9,8 @@ class Dijkstra : public GridGraph
 {
 public:
   Dijkstra(int maxX, int maxY, int maxZ);
-  void dijkstra2D(CUDA_GEO::coord glb_tgt);
-  void dijkstra2D_with_line(CUDA_GEO::coord glb_tgt, CUDA_GEO::pos seg_a, CUDA_GEO::pos seg_b);
-  void bfs2D(CUDA_GEO::coord glb_tgt);
-  void dijkstra3D(CUDA_GEO::coord glb_tgt);
   void dijkstra_with_theta(CUDA_GEO::coord glb_tgt);
-  void update_neighbour(const CUDA_GEO::coord &c, const int3 &shift, const float &m_g, float trans_cost);
+  void update_neighbour(const CUDA_GEO::coord &c, const int3 &shift, nodeInfo *m, float trans_cost);
   ~Dijkstra()
   {
     delete [] m_id_map;
@@ -69,37 +65,14 @@ public:
     s.y = floorf( (in.y - _origin.y) / _gridstep + 0.5f);
     s.z = theta2grid(in.z);
 
-
-    output.push_back(coord2float3(s));
-
     //Find the next minimum coord
-    CUDA_GEO::coord pc;
-    float min_val = 1e6;
-    CUDA_GEO::coord min_coord;
-    bool found_min;
+    nodeInfo* s_node = m_getNode(s);
     while(1)
     {
-      found_min = false;
-      for (shift_child child : children[positive_modulo(s.z,THETA_GRID_SIZE)])
+      if(s_node)
       {
-        pc.x = s.x + child.shift.x;
-        pc.y = s.y + child.shift.y;
-        pc.z = s.z + child.shift.z;
-        pc.z = positive_modulo(pc.z,THETA_GRID_SIZE);
-        nodeInfo* p = m_getNode(pc);
-
-        if (p && p->g < min_val)
-        {
-          min_val = p->g;
-          min_coord = pc;
-          found_min = true;
-        }
-      }
-
-      if (found_min)
-      {
-        s = min_coord;
-        output.push_back(coord2float3(s));
+        output.push_back(coord2float3(s_node->c));
+        s_node = s_node->ptr2parent;
       }
       else
       {
@@ -109,7 +82,6 @@ public:
 
     return output;
   }
-
   //---
   void set_neighbours()
   {
