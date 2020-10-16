@@ -206,7 +206,8 @@ void glb_plan(const ros::TimerEvent&)
   float length = 0.0f;
   std::vector<CUDA_GEO::coord> path = a_map->AStar2D(glb_tgt,start,false,length);
 
-  mid_map->dijkstra_with_theta(path[0]);
+//  mid_map->dijkstra_with_theta(path[0]);
+  mid_map->hybrid_dijkstra_with_int_theta(path[0]);
 
   setup_map_msg(nf1_map_msg,mid_map,false);
   copy_map_to_msg(nf1_map_msg,mid_map,tgt_height_coord);

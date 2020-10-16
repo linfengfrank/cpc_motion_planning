@@ -5,7 +5,7 @@
 #include <mid_plan/SortedSet.h>
 #include <cpc_aux_mapping/grid_map.h>
 
-#define MID_SAFE_DIST 0.25f
+#define MID_SAFE_DIST 0.35f
 struct nodeInfo
 {
   bool inClosed;

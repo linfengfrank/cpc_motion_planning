@@ -10,7 +10,9 @@ class Dijkstra : public GridGraph
 public:
   Dijkstra(int maxX, int maxY, int maxZ);
   void dijkstra_with_theta(CUDA_GEO::coord glb_tgt);
+  void hybrid_dijkstra_with_int_theta(CUDA_GEO::coord glb_tgt);
   void update_neighbour(const CUDA_GEO::coord &c, const int3 &shift, nodeInfo *m, float trans_cost);
+  void hybrid_update_neighbour(const float3 &shift_pose, nodeInfo *m, float trans_cost);
   ~Dijkstra()
   {
     delete [] m_id_map;
@@ -33,27 +35,8 @@ public:
   struct shift_child
   {
     int3 shift;
+    float3 shift_pose;
     float cost;
-
-    bool operator<(const shift_child& rhs) const
-    {
-      if(shift.x < rhs.shift.x)
-      {
-        return true;
-      }
-      else if (shift.x == rhs.shift.x && shift.y < rhs.shift.y)
-      {
-        return true;
-      }
-      else if (shift.x == rhs.shift.x && shift.y == rhs.shift.y && shift.z < rhs.shift.z)
-      {
-        return true;
-      }
-      else
-      {
-        return false;
-      }
-    }
   };
 
   //---
@@ -88,9 +71,9 @@ public:
     std::vector<float3> mps;
     float delta_t = 0;
     delta_t = 1.0f;
-    add_motion_primitives(mps, 2.0f*M_PI/(delta_t*static_cast<float>(THETA_GRID_SIZE)), 0.0f, delta_t);
+    add_motion_rotation(mps, 2.0f*M_PI/(delta_t*static_cast<float>(THETA_GRID_SIZE)), delta_t);
     delta_t = 0.4f;
-    add_motion_primitives(mps, 0.0f, getGridStep()/delta_t, delta_t);
+    add_motion_straight_move(mps, getGridStep()/delta_t, delta_t);
 
     for (size_t i = 0; i< THETA_GRID_SIZE; i++)
     {
@@ -106,14 +89,13 @@ public:
         if (child.shift.x == 0 && child.shift.y == 0 && child.shift.z == 0)
           continue;
 
-        children[i].insert(child);
+        children[i].push_back(child);
       }
     }
   }
 
 private:
-  std::set<shift_child> children[THETA_GRID_SIZE];
-//  int3 children[THETA_GRID_SIZE][4];
+  std::vector<shift_child> children[THETA_GRID_SIZE];
   nodeInfo *m_id_map; // Identity map, store Dijkstra related params
   nodeInfo *m_init_id_map; // A copy for reset
   std::queue<nodeInfo*> _Q;
@@ -171,27 +153,26 @@ private:
     float st = sinf(theta);
     if (fabsf(w) < 1e-3)
     {
-      child.shift.z = 0;
       dxp = v*dt;
       dyp = 0;
-      dx = ct*dxp - st*dyp;
-      dy = st*dxp + ct*dyp;
-      child.shift.x = float2grid(dx);
-      child.shift.y = float2grid(dy);
-      //child.cost = fabsf(v*dt);
     }
     else
     {
-      child.shift.z = theta2grid_raw(w*dt);
       float R = v/w;
       dxp = R*sinf(w*dt);
       dyp = R*(1-cosf(w*dt));
-      dx = ct*dxp - st*dyp;
-      dy = st*dxp + ct*dyp;
-      child.shift.x = float2grid(dx);
-      child.shift.y = float2grid(dy);
-      //child.cost = fabsf(R*w*dt);// + 2*fabsf(w*dt);
     }
+
+    dx = ct*dxp - st*dyp;
+    dy = st*dxp + ct*dyp;
+    child.shift.x = float2grid(dx);
+    child.shift.y = float2grid(dy);
+    child.shift.z = theta2grid_raw(w*dt);
+
+    child.shift_pose.x = dx;
+    child.shift_pose.y = dy;
+    child.shift_pose.z = w*dt;
+
     child.cost = 0.2f*fabsf(dt);
 
     // while doing dijkstra, we start from the goal so very thing is growing backaward
@@ -201,27 +182,16 @@ private:
     return child;
   }
 
-  shift_child get_shift_child(int coord_z, const int3 &shift)
+  void add_motion_rotation(std::vector<float3> &mps, float w, float t)
   {
-    shift_child child;
-    child.shift = shift;
-
-    float theta = atan2f(-shift.y,-shift.x);
-    float alpha = theta-grid2theta(coord_z);
-    alpha = alpha - floorf((alpha + M_PI) / (2 * M_PI)) * 2 * M_PI;
-    float beta = grid2theta(coord_z + shift.z) - theta;
-    beta = beta - floorf((beta + M_PI) / (2 * M_PI)) * 2 * M_PI;
-
-    child.cost  = sqrtf(static_cast<float>(shift.x*shift.x+shift.y*shift.y))*getGridStep() + 3.3f*(fabsf(alpha) + fabsf(beta));
-    return child;
+    mps.push_back(make_float3(w,0,t));
+    mps.push_back(make_float3(-w,0,t));
   }
 
-  void add_motion_primitives(std::vector<float3> &mps, float w, float v, float t)
+  void add_motion_straight_move(std::vector<float3> &mps, float v, float t)
   {
-    mps.push_back(make_float3(w,v,t));
-    mps.push_back(make_float3(-w,v,t));
-    mps.push_back(make_float3(w,-v,t));
-    mps.push_back(make_float3(-w,-v,t));
+    mps.push_back(make_float3(0,v,t));
+    mps.push_back(make_float3(0,-v,t));
   }
 
   float mm_obsCostAt(CUDA_GEO::coord s, float default_value) const
@@ -277,6 +247,15 @@ private:
     output.y = s.y * _gridstep + _origin.y;
     output.z = grid2theta(s.z);
     return output;
+  }
+
+  CUDA_GEO::coord float32coord(const float3& pose)
+  {
+    CUDA_GEO::coord s;
+    s.x = floorf( (pose.x - _origin.x) / _gridstep + 0.5f);
+    s.y = floorf( (pose.y - _origin.y) / _gridstep + 0.5f);
+    s.z = theta2grid(pose.z);
+    return s;
   }
 };
 
