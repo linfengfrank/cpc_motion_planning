@@ -27,6 +27,7 @@ public:
   {
     m_pure_turning = false;
     m_nf1_received = false;
+    m_stuck = false;
   }
 
   ~SingleTargetEvaluator()
@@ -141,24 +142,30 @@ public:
     if(!m_pure_turning)
     {
       //Distance cost
-      if (!m_nf1_received)
+      if(!m_stuck)
       {
-        float2 dist_err = s.p - m_goal.s.p;
-        cost += 0.5f*sqrtf(dist_err.x*dist_err.x + dist_err.y*dist_err.y) + 0.2f*sqrtf(3.0f*s.v*s.v + 0.2*s.w*s.w);
+        if (!m_nf1_received)
+        {
+          float2 dist_err = s.p - m_goal.s.p;
+          cost += 0.5f*sqrtf(dist_err.x*dist_err.x + dist_err.y*dist_err.y) + 0.2f*sqrtf(3.0f*s.v*s.v + 0.2*s.w*s.w);
+        }
+        else
+        {
+          CUDA_GEO::coord c = m_nf1_map.pos2coord(make_float3(s.p.x,s.p.y,0));
+          float theta = s.theta;
+          int theta_crd = theta2grid(theta);
+
+          c.z = theta_crd;
+
+#ifdef  __CUDA_ARCH__
+          // Must use c.x c.y and 0 here! Because the NF1 map has only 1 layer.
+          cost += 0.5f*m_nf1_map.nf1_const_at(c.x,c.y,c.z) + 0.01f*sqrtf(0.1f*s.v*s.v + 0.1f*s.w*s.w);
+#endif
+        }
       }
       else
       {
-        CUDA_GEO::coord c = m_nf1_map.pos2coord(make_float3(s.p.x,s.p.y,0));
-        float theta = s.theta;
-        int theta_crd = theta2grid(theta);
-
-        c.z = theta_crd;
-
-
-#ifdef  __CUDA_ARCH__
-        // Must use c.x c.y and 0 here! Because the NF1 map has only 1 layer.
-        cost += 0.5f*m_nf1_map.nf1_const_at(c.x,c.y,c.z) + 0.01f*sqrtf(0.1f*s.v*s.v + 0.1f*s.w*s.w);
-#endif
+        cost += 0.5f*(fabsf(s.v) - 0.3f)*(fabsf(s.v) - 0.3f);
       }
     }
     else
@@ -222,6 +229,7 @@ public:
 
   Target m_goal;
   bool m_pure_turning;
+  bool m_stuck;
   NF1Map m_nf1_map;
   bool m_nf1_received;
 };
