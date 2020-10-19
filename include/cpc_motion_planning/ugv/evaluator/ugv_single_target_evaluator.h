@@ -134,47 +134,46 @@ public:
     if (rd < 0.31f)
       cost += 100;
 
-    if (rd < 0.11f && time < 1.5f)
+    if (rd < 0.23f && time < 0.4f)
     {
       collision = true;
     }
 
-    if(!m_pure_turning)
+    if (m_nf1_received)
     {
-      //Distance cost
-      if(!m_stuck)
+      if (m_pure_turning)
       {
-        if (!m_nf1_received)
-        {
-          float2 dist_err = s.p - m_goal.s.p;
-          cost += 0.5f*sqrtf(dist_err.x*dist_err.x + dist_err.y*dist_err.y) + 0.2f*sqrtf(3.0f*s.v*s.v + 0.2*s.w*s.w);
-        }
-        else
-        {
-          CUDA_GEO::coord c = m_nf1_map.pos2coord(make_float3(s.p.x,s.p.y,0));
-          float theta = s.theta;
-          int theta_crd = theta2grid(theta);
-
-          c.z = theta_crd;
-
-#ifdef  __CUDA_ARCH__
-          // Must use c.x c.y and 0 here! Because the NF1 map has only 1 layer.
-          cost += 0.5f*m_nf1_map.nf1_const_at(c.x,c.y,c.z) + 0.01f*sqrtf(0.1f*s.v*s.v + 0.1f*s.w*s.w);
-#endif
-        }
+        //reached target, pure turning mode
+        cost += 5.0f*sqrtf(s.v*s.v); // stay still during turning
+        float yaw_diff = s.theta - m_goal.s.theta;
+        yaw_diff = yaw_diff - floorf((yaw_diff + M_PI) / (2 * M_PI)) * 2 * M_PI;
+        cost += 0.5f*fabsf(yaw_diff);
       }
       else
       {
-        cost += 0.5f*(fabsf(s.v) - 0.3f)*(fabsf(s.v) - 0.3f);
+        //either stuck or normal mode
+        CUDA_GEO::coord c = m_nf1_map.pos2coord(make_float3(s.p.x,s.p.y,0));
+        c.z = theta2grid(s.theta);
+        float nf_cost = 0;
+#ifdef  __CUDA_ARCH__
+        nf_cost = 0.5f*m_nf1_map.nf1_const_at(c.x,c.y,c.z);
+#endif
+        if (m_stuck)
+        {
+          //stuck mode, encourage random move to get out of stuck
+          cost += 2.0f*fabsf(fabsf(s.v) - 0.3f) + 0.02f*nf_cost;
+        }
+        else
+        {
+          //normal mode
+          cost += 0.5f*nf_cost + 0.01f*sqrtf(0.1f*s.v*s.v + 0.1f*s.w*s.w);
+        }
       }
     }
     else
     {
-      //Pure heading cost
-      cost += 5.0f*sqrtf(s.v*s.v); // stay still during turning
-      float yaw_diff = s.theta - m_goal.s.theta;
-      yaw_diff = yaw_diff - floorf((yaw_diff + M_PI) / (2 * M_PI)) * 2 * M_PI;
-      cost += 0.5f*fabsf(yaw_diff);
+      // have not received the guidance function map yet, stay still
+      cost += 1.0f*sqrtf(s.v*s.v + s.w*s.w);
     }
 
     return  cost;
@@ -184,45 +183,6 @@ public:
   float final_cost(const UGVModel::State &s, const EDTMap &map) const
   {
     float cost = 0;
-
-//    // Collision cost
-//    float rd = getEDT(s.p,map);
-//    cost += expf(-8.5f*rd)*200;
-
-//    if (rd < 0.61f)
-//      cost += 100;
-
-//    if(!m_pure_turning)
-//    {
-//      //Distance cost
-//      if (!m_nf1_received)
-//      {
-//        float2 dist_err = s.p - m_goal.s.p;
-//        cost += 0.5f*sqrtf(dist_err.x*dist_err.x + dist_err.y*dist_err.y) + 0.2f*sqrtf(3.0f*s.v*s.v + 0.2*s.w*s.w);
-//      }
-//      else
-//      {
-//        CUDA_GEO::coord c = m_nf1_map.pos2coord(make_float3(s.p.x,s.p.y,0));
-//        float theta = s.theta;
-//        int theta_crd = theta2grid(theta);
-
-//        c.z = theta_crd;
-
-
-//#ifdef  __CUDA_ARCH__
-//        // Must use c.x c.y and 0 here! Because the NF1 map has only 1 layer.
-//        cost += 10.0f*m_nf1_map.nf1_const_at(c.x,c.y,c.z) + 0.01f*sqrtf(0.1f*s.v*s.v + 0.1f*s.w*s.w);
-//#endif
-//      }
-//    }
-//    else
-//    {
-//      //Pure heading cost
-//      cost += 5.0f*sqrtf(s.v*s.v); // stay still during turning
-//      float yaw_diff = s.theta - m_goal.s.theta;
-//      yaw_diff = yaw_diff - floorf((yaw_diff + M_PI) / (2 * M_PI)) * 2 * M_PI;
-//      cost += 0.5f*fabsf(yaw_diff);
-//    }
 
     return  cost;
   }

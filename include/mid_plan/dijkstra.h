@@ -73,7 +73,7 @@ public:
     delta_t = 1.0f;
     add_motion_rotation(mps, 2.0f*M_PI/(delta_t*static_cast<float>(THETA_GRID_SIZE)), delta_t);
     delta_t = 0.4f;
-    add_motion_straight_move(mps, getGridStep()/delta_t, delta_t);
+    add_motion_straight_move(mps, 1.01f*getGridStep()/delta_t, delta_t);
 
     for (size_t i = 0; i< THETA_GRID_SIZE; i++)
     {
