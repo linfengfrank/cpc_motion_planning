@@ -307,11 +307,11 @@ void glb_plan(const ros::TimerEvent&)
 
   if (mid_map->isInside(proj_pnt))
   {
-    glb_tgt = mid_map->rayCast(mid_map->pos2coord(proj_pnt),glb_tgt,6.4f).back();
+    glb_tgt = mid_map->rayCast(mid_map->pos2coord(proj_pnt),glb_tgt,4.0f).back();
   }
   else
   {
-    glb_tgt = mid_map->rayCast(start,mid_map->pos2coord(proj_pnt),6.4f).back();
+    glb_tgt = mid_map->rayCast(start,mid_map->pos2coord(proj_pnt),4.0f).back();
     use_line = false;
   }
 
@@ -324,8 +324,10 @@ void glb_plan(const ros::TimerEvent&)
   float length = 0.0f;
   std::vector<CUDA_GEO::coord> path = a_map->AStar2D(glb_tgt,start,false,length);
 
-//  mid_map->dijkstra_with_theta(path[0]);
-  mid_map->hybrid_dijkstra_with_int_theta(path[0]);
+  if(!use_line)
+    mid_map->hybrid_dijkstra_with_int_theta(path[0]);
+  else
+    mid_map->hybrid_dijkstra_with_int_theta_with_line(path[0],seg_a,seg_b);
 
   setup_map_msg(nf1_map_msg,mid_map,false);
   copy_map_to_msg(nf1_map_msg,mid_map,tgt_height_coord);
@@ -364,9 +366,12 @@ void glb_plan(const ros::TimerEvent&)
 #endif
   float2 diff = make_float2(start_pos.x,start_pos.y) - lines[current_line_id].b;
 
-  if (sqrtf(dot(diff,diff)) < 1.5f && current_line_id + 1 <lines.size())
+  if (sqrtf(dot(diff,diff)) < 1.5f)
   {
     current_line_id ++;
+
+    if (current_line_id + 1 >= lines.size())
+      current_line_id = 0;
 
     geometry_msgs::PoseStamped glb_goal;
     glb_goal.pose.position.x = lines[current_line_id].b.x;

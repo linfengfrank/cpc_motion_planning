@@ -11,8 +11,10 @@ public:
   Dijkstra(int maxX, int maxY, int maxZ);
   void dijkstra_with_theta(CUDA_GEO::coord glb_tgt);
   void hybrid_dijkstra_with_int_theta(CUDA_GEO::coord glb_tgt);
+  void hybrid_dijkstra_with_int_theta_with_line(CUDA_GEO::coord glb_tgt,CUDA_GEO::pos seg_a, CUDA_GEO::pos seg_b);
   void update_neighbour(const CUDA_GEO::coord &c, const int3 &shift, nodeInfo *m, float trans_cost);
   void hybrid_update_neighbour(const float3 &shift_pose, nodeInfo *m, float trans_cost);
+  void hybrid_update_neighbour_with_line(const float3 &shift_pose, nodeInfo *m, float trans_cost,const CUDA_GEO::pos &seg_a, const CUDA_GEO::pos &seg_b);
   ~Dijkstra()
   {
     delete [] m_id_map;
@@ -200,7 +202,7 @@ private:
     float dist = getMinDist(s);
     cost += expf(-9.5f*dist)*50;
     if (dist < 0.36f)
-      cost += 100;
+      cost += 1000;
     return cost;
   }
 

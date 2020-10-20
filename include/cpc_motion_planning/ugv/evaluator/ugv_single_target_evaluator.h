@@ -132,7 +132,7 @@ public:
     cost += expf(-10.5f*rd)*50;
 
     if (rd < 0.31f)
-      cost += 100;
+      cost += 1000;
 
     if (rd < 0.23f && time < 0.4f)
     {
