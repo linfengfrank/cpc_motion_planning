@@ -100,6 +100,15 @@ public:
   }
 
   __host__ __device__
+  float2 get_head_pos(const UGVModel::State &s,float r) const
+  {
+    float2 head_pos;
+    head_pos.x = s.p.x + r*cosf(s.theta);
+    head_pos.y = s.p.y + r*sinf(s.theta);
+    return head_pos;
+  }
+
+  __host__ __device__
   float process_cost(const UGVModel::State &s, const EDTMap &map, const float &time, bool &collision) const
   {
     float cost = 0;
@@ -126,21 +135,16 @@ public:
       }
       else
       {
+        float2 head_pos = get_head_pos(s,0.3f);
+        CUDA_GEO::coord head_c = m_nf1_map.pos2coord(make_float3(head_pos.x,head_pos.y,0));
         CUDA_GEO::coord c = m_nf1_map.pos2coord(make_float3(s.p.x,s.p.y,0));
 #ifdef  __CUDA_ARCH__
         // Must use c.x c.y and 0 here! Because the NF1 map has only 1 layer.
-        cost += 0.5f*m_nf1_map.nf1_const_at(c.x,c.y,0) + 0.01f*sqrtf(0.1f*s.v*s.v + 0.1*s.w*s.w);
+        cost += 1.0f*m_nf1_map.nf1_const_at(head_c.x,head_c.y,0);
 #endif
         float yaw_diff = s.theta - getDesiredHeading(c);
         yaw_diff = yaw_diff - floorf((yaw_diff + M_PI) / (2 * M_PI)) * 2 * M_PI;
-
-        if (fabsf(yaw_diff) < M_PI*0.5)
-          cost += 0.10f*fabsf(yaw_diff);
-        else
-          cost += 1.00f*fabsf(yaw_diff) -  M_PI*0.5*0.5f;
-
-//        if (s.v < 0)
-//          cost += fabsf(s.v)*10;
+        cost += yaw_diff*yaw_diff*s.v*s.v;
       }
     }
     else
