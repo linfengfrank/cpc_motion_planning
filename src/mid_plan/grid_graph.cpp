@@ -85,6 +85,29 @@ float GridGraph::obsCostAt(CUDA_GEO::coord s, float default_value, bool &occupie
   return cost;
 }
 
+float GridGraph::obsCostAt(CUDA_GEO::coord s, float default_value) const
+{
+  SeenDist* map_ptr;
+  map_ptr = _val_map;
+
+  float dist = 0.0f;
+  float cost = 0.0;
+  if (s.x<0 || s.x>=_w || s.y<0 || s.y>=_h || s.z<0 || s.z>=_d)
+  {
+    dist = default_value;
+  }
+  else
+  {
+    dist = map_ptr[coord2index(s)].d;
+  }
+  dist *= static_cast<float>(getGridStep());
+
+  cost += expf(-4.4f*dist)*200;
+  if (dist < 0.61f)
+    cost += 100;
+  return cost;
+}
+
 nodeInfo* GridGraph::getNode(CUDA_GEO::coord s)
 {
   if (s.x<0 || s.x>=_w ||

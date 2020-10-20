@@ -17,10 +17,9 @@ void Dijkstra::dijkstra2D(CUDA_GEO::coord glb_tgt)
   // insert the root
   m=getNode(mc);
 
-  bool occupied=false;
   if (m)
   {
-    m->g = 0 + obsCostAt(mc,0,occupied);
+    m->g = 0 + obsCostAt(mc,0);
     _PQ.insert(m,m->g);
   }
   while (_PQ.size()>0)
@@ -46,7 +45,7 @@ void Dijkstra::dijkstra2D(CUDA_GEO::coord glb_tgt)
           if (!p->inClosed)
           {
             float new_g = sqrtf(static_cast<float>(ix*ix+iy*iy))*getGridStep() +
-                m->g + obsCostAt(pc,0,occupied,true);
+                m->g + obsCostAt(pc,0);
 
             if (p->g > new_g)
             {
@@ -72,10 +71,9 @@ void Dijkstra::dijkstra2D_with_line(CUDA_GEO::coord glb_tgt, CUDA_GEO::pos seg_a
   // insert the root
   m=getNode(mc);
 
-  bool occupied=false;
   if (m)
   {
-    m->g = 0 + obsCostAt(mc,0,occupied);
+    m->g = 0 + obsCostAt(mc,0);
     _PQ.insert(m,m->g);
   }
   while (_PQ.size()>0)
@@ -101,11 +99,11 @@ void Dijkstra::dijkstra2D_with_line(CUDA_GEO::coord glb_tgt, CUDA_GEO::pos seg_a
           if (!p->inClosed)
           {
             float new_g = sqrtf(static_cast<float>(ix*ix+iy*iy))*getGridStep() +
-                m->g + obsCostAt(pc,0,occupied,true);
+                m->g + obsCostAt(pc,0);
 
             pc_pos = coord2pos(pc);
             lat_dist = straight_line_proj(seg_a,seg_b,pc_pos);
-            new_g += lat_dist*lat_dist;
+            new_g += 0.2f*lat_dist*lat_dist;
 
             if (p->g > new_g)
             {
