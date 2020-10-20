@@ -163,41 +163,18 @@ public:
   float final_cost(const UGVModel::State &s, const EDTMap &map) const
   {
     float cost = 0;
-//     float2 dist_err = s.p - m_goal.s.p;
-//     cost += 0.5f*sqrt(dist_err.x*dist_err.x + dist_err.y*dist_err.y) + 1.2f*sqrt(3.0f*s.v*s.v + s.w*s.w);
 
-//     int ix = floor( (s.p.x - map.m_origin.x) / map.m_grid_step + 0.5);
-//     int iy = floor( (s.p.y - map.m_origin.y) / map.m_grid_step + 0.5);
-//     int iz = floor( (0 - map.m_origin.z) / map.m_grid_step + 0.5);
+    if(!m_pure_turning && m_nf1_received)
+    {
+      float2 head_pos = get_head_pos(s,0.3f);
+      CUDA_GEO::coord head_c = m_nf1_map.pos2coord(make_float3(head_pos.x,head_pos.y,0));
+#ifdef  __CUDA_ARCH__
+      // Must use c.x c.y and 0 here! Because the NF1 map has only 1 layer.
+      cost += 20.0f*m_nf1_map.nf1_const_at(head_c.x,head_c.y,0);
+#endif
+    }
 
-//     if (ix<0 || ix>=map.m_map_size.x ||
-//             iy<0 || iy>=map.m_map_size.y ||
-//             iz<0 || iz>=map.m_map_size.z)
-//     {
-//         cost += 100;
-//         return cost;
-//     }
-
-//   #ifdef  __CUDA_ARCH__
-//     float rd = map.edt_const_at(ix,iy,iz).d*map.m_grid_step;
-//     cost += exp(-4.5f*rd)*400;
-
-//     if (rd < 0.71)
-//       cost += 100;
-//   #endif
-
-//     if (sqrt(dist_err.x*dist_err.x + dist_err.y*dist_err.y) > 1)
-//     {
-//       cost += 0.5f*M_PI;
-//     }
-//     else
-//     {
-//       float yaw_diff = s.theta - m_goal.s.theta;
-//       yaw_diff = yaw_diff - floor((yaw_diff + M_PI) / (2 * M_PI)) * 2 * M_PI;
-//       cost += 0.5f*fabs(yaw_diff);
-//     }
-
-     return  cost;
+    return  cost;
   }
 
   Target m_goal;

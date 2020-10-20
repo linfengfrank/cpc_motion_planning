@@ -102,7 +102,7 @@ float GridGraph::obsCostAt(CUDA_GEO::coord s, float default_value) const
   }
   dist *= static_cast<float>(getGridStep());
 
-  cost += expf(-4.4f*dist)*200;
+  cost += expf(-8.0f*dist)*200;
   if (dist < 0.61f)
     cost += 100;
   return cost;
