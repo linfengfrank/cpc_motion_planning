@@ -13,6 +13,7 @@ struct nodeInfo
   float g;
   float h;
   float theta;
+  float3 pose;
   CUDA_GEO::coord c;
   nodeInfo* ptr2parent;
   std::multiset<std::pair<float, nodeInfo*>>::iterator it;
@@ -22,6 +23,7 @@ struct nodeInfo
     g(std::numeric_limits<float>::infinity()),
     h(std::numeric_limits<float>::infinity()),
     theta(0),
+    pose(make_float3(0,0,0)),
     ptr2parent(nullptr)
   {
 

@@ -12,6 +12,7 @@
 #include <cpc_motion_planning/ref_data.h>
 #include <cpc_motion_planning/JLT.h>
 #include <cpc_motion_planning/ugv/evaluator/ugv_single_target_evaluator.h>
+#include <cpc_motion_planning/ugv/evaluator/ugv_hybrid_evaluator.h>
 #include <cpc_motion_planning/ugv/controller/ugv_dp_control.h>
 #include <cpc_motion_planning/ugv/controller/ugv_jlt_control.h>
 #include <cpc_motion_planning/ugv/swarm/ugv_swarm.h>
