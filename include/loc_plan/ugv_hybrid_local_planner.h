@@ -3,12 +3,12 @@
 #include <loc_plan/ugv_base_local_planner.h>
 #include <std_msgs/Int32.h>
 
-#define SIMPLE_UGV UGV::UGVModel,UGV::UGVDPControl,UGV::SingleTargetEvaluator,UGV::UGVSwarm<3>
-class UGVSigTgtMotionPlanner : public UGVLocalMotionPlanner
+#define SIMPLE_UGV UGV::UGVModel,UGV::UGVDPControl,UGV::HybridEvaluator,UGV::UGVSwarm<3>
+class UGVHybridMotionPlanner : public UGVLocalMotionPlanner
 {
 public:
-  UGVSigTgtMotionPlanner();
-  ~UGVSigTgtMotionPlanner();
+  UGVHybridMotionPlanner();
+  ~UGVHybridMotionPlanner();
 
 protected:
   virtual void do_start();
@@ -40,8 +40,8 @@ private:
 
   bool m_goal_received;
   PSO::Planner<SIMPLE_UGV> *m_pso_planner;
-  UGV::SingleTargetEvaluator::Target m_goal;
-  UGV::SingleTargetEvaluator::Target m_stuck_goal;
+  UGV::HybridEvaluator::Target m_goal;
+  UGV::HybridEvaluator::Target m_stuck_goal;
   float2 m_mid_goal;
   bool m_mid_goal_received;
   float m_ref_v, m_ref_w, m_ref_theta;
@@ -52,7 +52,7 @@ private:
   std::vector<UGV::UGVModel::State> m_traj;
   bool cycle_initialized;
   int m_braking_start_cycle;
-  NF1MapDT *m_nf1_map;
+  NF1Map *m_nf1_map;
 };
 
 #endif // UGV_MOTION_PLANNER_H

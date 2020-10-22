@@ -10,21 +10,22 @@
 #include <std_msgs/Bool.h>
 #include <algorithm>
 #include "cpc_motion_planning/ref_data.h"
-#include <mid_plan/dijkstra.h>
+#include <mid_plan/hybrid_dijkstra.h>
 #include <mid_plan/a_star.h>
-#include <std_msgs/Int32.h>
+#include <nav_msgs/Odometry.h>
 #include <tf/tf.h>
+#include <std_msgs/Int32.h>
 #include <visualization_msgs/Marker.h>
-#include <cuda_geometry/cuda_nf1_desired_theta.cuh>
 #define SHOWPC
-
+//#define DEBUG_COST
 typedef pcl::PointCloud<pcl::PointXYZRGB> PointCloud;
 PointCloud::Ptr pclOut (new PointCloud);
 ros::Publisher* nf1_pub;
-ros::Publisher* vis_pub;
 ros::Publisher* pc_pub;
+ros::Publisher* path_pub;
 ros::Publisher* mid_goal_pub;
-ros::Publisher* glb_goal_pub;
+ros::Publisher* vis_pub;
+
 Dijkstra *mid_map=nullptr;
 Astar *a_map=nullptr;
 
@@ -35,10 +36,12 @@ bool stucked = false;
 bool received_cmd = false;
 bool received_map = false;
 bool received_ref = false;
+CUDA_GEO::pos goal;
 ros::Timer glb_plan_timer;
 cpc_motion_planning::ref_data ref;
 cpc_aux_mapping::grid_map nf1_map_msg;
-
+float3 curr_pose;
+ros::Publisher* glb_goal_pub;
 //---
 struct line_seg
 {
@@ -71,12 +74,12 @@ void publishMap(int tgt_height_coord)
   {
     for (int y=0;y<mid_map->getMaxY();y++)
     {
-      //for (int z=0;z<msg->z_length;z++)
+      for (int z=0;z<THETA_GRID_SIZE;z++)
       {
         c.x = x;
         c.y = y;
-        c.z = tgt_height_coord;
-        float d_c = mid_map->getCost2Come(c,0.0f)*15;
+        c.z = z;
+        float d_c = mid_map->m_getCost2Come(c,0.0f)*15;
         if (d_c > 255) d_c = 255;
         int d = static_cast<int>(d_c);
 
@@ -138,8 +141,8 @@ void setup_map_msg(cpc_aux_mapping::grid_map &msg, GridGraph* map, bool resize)
   {
     msg.x_size = map->getMaxX();
     msg.y_size = map->getMaxY();
-    msg.z_size = 1;
-    msg.payload8.resize(sizeof(CostTheta)*static_cast<unsigned int>(msg.x_size*msg.y_size*msg.z_size));
+    msg.z_size = THETA_GRID_SIZE;
+    msg.payload8.resize(sizeof(float)*static_cast<unsigned int>(msg.x_size*msg.y_size*msg.z_size));
   }
 
   msg.type = cpc_aux_mapping::grid_map::TYPE_NF1;
@@ -148,38 +151,52 @@ void setup_map_msg(cpc_aux_mapping::grid_map &msg, GridGraph* map, bool resize)
 void copy_map_to_msg(cpc_aux_mapping::grid_map &msg, GridGraph* map,int tgt_height_coord)
 {
   CUDA_GEO::coord c;
-  CostTheta *tmp = static_cast<CostTheta*>(static_cast<void*>(msg.payload8.data()));
+#ifdef DEBUG_COST
+  std::ofstream mylog;
+  mylog.open("/home/sp/test/dj.txt");
+#endif
+  float *tmp = static_cast<float*>(static_cast<void*>(msg.payload8.data()));
   int i=0;
-  for (int y=0;y<map->getMaxY();y++)
+  for (int z=0;z<THETA_GRID_SIZE;z++)
   {
-    for (int x=0;x<map->getMaxX();x++)
+    for (int y=0;y<map->getMaxY();y++)
     {
-      //for (int z=0;z<map->getMaxZ();z++)
+      for (int x=0;x<map->getMaxX();x++)
       {
         c.x = x;
         c.y = y;
-        c.z = tgt_height_coord;
-        tmp[i].c=mid_map->getCost2Come(c,0.0f);
-        tmp[i].t=mid_map->getTheta(c,0.0f);
-        i++;
+        c.z = z;
+        float d_c = mid_map->m_getCost2Come(c,0.0);
+        tmp[i++]=d_c;
+#ifdef DEBUG_COST
+        mylog<<d_c<<" ";
+#endif
       }
     }
   }
+#ifdef DEBUG_COST
+  mylog.close();
+#endif
 }
 //---
 void mapCallback(const cpc_aux_mapping::grid_map::ConstPtr& msg)
 {
   received_map = true;
-  CUDA_GEO::pos origin;
   if (mid_map == nullptr)
   {
     mid_map = new Dijkstra(msg->x_size,msg->y_size,msg->z_size);
+    mid_map->copyEdtData(msg);
+    mid_map->set_neighbours();
     setup_map_msg(nf1_map_msg,mid_map,true);
 
     a_map = new Astar(msg->x_size,msg->y_size,msg->z_size);
+    a_map->copyEdtData(msg);
   }
-  mid_map->copyEdtData(msg);
-  a_map->copyEdtData(msg);
+  else
+  {
+    mid_map->copyEdtData(msg);
+    a_map->copyEdtData(msg);
+  }
 }
 //---
 void show_path(const std::vector<float2> &wps)
@@ -290,23 +307,27 @@ void glb_plan(const ros::TimerEvent&)
 
   if (mid_map->isInside(proj_pnt))
   {
-    glb_tgt = mid_map->rayCast(mid_map->pos2coord(proj_pnt),glb_tgt).back();
+    glb_tgt = mid_map->rayCast(mid_map->pos2coord(proj_pnt),glb_tgt,2.5f).back();
   }
   else
   {
-    glb_tgt = mid_map->rayCast(start,mid_map->pos2coord(proj_pnt)).back();
+    glb_tgt = mid_map->rayCast(start,mid_map->pos2coord(proj_pnt),2.5f).back();
     use_line = false;
   }
 
-  //---
+#ifdef DEBUG_COST
+  static bool done = false;
+  if (done) return;
+  done = true;
+#endif
 
   float length = 0.0f;
   std::vector<CUDA_GEO::coord> path = a_map->AStar2D(glb_tgt,start,false,length);
 
-//  if (!use_line)
-//    mid_map->dijkstra2D(path[0]);
-//  else
-    mid_map->dijkstra2D_with_line(path[0],seg_a,seg_b);
+  if(!use_line)
+    mid_map->hybrid_dijkstra_with_int_theta(path[0]);
+  else
+    mid_map->hybrid_dijkstra_with_int_theta_with_line(path[0],seg_a,seg_b);
 
   setup_map_msg(nf1_map_msg,mid_map,false);
   copy_map_to_msg(nf1_map_msg,mid_map,tgt_height_coord);
@@ -325,14 +346,32 @@ void glb_plan(const ros::TimerEvent&)
 
 #ifdef SHOWPC
   publishMap(tgt_height_coord);
+  std::vector<float3> shortest_path = mid_map->get_shortest_path(curr_pose);
+//  std::cout<<"****"<<shortest_path.size()<<std::endl;
+  for (size_t i=0;i<shortest_path.size();i++)
+  {
+    pcl::PointXYZRGB clrP;
+    clrP.x = shortest_path[i].x;
+    clrP.y = shortest_path[i].y;
+    clrP.z = 0;
+    pclOut->points.push_back (clrP);
+  }
+
+  pcl_conversions::toPCL(ros::Time::now(), pclOut->header.stamp);
+
+  path_pub->publish (pclOut);
+
+  pclOut->clear();
+
 #endif
-
-
   float2 diff = make_float2(start_pos.x,start_pos.y) - lines[current_line_id].b;
 
-  if (sqrtf(dot(diff,diff)) < 1.5f && current_line_id + 1 <lines.size())
+  if (sqrtf(dot(diff,diff)) < 1.5f)
   {
     current_line_id ++;
+
+    if (current_line_id + 1 >= lines.size())
+      current_line_id = 0;
 
     geometry_msgs::PoseStamped glb_goal;
     glb_goal.pose.position.x = lines[current_line_id].b.x;
@@ -345,43 +384,68 @@ void glb_plan(const ros::TimerEvent&)
 
     glb_goal_pub->publish(glb_goal);
   }
+
   auto end_time = std::chrono::steady_clock::now();
-      std::cout << "Middle planning time: "
-                << std::chrono::duration_cast<std::chrono::milliseconds>(end_time - start_time).count()
-                << " ms" << std::endl;
+  std::cout << "Middle planning time: "
+            << std::chrono::duration_cast<std::chrono::milliseconds>(end_time - start_time).count()
+            << " ms" << std::endl;
 
   first_run = false;
+}
+//---
+float get_heading(const nav_msgs::Odometry &odom)
+{
+  double phi,theta,psi;
+  tf::Quaternion q(odom.pose.pose.orientation.x,
+                   odom.pose.pose.orientation.y,
+                   odom.pose.pose.orientation.z,
+                   odom.pose.pose.orientation.w);
+  tf::Matrix3x3 m(q);
+  m.getRPY(phi, theta, psi);
+  return psi;
+}
+//---
+void slam_odo_call_back(const nav_msgs::Odometry::ConstPtr &msg)
+{
+  curr_pose.x = msg->pose.pose.position.x;
+  curr_pose.y = msg->pose.pose.position.y;
+  curr_pose.z = get_heading(*msg);
 }
 //---
 int main(int argc, char **argv)
 {
   ros::init(argc, argv, "mid_layer_node");
   pc_pub = new ros::Publisher;
+  path_pub = new ros::Publisher;
   nf1_pub = new ros::Publisher;
-  vis_pub = new ros::Publisher;
   mid_goal_pub = new ros::Publisher;
   glb_goal_pub = new ros::Publisher;
+  vis_pub = new ros::Publisher;
+
   ros::NodeHandle nh;
-  ros::Subscriber map_sub = nh.subscribe("/edt_map", 1, &mapCallback);
+  ros::Subscriber map_sub = nh.subscribe("/lowres_map", 1, &mapCallback);
   ros::Subscriber stuck_sub = nh.subscribe("/stuck", 1, &stuckCallback);
+  ros::Subscriber slam_odom_sub = nh.subscribe("/UgvOdomTopic", 1, &slam_odo_call_back);
   ros::Subscriber mission_sub = nh.subscribe("/start_mission", 1, &load_mission_callback);
 
   *pc_pub = nh.advertise<PointCloud> ("/nf1", 1);
+  *path_pub = nh.advertise<PointCloud> ("/path", 1);
   *mid_goal_pub = nh.advertise<geometry_msgs::PoseStamped> ("/mid_goal", 1);
-  *glb_goal_pub = nh.advertise<geometry_msgs::PoseStamped> ("/move_base_simple/goal", 1);
   *nf1_pub = nh.advertise<cpc_aux_mapping::grid_map>("/mid_layer/goal",1);
+  *glb_goal_pub = nh.advertise<geometry_msgs::PoseStamped> ("/move_base_simple/goal", 1);
   *vis_pub = nh.advertise<visualization_msgs::Marker>("path_viz",1);
 
   pclOut->header.frame_id = "/world";
   nh.param<float>("/nndp_cpp/fly_height",FLY_HEIGHT,0.0);
 
 
-  glb_plan_timer = nh.createTimer(ros::Duration(0.333), glb_plan);
+  glb_plan_timer = nh.createTimer(ros::Duration(0.5), glb_plan);
 
   ros::spin();
 
   delete pc_pub;
   delete nf1_pub;
+  delete path_pub;
   delete vis_pub;
 
   if (mid_map)

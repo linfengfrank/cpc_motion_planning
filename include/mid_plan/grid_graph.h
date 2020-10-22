@@ -5,13 +5,15 @@
 #include <mid_plan/SortedSet.h>
 #include <cpc_aux_mapping/grid_map.h>
 
-#define MID_SAFE_DIST 0.66f
+#define MID_SAFE_DIST 0.41f
 struct nodeInfo
 {
   bool inClosed;
   bool inQ;
   float g;
   float h;
+  float theta;
+  float3 pose;
   CUDA_GEO::coord c;
   nodeInfo* ptr2parent;
   std::multiset<std::pair<float, nodeInfo*>>::iterator it;
@@ -20,6 +22,8 @@ struct nodeInfo
     inQ(false),
     g(std::numeric_limits<float>::infinity()),
     h(std::numeric_limits<float>::infinity()),
+    theta(0),
+    pose(make_float3(0,0,0)),
     ptr2parent(nullptr)
   {
 
@@ -31,6 +35,7 @@ class GridGraph : public MapBase
 public:
   GridGraph(int maxX, int maxY, int maxZ);
   float obsCostAt(CUDA_GEO::coord s, float default_value, bool &occupied, bool extend=false, float obstacle_dist = MID_SAFE_DIST) const;
+  float obsCostAt(CUDA_GEO::coord s, float default_value) const;
   bool isSeen(const CUDA_GEO::coord & s, const bool default_value) const;
 
   nodeInfo* getIdMapPtr() {return _id_map;}
@@ -40,6 +45,7 @@ public:
   int getMaxY() {return _h;}
   int getMaxZ() {return _d;}
   float getCost2Come(const CUDA_GEO::coord & s, const float &default_value) const;
+  float getTheta(const CUDA_GEO::coord & s, const float &default_value) const;
 
   void copyIdData(const cpc_aux_mapping::grid_map::ConstPtr &msg);
   void copyEdtData(const cpc_aux_mapping::grid_map::ConstPtr &msg);

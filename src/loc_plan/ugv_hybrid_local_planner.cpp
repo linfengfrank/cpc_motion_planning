@@ -1,28 +1,28 @@
-#include "loc_plan/ugv_sigtgt_local_planner.h"
+#include "loc_plan/ugv_hybrid_local_planner.h"
 #include "tf/tf.h"
 #include <chrono>
 #include <std_msgs/String.h>
 
-UGVSigTgtMotionPlanner::UGVSigTgtMotionPlanner():
+UGVHybridMotionPlanner::UGVHybridMotionPlanner():
   m_goal_received(false),
   m_mid_goal_received(false),
   cycle_initialized(false),
   m_braking_start_cycle(0),
   m_nf1_map(nullptr)
 {
-  m_goal_sub = m_nh.subscribe("/move_base_simple/goal",1,&UGVSigTgtMotionPlanner::goal_call_back, this);
-  m_mid_goal_sub = m_nh.subscribe("/mid_goal",1,&UGVSigTgtMotionPlanner::mid_goal_call_back, this);
-  m_nf1_sub = m_nh.subscribe("/mid_layer/goal",1,&UGVSigTgtMotionPlanner::nf1_call_back, this);
-  m_dropoff_finish_sub = m_nh.subscribe("/dropoff_finish",1,&UGVSigTgtMotionPlanner::dropoff_finish_call_back, this);
+  m_goal_sub = m_nh.subscribe("/move_base_simple/goal",1,&UGVHybridMotionPlanner::goal_call_back, this);
+  m_mid_goal_sub = m_nh.subscribe("/mid_goal",1,&UGVHybridMotionPlanner::mid_goal_call_back, this);
+  m_nf1_sub = m_nh.subscribe("/mid_layer/goal",1,&UGVHybridMotionPlanner::nf1_call_back, this);
+  m_dropoff_finish_sub = m_nh.subscribe("/dropoff_finish",1,&UGVHybridMotionPlanner::dropoff_finish_call_back, this);
 
   m_ref_pub = m_nh.advertise<cpc_motion_planning::ref_data>("ref_traj",1);
   m_status_pub = m_nh.advertise<std_msgs::String>("ref_status_string",1);
   m_mission_status_pub = m_nh.advertise<std_msgs::Int32>("/mission_status",1);
   m_dropoff_start_pub = m_nh.advertise<std_msgs::Int32>("/dropoff_start",1);
 
-  m_planning_timer = m_nh.createTimer(ros::Duration(PSO::PSO_REPLAN_DT), &UGVSigTgtMotionPlanner::plan_call_back, this);
+  m_planning_timer = m_nh.createTimer(ros::Duration(PSO::PSO_REPLAN_DT), &UGVHybridMotionPlanner::plan_call_back, this);
 
-  m_pso_planner = new PSO::Planner<SIMPLE_UGV>(120,50,3);
+  m_pso_planner = new PSO::Planner<SIMPLE_UGV>(120,50,2);
   m_pso_planner->initialize();
 
 
@@ -41,28 +41,31 @@ UGVSigTgtMotionPlanner::UGVSigTgtMotionPlanner():
   m_ref_start_idx = 0;
 }
 
-UGVSigTgtMotionPlanner::~UGVSigTgtMotionPlanner()
+UGVHybridMotionPlanner::~UGVHybridMotionPlanner()
 {
   m_pso_planner->release();
   delete m_pso_planner;
 }
 
-void UGVSigTgtMotionPlanner::dropoff_finish_call_back(const std_msgs::Int32::ConstPtr &msg)
+void UGVHybridMotionPlanner::dropoff_finish_call_back(const std_msgs::Int32::ConstPtr &msg)
 {
   std_msgs::Int32 msg_out;
   msg_out.data = 1;
   m_mission_status_pub.publish(msg_out);
 }
 
-void UGVSigTgtMotionPlanner::nf1_call_back(const cpc_aux_mapping::grid_map::ConstPtr &msg)
+void UGVHybridMotionPlanner::nf1_call_back(const cpc_aux_mapping::grid_map::ConstPtr &msg)
 {
   m_goal_received = true;
   if (m_nf1_map == nullptr)
   {
     CUDA_GEO::pos origin(msg->x_origin,msg->y_origin,msg->z_origin);
     int3 m_nf1_map_size = make_int3(msg->x_size,msg->y_size,msg->z_size);
-    m_nf1_map = new NF1MapDT(origin,msg->width,m_nf1_map_size);
+
+    m_nf1_map = new NF1Map(origin,msg->width,m_nf1_map_size);
     m_nf1_map->setup_device();
+
+    //std::cout<<"********* "<<m_nf1_map->m_map_size.x<<" "<<m_nf1_map->m_map_size.y<<" "<<m_nf1_map->m_map_size.z<<std::endl;
   }
   else
   {
@@ -72,9 +75,25 @@ void UGVSigTgtMotionPlanner::nf1_call_back(const cpc_aux_mapping::grid_map::Cons
   CUDA_MEMCPY_H2D(m_nf1_map->m_nf1_map,msg->payload8.data(),static_cast<size_t>(m_nf1_map->m_byte_size));
   m_pso_planner->m_eva.m_nf1_map = *m_nf1_map;
   m_pso_planner->m_eva.m_nf1_received = true;
+
+//  std::ofstream mylog;
+//  mylog.open("/home/sp/nf1_log_2.txt");
+//  const float *tmp = static_cast<const float*>(static_cast<const void*>(msg->payload8.data()));
+//  int i = 0;
+//  for (size_t z=0;z<8;z++)
+//  {
+//    for (size_t y=0;y<100;y++)
+//    {
+//      for (size_t x=0;x<100;x++)
+//      {
+//        mylog<<tmp[i++]<<" ";
+//      }
+//    }
+//  }
+
 }
 
-void UGVSigTgtMotionPlanner::plan_call_back(const ros::TimerEvent&)
+void UGVHybridMotionPlanner::plan_call_back(const ros::TimerEvent&)
 {
 
   ros::Time curr_t = ros::Time::now();
@@ -120,7 +139,7 @@ void UGVSigTgtMotionPlanner::plan_call_back(const ros::TimerEvent&)
 
 
 
-void UGVSigTgtMotionPlanner::goal_call_back(const geometry_msgs::PoseStamped::ConstPtr &msg)
+void UGVHybridMotionPlanner::goal_call_back(const geometry_msgs::PoseStamped::ConstPtr &msg)
 {
   m_goal_received = true;
   m_goal.s.p.x = msg->pose.position.x;
@@ -144,14 +163,14 @@ void UGVSigTgtMotionPlanner::goal_call_back(const geometry_msgs::PoseStamped::Co
   m_mission_status_pub.publish(msg_out);
 }
 
-void UGVSigTgtMotionPlanner::mid_goal_call_back(const geometry_msgs::PoseStamped::ConstPtr &msg)
+void UGVHybridMotionPlanner::mid_goal_call_back(const geometry_msgs::PoseStamped::ConstPtr &msg)
 {
   m_mid_goal_received = true;
   m_mid_goal.x = msg->pose.position.x;
   m_mid_goal.y = msg->pose.position.y;
 }
 //=====================================
-void UGVSigTgtMotionPlanner::do_start()
+void UGVHybridMotionPlanner::do_start()
 {
   if (m_slam_odo_received && m_raw_odo_received && m_received_map && m_goal_received)
   {
@@ -164,7 +183,7 @@ void UGVSigTgtMotionPlanner::do_start()
   }
 }
 //=====================================
-void UGVSigTgtMotionPlanner::do_normal()
+void UGVHybridMotionPlanner::do_normal()
 {
   cycle_init();
   std::cout<<"NORMAL"<<std::endl;
@@ -200,7 +219,7 @@ void UGVSigTgtMotionPlanner::do_normal()
 
 }
 //=====================================
-void UGVSigTgtMotionPlanner::do_stuck()
+void UGVHybridMotionPlanner::do_stuck()
 {
   cycle_init();
   std::cout<<"STUCK"<<std::endl;
@@ -225,12 +244,12 @@ void UGVSigTgtMotionPlanner::do_stuck()
 //  }
 }
 //=====================================
-void UGVSigTgtMotionPlanner::do_emergent()
+void UGVHybridMotionPlanner::do_emergent()
 {
   cycle_init();
 }
 //=====================================
-void UGVSigTgtMotionPlanner::do_braking()
+void UGVHybridMotionPlanner::do_braking()
 {
   cycle_init();
   std::cout<<"BRAKING"<<std::endl;
@@ -246,7 +265,7 @@ void UGVSigTgtMotionPlanner::do_braking()
 
 }
 //=====================================
-void UGVSigTgtMotionPlanner::do_pos_reached()
+void UGVHybridMotionPlanner::do_pos_reached()
 {
   cycle_init();
   std::cout<<"POS_REACHED"<<std::endl;
@@ -266,7 +285,7 @@ void UGVSigTgtMotionPlanner::do_pos_reached()
   }
 }
 //=====================================
-void UGVSigTgtMotionPlanner::do_fully_reached()
+void UGVHybridMotionPlanner::do_fully_reached()
 {
   cycle_init();
   std::cout<<"FULLY_REACHED"<<std::endl;
@@ -283,7 +302,7 @@ void UGVSigTgtMotionPlanner::do_fully_reached()
   m_status = UGV::DROPOFF;
 }
 //=====================================
-void UGVSigTgtMotionPlanner::do_dropoff()
+void UGVHybridMotionPlanner::do_dropoff()
 {
   cycle_init();
   std::cout<<"DROPOFF"<<std::endl;
@@ -298,7 +317,7 @@ void UGVSigTgtMotionPlanner::do_dropoff()
   }
 }
 //=====================================
-void UGVSigTgtMotionPlanner::cycle_init()
+void UGVHybridMotionPlanner::cycle_init()
 {
   if (cycle_initialized)
     return;
