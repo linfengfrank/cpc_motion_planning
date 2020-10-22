@@ -13,9 +13,9 @@ class UGVDPControl
 public:
   UGVDPControl()
   {
-	      // weight_prefix="/home/ugv/yzchen_ws/omen_deploy/UGV_new/";
+       weight_prefix="/home/ugv/yzchen_ws/omen_deploy/UGV_new/";
         
-       weight_prefix="/home/yzchen/CODE/higgs/higgs_ugv/UGV_new/";
+       //weight_prefix="/home/yzchen/CODE/higgs/higgs_ugv/UGV_new/";
   }
 
   ~UGVDPControl()
