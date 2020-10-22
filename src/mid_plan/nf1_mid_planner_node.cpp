@@ -219,7 +219,7 @@ int main(int argc, char **argv)
   nf1_pub = new ros::Publisher;
   mid_goal_pub = new ros::Publisher;
   ros::NodeHandle nh;
-  ros::Subscriber map_sub = nh.subscribe("/lowres_map", 1, &mapCallback);
+  ros::Subscriber map_sub = nh.subscribe("/edt_map", 1, &mapCallback);
   ros::Subscriber stuck_sub = nh.subscribe("/stuck", 1, &stuckCallback);
   ros::Subscriber glb_tgt_sub = nh.subscribe("/move_base_simple/goal", 1, &goalCallback);
 

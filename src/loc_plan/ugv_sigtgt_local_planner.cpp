@@ -22,7 +22,7 @@ UGVSigTgtMotionPlanner::UGVSigTgtMotionPlanner():
 
   m_planning_timer = m_nh.createTimer(ros::Duration(PSO::PSO_REPLAN_DT), &UGVSigTgtMotionPlanner::plan_call_back, this);
 
-  m_pso_planner = new PSO::Planner<SIMPLE_UGV>(120,40,1);
+  m_pso_planner = new PSO::Planner<SIMPLE_UGV>(120,50,3);
   m_pso_planner->initialize();
 
 
@@ -187,19 +187,7 @@ void UGVSigTgtMotionPlanner::do_normal()
     if(is_stuck(m_traj,m_goal.s))
     {
       m_status = UGV::STUCK;
-
-      m_stuck_goal = m_goal;
-      m_stuck_goal.s = m_pso_planner->m_model.get_ini_state();
-      if (m_mid_goal_received)
-      {
-        float2 diff = m_mid_goal - m_stuck_goal.s.p;
-        m_stuck_goal.s.theta = un_in_pi(atan2f(diff.y,diff.x),m_stuck_goal.s.theta);
-      }
-      else
-      {
-        m_stuck_goal.s.theta += 0.5*M_PI;
-      }
-
+      m_braking_start_cycle = m_plan_cycle;
     }
 
     //Goto: Pos_reached
@@ -218,35 +206,23 @@ void UGVSigTgtMotionPlanner::do_stuck()
   std::cout<<"STUCK"<<std::endl;
 
   //Planning
-  m_pso_planner->m_eva.m_pure_turning = true;
+  m_pso_planner->m_eva.m_stuck = true;
   m_pso_planner->m_eva.setTarget(m_stuck_goal);
   calculate_trajectory<SIMPLE_UGV>(m_pso_planner, m_traj);
 
-  //Goto: Normal (Finished turning)
-  if (is_heading_reached(m_pso_planner->m_model.get_ini_state(),m_stuck_goal.s))
+  //Goto: Normal
+  if (m_plan_cycle - m_braking_start_cycle >= 10)
   {
-    m_status = UGV::NORMAL;
+     m_status = UGV::NORMAL;
+     m_pso_planner->m_eva.m_stuck = false;
   }
 
-  //Goto: Normal (Found excape trajectory)
-  if (!m_mid_goal_received)
-  {
-    std::vector<UGV::UGVModel::State> tmp_traj;
-    m_pso_planner->m_eva.m_pure_turning = false;
-    m_pso_planner->m_eva.setTarget(m_goal);
-    calculate_trajectory<SIMPLE_UGV>(m_pso_planner, tmp_traj);
-    if(!is_stuck_instant_horizon(tmp_traj,m_goal.s))
-    {
-      m_status = UGV::NORMAL;
-      m_traj = tmp_traj;
-    }
-  }
-
-  //Goto: Normal (New target)
-  if (m_goal.id != m_pso_planner->m_eva.m_goal.id)
-  {
-    m_status = UGV::NORMAL;
-  }
+//  //Goto: Normal (New target)
+//  if (m_goal.id != m_pso_planner->m_eva.m_goal.id)
+//  {
+//    m_status = UGV::NORMAL;
+//    m_pso_planner->m_eva.m_stuck = false;
+//  }
 }
 //=====================================
 void UGVSigTgtMotionPlanner::do_emergent()

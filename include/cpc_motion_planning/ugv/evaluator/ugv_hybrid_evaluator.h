@@ -166,6 +166,7 @@ public:
         else
         {
           //normal mode
+          cost += expf(-4.5f*rd)*100;
           cost += 0.5f*nf_cost + 0.01f*sqrtf(0.1f*s.v*s.v + 0.1f*s.w*s.w);
         }
       }

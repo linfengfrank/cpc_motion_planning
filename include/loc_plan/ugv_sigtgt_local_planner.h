@@ -3,7 +3,7 @@
 #include <loc_plan/ugv_base_local_planner.h>
 #include <std_msgs/Int32.h>
 
-#define SIMPLE_UGV UGV::UGVModel,UGV::UGVDPControl,UGV::SingleTargetEvaluator,UGV::UGVSwarm<2>
+#define SIMPLE_UGV UGV::UGVModel,UGV::UGVDPControl,UGV::SingleTargetEvaluator,UGV::UGVSwarm<3>
 class UGVSigTgtMotionPlanner : public UGVLocalMotionPlanner
 {
 public:

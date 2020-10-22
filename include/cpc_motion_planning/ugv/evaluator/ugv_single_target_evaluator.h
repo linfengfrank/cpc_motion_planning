@@ -25,6 +25,7 @@ public:
   {
     m_pure_turning = false;
     m_nf1_received = false;
+    m_stuck = false;
   }
 
   ~SingleTargetEvaluator()
@@ -101,46 +102,58 @@ public:
     float cost = 0;
 
     // Collision cost
-    float rd = getEDT(s.p,map);
-    cost += expf(-8.5f*rd)*200;
+    float rd = getMinDist(s,map);
+    cost += expf(-10.5f*rd)*100;
 
-    if (rd < 0.61f)
-      cost += 100;
+    if (rd < 0.401f)
+      cost += 400;
 
-    if (rd < 0.21f && time < 1.5f)
+    if (rd < 0.23f && time < 0.4f)
     {
       collision = true;
     }
 
-    if(!m_pure_turning)
+    if (m_nf1_received)
     {
-      //Distance cost
-      if (!m_nf1_received)
+      if (m_pure_turning)
       {
-        float2 dist_err = s.p - m_goal.s.p;
-        cost += 0.5f*sqrtf(dist_err.x*dist_err.x + dist_err.y*dist_err.y) + 0.2f*sqrtf(3.0f*s.v*s.v + 0.2*s.w*s.w);
+        //Pure heading cost
+        cost += 5.0f*sqrtf(s.v*s.v); // stay still during turning
+        float yaw_diff = s.theta - m_goal.s.theta;
+        yaw_diff = yaw_diff - floorf((yaw_diff + M_PI) / (2 * M_PI)) * 2 * M_PI;
+        cost += 0.5f*fabsf(yaw_diff);
       }
       else
       {
+        //either stuck or normal mode
         float2 head_pos = get_head_pos(s,0.3f);
         CUDA_GEO::coord head_c = m_nf1_map.pos2coord(make_float3(head_pos.x,head_pos.y,0));
         CUDA_GEO::coord c = m_nf1_map.pos2coord(make_float3(s.p.x,s.p.y,0));
+        float nf_cost = 0;
 #ifdef  __CUDA_ARCH__
         // Must use c.x c.y and 0 here! Because the NF1 map has only 1 layer.
-        cost += 1.0f*m_nf1_map.nf1_const_at(head_c.x,head_c.y,0);
+        nf_cost = m_nf1_map.nf1_const_at(head_c.x,head_c.y,0);
 #endif
-        float yaw_diff = s.theta - getDesiredHeading(c);
-        yaw_diff = yaw_diff - floorf((yaw_diff + M_PI) / (2 * M_PI)) * 2 * M_PI;
-        cost += yaw_diff*yaw_diff*s.v*s.v;
+        if (m_stuck)
+        {
+          //stuck mode, encourage random move to get out of stuck
+          cost += expf(-4.5f*rd)*100;
+          cost += 2.0f*fabsf(fabsf(s.v) - 0.3f) + 0.02f*nf_cost;
+        }
+        else
+        {
+          //normal mode
+          cost += 1.0f*nf_cost + 0.01f*sqrtf(0.1f*s.v*s.v + 0.1f*s.w*s.w);
+          float yaw_diff = s.theta - getDesiredHeading(c);
+          yaw_diff = yaw_diff - floorf((yaw_diff + M_PI) / (2 * M_PI)) * 2 * M_PI;
+          cost += yaw_diff*yaw_diff*s.v*s.v;
+        }
       }
     }
     else
     {
-      //Pure heading cost
-      cost += 5.0f*sqrtf(s.v*s.v); // stay still during turning
-      float yaw_diff = s.theta - m_goal.s.theta;
-      yaw_diff = yaw_diff - floorf((yaw_diff + M_PI) / (2 * M_PI)) * 2 * M_PI;
-      cost += 0.5f*fabsf(yaw_diff);
+      // have not received the guidance function map yet, stay still
+      cost += 1.0f*sqrtf(s.v*s.v + s.w*s.w);
     }
 
     return  cost;
@@ -151,7 +164,7 @@ public:
   {
     float cost = 0;
 
-    if(!m_pure_turning && m_nf1_received)
+    if(!m_pure_turning && m_nf1_received && !m_stuck)
     {
       float2 head_pos = get_head_pos(s,0.3f);
       CUDA_GEO::coord head_c = m_nf1_map.pos2coord(make_float3(head_pos.x,head_pos.y,0));
@@ -166,6 +179,7 @@ public:
 
   Target m_goal;
   bool m_pure_turning;
+  bool m_stuck;
   NF1MapDT m_nf1_map;
   bool m_nf1_received;
 };
