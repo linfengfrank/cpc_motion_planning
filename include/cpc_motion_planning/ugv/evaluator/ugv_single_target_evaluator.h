@@ -145,7 +145,7 @@ public:
         else
         {
           //normal mode
-          cost += 1.0f*nf_cost + 0.01f*sqrtf(0.1f*s.v*s.v + 0.1f*s.w*s.w);
+          cost += 1.0f*nf_cost + 1.0f*sqrtf(0.01f*s.v*s.v + 0.05f*s.w*s.w);
           float yaw_diff = s.theta - getDesiredHeading(c);
           yaw_diff = yaw_diff - floorf((yaw_diff + M_PI) / (2 * M_PI)) * 2 * M_PI;
           cost += yaw_diff*yaw_diff*s.v*s.v;
