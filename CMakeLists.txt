@@ -68,6 +68,7 @@ endif()
  add_message_files(
    FILES
    ref_data.msg
+   line_target.msg
  )
 
 ## Generate services in the 'srv' folder

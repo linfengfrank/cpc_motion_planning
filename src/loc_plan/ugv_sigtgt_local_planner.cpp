@@ -13,12 +13,11 @@ UGVSigTgtMotionPlanner::UGVSigTgtMotionPlanner():
   m_goal_sub = m_nh.subscribe("/move_base_simple/goal",1,&UGVSigTgtMotionPlanner::goal_call_back, this);
   m_mid_goal_sub = m_nh.subscribe("/mid_goal",1,&UGVSigTgtMotionPlanner::mid_goal_call_back, this);
   m_nf1_sub = m_nh.subscribe("/mid_layer/goal",1,&UGVSigTgtMotionPlanner::nf1_call_back, this);
-  m_dropoff_finish_sub = m_nh.subscribe("/dropoff_finish",1,&UGVSigTgtMotionPlanner::dropoff_finish_call_back, this);
+  m_line_tgt_sub = m_nh.subscribe("/line_target",1,&UGVSigTgtMotionPlanner::line_target_call_back,this);
 
   m_ref_pub = m_nh.advertise<cpc_motion_planning::ref_data>("ref_traj",1);
   m_status_pub = m_nh.advertise<std_msgs::String>("ref_status_string",1);
-  m_mission_status_pub = m_nh.advertise<std_msgs::Int32>("/mission_status",1);
-  m_dropoff_start_pub = m_nh.advertise<std_msgs::Int32>("/dropoff_start",1);
+  m_tgt_reached_pub = m_nh.advertise<std_msgs::Int32>("target_reached",1);
 
   m_planning_timer = m_nh.createTimer(ros::Duration(PSO::PSO_REPLAN_DT), &UGVSigTgtMotionPlanner::plan_call_back, this);
 
@@ -45,13 +44,6 @@ UGVSigTgtMotionPlanner::~UGVSigTgtMotionPlanner()
 {
   m_pso_planner->release();
   delete m_pso_planner;
-}
-
-void UGVSigTgtMotionPlanner::dropoff_finish_call_back(const std_msgs::Int32::ConstPtr &msg)
-{
-  std_msgs::Int32 msg_out;
-  msg_out.data = 1;
-  m_mission_status_pub.publish(msg_out);
 }
 
 void UGVSigTgtMotionPlanner::nf1_call_back(const cpc_aux_mapping::grid_map::ConstPtr &msg)
@@ -118,7 +110,27 @@ void UGVSigTgtMotionPlanner::plan_call_back(const ros::TimerEvent&)
   m_plan_cycle++;
 }
 
+void UGVSigTgtMotionPlanner::line_target_call_back(const cpc_motion_planning::line_target::ConstPtr &msg)
+{
+  m_goal_received = true;
+  m_goal.s.p.x = msg->target_pose.pose.position.x;
+  m_goal.s.p.y = msg->target_pose.pose.position.y;
 
+  double phi,theta,psi;
+
+  tf::Quaternion q( msg->target_pose.pose.orientation.x,
+                    msg->target_pose.pose.orientation.y,
+                    msg->target_pose.pose.orientation.z,
+                    msg->target_pose.pose.orientation.w);
+  tf::Matrix3x3 m(q);
+  m.getRPY(phi, theta, psi);
+
+  m_goal.s.theta = psi;
+  m_goal.id++;
+
+  m_goal.do_turning = msg->do_turning;
+  m_goal.reaching_radius = msg->reaching_radius;
+}
 
 void UGVSigTgtMotionPlanner::goal_call_back(const geometry_msgs::PoseStamped::ConstPtr &msg)
 {
@@ -139,9 +151,8 @@ void UGVSigTgtMotionPlanner::goal_call_back(const geometry_msgs::PoseStamped::Co
   m_goal.s.theta = psi;
   m_goal.id++;
 
-  std_msgs::Int32 msg_out;
-  msg_out.data = 0;
-  m_mission_status_pub.publish(msg_out);
+  m_goal.do_turning = true;
+  m_goal.reaching_radius = 1.0f;
 }
 
 void UGVSigTgtMotionPlanner::mid_goal_call_back(const geometry_msgs::PoseStamped::ConstPtr &msg)
@@ -191,13 +202,20 @@ void UGVSigTgtMotionPlanner::do_normal()
     }
 
     //Goto: Pos_reached
-    if(is_pos_reached(m_pso_planner->m_model.get_ini_state(),m_goal.s))
+    if(is_pos_reached(m_pso_planner->m_model.get_ini_state(),m_goal.s,m_goal.reaching_radius))
     {
-      m_status = UGV::POS_REACHED;
+      if(m_goal.do_turning)
+      {
+        m_status = UGV::POS_REACHED;
+      }
+      else
+      {
+        std_msgs::Int32 reach_msg;
+        reach_msg.data = m_goal.id;
+        m_tgt_reached_pub.publish(reach_msg);
+      }
     }
   }
-
-
 }
 //=====================================
 void UGVSigTgtMotionPlanner::do_stuck()
@@ -207,7 +225,7 @@ void UGVSigTgtMotionPlanner::do_stuck()
 
   //Planning
   m_pso_planner->m_eva.m_stuck = true;
-  m_pso_planner->m_eva.setTarget(m_stuck_goal);
+  m_pso_planner->m_eva.setTarget(m_goal);
   calculate_trajectory<SIMPLE_UGV>(m_pso_planner, m_traj);
 
   //Goto: Normal
@@ -216,13 +234,6 @@ void UGVSigTgtMotionPlanner::do_stuck()
      m_status = UGV::NORMAL;
      m_pso_planner->m_eva.m_stuck = false;
   }
-
-//  //Goto: Normal (New target)
-//  if (m_goal.id != m_pso_planner->m_eva.m_goal.id)
-//  {
-//    m_status = UGV::NORMAL;
-//    m_pso_planner->m_eva.m_stuck = false;
-//  }
 }
 //=====================================
 void UGVSigTgtMotionPlanner::do_emergent()
@@ -256,7 +267,9 @@ void UGVSigTgtMotionPlanner::do_pos_reached()
   calculate_trajectory<SIMPLE_UGV>(m_pso_planner, m_traj);
   if(is_heading_reached(m_pso_planner->m_model.get_ini_state(),m_goal.s))
   {
-    m_status = UGV::FULLY_REACHED;
+    std_msgs::Int32 reach_msg;
+    reach_msg.data = m_goal.id;
+    m_tgt_reached_pub.publish(reach_msg);
   }
 
   //Goto: Normal (New target)
@@ -273,11 +286,6 @@ void UGVSigTgtMotionPlanner::do_fully_reached()
 
   // Planing
   full_stop_trajectory(m_traj,m_pso_planner->m_model.get_ini_state());
-
-  //Publish a dropoff start message here
-  std_msgs::Int32 msg;
-  msg.data = m_goal.id;
-  m_dropoff_start_pub.publish(msg);
 
   //Go to the dropoff state
   m_status = UGV::DROPOFF;

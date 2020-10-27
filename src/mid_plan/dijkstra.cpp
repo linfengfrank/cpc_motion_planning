@@ -104,7 +104,7 @@ void Dijkstra::dijkstra2D_with_line(CUDA_GEO::coord glb_tgt, CUDA_GEO::pos seg_a
 
             pc_pos = coord2pos(pc);
             lat_dist = straight_line_proj(seg_a,seg_b,pc_pos);
-            new_g += 0.02f*lat_dist*lat_dist;
+            new_g += 0.5f*lat_dist*lat_dist;
 
             if (p->g > new_g)
             {

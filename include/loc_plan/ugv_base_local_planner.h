@@ -93,7 +93,7 @@ protected:
     }
   }
 
-  bool is_pos_reached(const UGV::UGVModel::State &s, const UGV::UGVModel::State &tgt_state)
+  bool is_pos_reached(const UGV::UGVModel::State &s, const UGV::UGVModel::State &tgt_state, float reaching_radius = 0.8f)
   {
     float2 p_diff = s.p - tgt_state.p;
     if (sqrtf(dot(p_diff,p_diff))<0.8f && fabsf(s.v) < 0.5f)
