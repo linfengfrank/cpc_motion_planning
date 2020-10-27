@@ -26,7 +26,6 @@ private:
   void mid_goal_call_back(const geometry_msgs::PoseStamped::ConstPtr &msg);
   void nf1_call_back(const cpc_aux_mapping::grid_map::ConstPtr &msg);
   void cycle_init();
-  void dropoff_finish_call_back(const std_msgs::Int32::ConstPtr &msg);
   void line_target_call_back(const cpc_motion_planning::line_target::ConstPtr &msg);
 
 private:
@@ -37,9 +36,6 @@ private:
   ros::Timer m_planning_timer;
   ros::Publisher m_ref_pub;
   ros::Publisher m_status_pub;
-  ros::Subscriber m_dropoff_finish_sub;
-  ros::Publisher m_dropoff_start_pub;
-  ros::Publisher m_mission_status_pub;
 
   bool m_goal_received;
   PSO::Planner<SIMPLE_UGV> *m_pso_planner;
