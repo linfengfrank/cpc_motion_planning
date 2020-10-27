@@ -17,6 +17,7 @@ UGVSigTgtMotionPlanner::UGVSigTgtMotionPlanner():
 
   m_ref_pub = m_nh.advertise<cpc_motion_planning::ref_data>("ref_traj",1);
   m_status_pub = m_nh.advertise<std_msgs::String>("ref_status_string",1);
+  m_tgt_reached_pub = m_nh.advertise<std_msgs::Int32>("target_reached",1);
 
   m_planning_timer = m_nh.createTimer(ros::Duration(PSO::PSO_REPLAN_DT), &UGVSigTgtMotionPlanner::plan_call_back, this);
 
@@ -124,9 +125,11 @@ void UGVSigTgtMotionPlanner::line_target_call_back(const cpc_motion_planning::li
   tf::Matrix3x3 m(q);
   m.getRPY(phi, theta, psi);
 
-
   m_goal.s.theta = psi;
   m_goal.id++;
+
+  m_goal.do_turning = msg->do_turning;
+  m_goal.reaching_radius = msg->reaching_radius;
 }
 
 void UGVSigTgtMotionPlanner::goal_call_back(const geometry_msgs::PoseStamped::ConstPtr &msg)
@@ -147,6 +150,9 @@ void UGVSigTgtMotionPlanner::goal_call_back(const geometry_msgs::PoseStamped::Co
 
   m_goal.s.theta = psi;
   m_goal.id++;
+
+  m_goal.do_turning = true;
+  m_goal.reaching_radius = 1.0f;
 }
 
 void UGVSigTgtMotionPlanner::mid_goal_call_back(const geometry_msgs::PoseStamped::ConstPtr &msg)
@@ -196,13 +202,20 @@ void UGVSigTgtMotionPlanner::do_normal()
     }
 
     //Goto: Pos_reached
-    if(is_pos_reached(m_pso_planner->m_model.get_ini_state(),m_goal.s))
+    if(is_pos_reached(m_pso_planner->m_model.get_ini_state(),m_goal.s,m_goal.reaching_radius))
     {
-      m_status = UGV::POS_REACHED;
+      if(m_goal.do_turning)
+      {
+        m_status = UGV::POS_REACHED;
+      }
+      else
+      {
+        std_msgs::Int32 reach_msg;
+        reach_msg.data = m_goal.id;
+        m_tgt_reached_pub.publish(reach_msg);
+      }
     }
   }
-
-
 }
 //=====================================
 void UGVSigTgtMotionPlanner::do_stuck()
@@ -212,7 +225,7 @@ void UGVSigTgtMotionPlanner::do_stuck()
 
   //Planning
   m_pso_planner->m_eva.m_stuck = true;
-  m_pso_planner->m_eva.setTarget(m_stuck_goal);
+  m_pso_planner->m_eva.setTarget(m_goal);
   calculate_trajectory<SIMPLE_UGV>(m_pso_planner, m_traj);
 
   //Goto: Normal
@@ -221,13 +234,6 @@ void UGVSigTgtMotionPlanner::do_stuck()
      m_status = UGV::NORMAL;
      m_pso_planner->m_eva.m_stuck = false;
   }
-
-//  //Goto: Normal (New target)
-//  if (m_goal.id != m_pso_planner->m_eva.m_goal.id)
-//  {
-//    m_status = UGV::NORMAL;
-//    m_pso_planner->m_eva.m_stuck = false;
-//  }
 }
 //=====================================
 void UGVSigTgtMotionPlanner::do_emergent()
@@ -261,7 +267,9 @@ void UGVSigTgtMotionPlanner::do_pos_reached()
   calculate_trajectory<SIMPLE_UGV>(m_pso_planner, m_traj);
   if(is_heading_reached(m_pso_planner->m_model.get_ini_state(),m_goal.s))
   {
-    m_status = UGV::FULLY_REACHED;
+    std_msgs::Int32 reach_msg;
+    reach_msg.data = m_goal.id;
+    m_tgt_reached_pub.publish(reach_msg);
   }
 
   //Goto: Normal (New target)

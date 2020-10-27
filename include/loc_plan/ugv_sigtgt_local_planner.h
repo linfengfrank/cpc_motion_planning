@@ -36,11 +36,11 @@ private:
   ros::Timer m_planning_timer;
   ros::Publisher m_ref_pub;
   ros::Publisher m_status_pub;
+  ros::Publisher m_tgt_reached_pub;
 
   bool m_goal_received;
   PSO::Planner<SIMPLE_UGV> *m_pso_planner;
   UGV::SingleTargetEvaluator::Target m_goal;
-  UGV::SingleTargetEvaluator::Target m_stuck_goal;
   float2 m_mid_goal;
   bool m_mid_goal_received;
   float m_ref_v, m_ref_w, m_ref_theta;

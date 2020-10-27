@@ -15,7 +15,9 @@ public:
   {
     UGVModel::State s;
     int id;
-    Target():id(0)
+    bool do_turning;
+    float reaching_radius;
+    Target():id(0),do_turning(false),reaching_radius(1.0f)
     {
 
     }

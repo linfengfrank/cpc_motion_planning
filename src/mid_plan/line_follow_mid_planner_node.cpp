@@ -48,7 +48,8 @@ struct line_seg
   float2 uni;
   float tht;
   float dist;
-  line_seg(float2 a_, float2 b_):a(a_),b(b_)
+  bool do_turning;
+  line_seg(float2 a_, float2 b_, bool do_turning_):a(a_),b(b_),do_turning(do_turning_)
   {
     dist = sqrtf(dot(b-a,b-a));
 
@@ -208,13 +209,34 @@ void show_path(const std::vector<float2> &wps)
   vis_pub->publish(line_strip);
 }
 //---
+void send_line_target(int idx)
+{
+  cpc_motion_planning::line_target line_tgt;
+  line_tgt.target_pose.pose.position.x = lines[idx].b.x;
+  line_tgt.target_pose.pose.position.y = lines[idx].b.y;
+  line_tgt.target_pose.pose.position.z = 0;
+
+  tf::Quaternion quat;
+  // turn towards the next line
+  if (idx + 1 < lines.size())
+    quat.setRPY( 0, 0, lines[idx+1].tht );
+  else
+    quat.setRPY( 0, 0, lines[idx].tht );
+  tf::quaternionTFToMsg(quat, line_tgt.target_pose.pose.orientation);
+
+  line_tgt.do_turning = lines[idx].do_turning;
+  line_tgt.reaching_radius = 1.0f;
+
+  line_goal_pub->publish(line_tgt);
+}
+//---
 void load_mission_callback(const std_msgs::Int32::ConstPtr &msg)
 {
   // Read in the data files
   std::ifstream corridor_file;
   float data[3];
   std::vector<float2> wps;
-
+  std::vector<bool> turning_list;
   corridor_file.open("/home/sp/nndp/Learning_part/tripple_integrator/pso/in.txt");
   std::cout<<"Read in data"<<std::endl;
   while(1)
@@ -222,6 +244,7 @@ void load_mission_callback(const std_msgs::Int32::ConstPtr &msg)
     if (corridor_file>>data[0]>>data[1]>>data[2])
     {
       wps.push_back((make_float2(data[0],data[1])));
+      turning_list.push_back(data[2]>0);
       std::cout<<data[0]<<" "<<data[1]<<" "<<static_cast<int>(data[2])<<std::endl;
     }
     else
@@ -236,25 +259,11 @@ void load_mission_callback(const std_msgs::Int32::ConstPtr &msg)
     lines.clear();
     for (size_t i = 0; i < wps.size()-1; i++)
     {
-      lines.push_back(line_seg(wps[i],wps[i+1]));
+      lines.push_back(line_seg(wps[i],wps[i+1],turning_list[i+1]));
     }
     received_cmd = true;
     current_line_id = 0;
-
-    cpc_motion_planning::line_target line_tgt;
-    line_tgt.target_pose.pose.position.x = lines[current_line_id].b.x;
-    line_tgt.target_pose.pose.position.y = lines[current_line_id].b.y;
-    line_tgt.target_pose.pose.position.z = 0;
-
-    tf::Quaternion quat;
-    quat.setRPY( 0, 0, lines[current_line_id].tht );
-    tf::quaternionTFToMsg(quat, line_tgt.target_pose.pose.orientation);
-
-    line_tgt.do_turning = false;
-    line_tgt.reaching_radius = 1.0f;
-
-    line_goal_pub->publish(line_tgt);
-
+    send_line_target(current_line_id);
     show_path(wps);
   }
 }
@@ -331,33 +340,21 @@ void glb_plan(const ros::TimerEvent&)
   publishMap(tgt_height_coord);
 #endif
 
-
-  float2 diff = make_float2(start_pos.x,start_pos.y) - lines[current_line_id].b;
-
-  if (sqrtf(dot(diff,diff)) < 1.5f && current_line_id + 1 <lines.size())
-  {
-    current_line_id ++;
-
-    cpc_motion_planning::line_target line_tgt;
-    line_tgt.target_pose.pose.position.x = lines[current_line_id].b.x;
-    line_tgt.target_pose.pose.position.y = lines[current_line_id].b.y;
-    line_tgt.target_pose.pose.position.z = 0;
-
-    tf::Quaternion quat;
-    quat.setRPY( 0, 0, lines[current_line_id].tht );
-    tf::quaternionTFToMsg(quat, line_tgt.target_pose.pose.orientation);
-
-    line_tgt.do_turning = false;
-    line_tgt.reaching_radius = 1.0f;
-
-    line_goal_pub->publish(line_tgt);
-  }
   auto end_time = std::chrono::steady_clock::now();
       std::cout << "Middle planning time: "
                 << std::chrono::duration_cast<std::chrono::milliseconds>(end_time - start_time).count()
                 << " ms" << std::endl;
 
   first_run = false;
+}
+//---
+void target_reached_callback(const std_msgs::Int32::ConstPtr &msg)
+{
+  if (current_line_id + 1 <lines.size())
+  {
+    current_line_id ++;
+    send_line_target(current_line_id);
+  }
 }
 //---
 int main(int argc, char **argv)
@@ -372,7 +369,7 @@ int main(int argc, char **argv)
   ros::Subscriber map_sub = nh.subscribe("/edt_map", 1, &mapCallback);
   ros::Subscriber stuck_sub = nh.subscribe("/stuck", 1, &stuckCallback);
   ros::Subscriber mission_sub = nh.subscribe("/start_mission", 1, &load_mission_callback);
-
+  ros::Subscriber target_reached_sub = nh.subscribe("/target_reached", 1, &target_reached_callback);
   *pc_pub = nh.advertise<PointCloud> ("/nf1", 1);
   *mid_goal_pub = nh.advertise<geometry_msgs::PoseStamped> ("/mid_goal", 1);
   *line_goal_pub = nh.advertise<cpc_motion_planning::line_target> ("/line_target", 1);
