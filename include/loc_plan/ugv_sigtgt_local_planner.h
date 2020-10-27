@@ -1,6 +1,7 @@
 #ifndef UGV_MOTION_PLANNER_H
 #define UGV_MOTION_PLANNER_H
 #include <loc_plan/ugv_base_local_planner.h>
+#include <cpc_motion_planning/line_target.h>
 #include <std_msgs/Int32.h>
 
 #define SIMPLE_UGV UGV::UGVModel,UGV::UGVDPControl,UGV::SingleTargetEvaluator,UGV::UGVSwarm<3>
@@ -26,11 +27,13 @@ private:
   void nf1_call_back(const cpc_aux_mapping::grid_map::ConstPtr &msg);
   void cycle_init();
   void dropoff_finish_call_back(const std_msgs::Int32::ConstPtr &msg);
+  void line_target_call_back(const cpc_motion_planning::line_target::ConstPtr &msg);
 
 private:
   ros::Subscriber m_goal_sub;
   ros::Subscriber m_mid_goal_sub;
   ros::Subscriber m_nf1_sub;
+  ros::Subscriber m_line_tgt_sub;
   ros::Timer m_planning_timer;
   ros::Publisher m_ref_pub;
   ros::Publisher m_status_pub;

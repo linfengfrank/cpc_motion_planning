@@ -14,6 +14,7 @@ UGVSigTgtMotionPlanner::UGVSigTgtMotionPlanner():
   m_mid_goal_sub = m_nh.subscribe("/mid_goal",1,&UGVSigTgtMotionPlanner::mid_goal_call_back, this);
   m_nf1_sub = m_nh.subscribe("/mid_layer/goal",1,&UGVSigTgtMotionPlanner::nf1_call_back, this);
   m_dropoff_finish_sub = m_nh.subscribe("/dropoff_finish",1,&UGVSigTgtMotionPlanner::dropoff_finish_call_back, this);
+  m_line_tgt_sub = m_nh.subscribe("/line_target",1,&UGVSigTgtMotionPlanner::line_target_call_back,this);
 
   m_ref_pub = m_nh.advertise<cpc_motion_planning::ref_data>("ref_traj",1);
   m_status_pub = m_nh.advertise<std_msgs::String>("ref_status_string",1);
@@ -118,7 +119,29 @@ void UGVSigTgtMotionPlanner::plan_call_back(const ros::TimerEvent&)
   m_plan_cycle++;
 }
 
+void UGVSigTgtMotionPlanner::line_target_call_back(const cpc_motion_planning::line_target::ConstPtr &msg)
+{
+  m_goal_received = true;
+  m_goal.s.p.x = msg->target_pose.pose.position.x;
+  m_goal.s.p.y = msg->target_pose.pose.position.y;
 
+  double phi,theta,psi;
+
+  tf::Quaternion q( msg->target_pose.pose.orientation.x,
+                    msg->target_pose.pose.orientation.y,
+                    msg->target_pose.pose.orientation.z,
+                    msg->target_pose.pose.orientation.w);
+  tf::Matrix3x3 m(q);
+  m.getRPY(phi, theta, psi);
+
+
+  m_goal.s.theta = psi;
+  m_goal.id++;
+
+  std_msgs::Int32 msg_out;
+  msg_out.data = 0;
+  m_mission_status_pub.publish(msg_out);
+}
 
 void UGVSigTgtMotionPlanner::goal_call_back(const geometry_msgs::PoseStamped::ConstPtr &msg)
 {

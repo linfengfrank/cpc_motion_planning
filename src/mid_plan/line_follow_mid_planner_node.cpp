@@ -16,6 +16,7 @@
 #include <tf/tf.h>
 #include <visualization_msgs/Marker.h>
 #include <cuda_geometry/cuda_nf1_desired_theta.cuh>
+#include <cpc_motion_planning/line_target.h>
 #define SHOWPC
 
 typedef pcl::PointCloud<pcl::PointXYZRGB> PointCloud;
@@ -24,7 +25,7 @@ ros::Publisher* nf1_pub;
 ros::Publisher* vis_pub;
 ros::Publisher* pc_pub;
 ros::Publisher* mid_goal_pub;
-ros::Publisher* glb_goal_pub;
+ros::Publisher* line_goal_pub;
 Dijkstra *mid_map=nullptr;
 Astar *a_map=nullptr;
 
@@ -240,16 +241,19 @@ void load_mission_callback(const std_msgs::Int32::ConstPtr &msg)
     received_cmd = true;
     current_line_id = 0;
 
-    geometry_msgs::PoseStamped glb_goal;
-    glb_goal.pose.position.x = lines[current_line_id].b.x;
-    glb_goal.pose.position.y = lines[current_line_id].b.y;
-    glb_goal.pose.position.z = 0;
+    cpc_motion_planning::line_target line_tgt;
+    line_tgt.target_pose.pose.position.x = lines[current_line_id].b.x;
+    line_tgt.target_pose.pose.position.y = lines[current_line_id].b.y;
+    line_tgt.target_pose.pose.position.z = 0;
 
     tf::Quaternion quat;
     quat.setRPY( 0, 0, lines[current_line_id].tht );
-    tf::quaternionTFToMsg(quat, glb_goal.pose.orientation);
+    tf::quaternionTFToMsg(quat, line_tgt.target_pose.pose.orientation);
 
-    glb_goal_pub->publish(glb_goal);
+    line_tgt.do_turning = false;
+    line_tgt.reaching_radius = 1.0f;
+
+    line_goal_pub->publish(line_tgt);
 
     show_path(wps);
   }
@@ -334,16 +338,19 @@ void glb_plan(const ros::TimerEvent&)
   {
     current_line_id ++;
 
-    geometry_msgs::PoseStamped glb_goal;
-    glb_goal.pose.position.x = lines[current_line_id].b.x;
-    glb_goal.pose.position.y = lines[current_line_id].b.y;
-    glb_goal.pose.position.z = 0;
+    cpc_motion_planning::line_target line_tgt;
+    line_tgt.target_pose.pose.position.x = lines[current_line_id].b.x;
+    line_tgt.target_pose.pose.position.y = lines[current_line_id].b.y;
+    line_tgt.target_pose.pose.position.z = 0;
 
     tf::Quaternion quat;
     quat.setRPY( 0, 0, lines[current_line_id].tht );
-    tf::quaternionTFToMsg(quat, glb_goal.pose.orientation);
+    tf::quaternionTFToMsg(quat, line_tgt.target_pose.pose.orientation);
 
-    glb_goal_pub->publish(glb_goal);
+    line_tgt.do_turning = false;
+    line_tgt.reaching_radius = 1.0f;
+
+    line_goal_pub->publish(line_tgt);
   }
   auto end_time = std::chrono::steady_clock::now();
       std::cout << "Middle planning time: "
@@ -360,7 +367,7 @@ int main(int argc, char **argv)
   nf1_pub = new ros::Publisher;
   vis_pub = new ros::Publisher;
   mid_goal_pub = new ros::Publisher;
-  glb_goal_pub = new ros::Publisher;
+  line_goal_pub = new ros::Publisher;
   ros::NodeHandle nh;
   ros::Subscriber map_sub = nh.subscribe("/edt_map", 1, &mapCallback);
   ros::Subscriber stuck_sub = nh.subscribe("/stuck", 1, &stuckCallback);
@@ -368,7 +375,7 @@ int main(int argc, char **argv)
 
   *pc_pub = nh.advertise<PointCloud> ("/nf1", 1);
   *mid_goal_pub = nh.advertise<geometry_msgs::PoseStamped> ("/mid_goal", 1);
-  *glb_goal_pub = nh.advertise<geometry_msgs::PoseStamped> ("/move_base_simple/goal", 1);
+  *line_goal_pub = nh.advertise<cpc_motion_planning::line_target> ("/line_target", 1);
   *nf1_pub = nh.advertise<cpc_aux_mapping::grid_map>("/mid_layer/goal",1);
   *vis_pub = nh.advertise<visualization_msgs::Marker>("path_viz",1);
 
@@ -389,7 +396,7 @@ int main(int argc, char **argv)
     delete mid_map;
     delete a_map;
     delete mid_goal_pub;
-    delete glb_goal_pub;
+    delete line_goal_pub;
   }
   return 0;
 }
