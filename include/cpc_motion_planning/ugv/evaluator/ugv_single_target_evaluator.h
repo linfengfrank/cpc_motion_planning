@@ -5,6 +5,8 @@
 #include <cpc_motion_planning/dynamic_programming.cuh>
 #include <cuda_geometry/cuda_edtmap.cuh>
 #include <cuda_geometry/cuda_nf1_desired_theta.cuh>
+#include <cpc_motion_planning/ugv/evaluator/bilinear_interpolation.h>
+
 namespace UGV
 {
 class SingleTargetEvaluator
@@ -105,7 +107,7 @@ public:
 
     // Collision cost
     float rd = getMinDist(s,map);
-    cost += expf(-9.5f*rd)*100;
+    cost += expf(-9.5f*rd)*40;
 
     if (rd < 0.51f)
       cost += 1000;
@@ -145,8 +147,8 @@ public:
         else
         {
           //normal mode
-          cost += 1.0f*nf_cost + 1.0f*sqrtf(0.01f*s.v*s.v + 0.05f*s.w*s.w);
-          float yaw_diff = s.theta - getDesiredHeading(c);
+          cost += 1.0f*nf_cost + 1.0f*sqrtf(0.005f*s.v*s.v + 0.005f*s.w*s.w);
+          float yaw_diff = s.theta - getDesiredHeading(c);//bilinear_theta(s.p, m_nf1_map);//getDesiredHeading(c);
           yaw_diff = yaw_diff - floorf((yaw_diff + M_PI) / (2 * M_PI)) * 2 * M_PI;
           cost += yaw_diff*yaw_diff*s.v*s.v;
         }
