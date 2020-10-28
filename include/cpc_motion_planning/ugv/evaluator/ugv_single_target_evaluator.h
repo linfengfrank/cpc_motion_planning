@@ -147,7 +147,7 @@ public:
         else
         {
           //normal mode
-          cost += 1.0f*nf_cost + 1.0f*sqrtf(0.01f*s.v*s.v + 0.05f*s.w*s.w);
+          cost += 1.0f*nf_cost + 1.0f*sqrtf(0.005f*s.v*s.v + 0.005f*s.w*s.w);
           float yaw_diff = s.theta - getDesiredHeading(c);//bilinear_theta(s.p, m_nf1_map);//getDesiredHeading(c);
           yaw_diff = yaw_diff - floorf((yaw_diff + M_PI) / (2 * M_PI)) * 2 * M_PI;
           cost += yaw_diff*yaw_diff*s.v*s.v;
