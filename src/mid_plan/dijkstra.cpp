@@ -117,6 +117,22 @@ void Dijkstra::dijkstra2D_with_line(CUDA_GEO::coord glb_tgt, CUDA_GEO::pos seg_a
       }
     }
   }
+
+
+  for (size_t x = 0; x<getMaxX(); x++)
+  {
+    for (size_t y = 0; y<getMaxY(); y++)
+    {
+      mc.x = x;
+      mc.y = y;
+      mc.z = 0;
+      m=getNode(mc);
+      pc_pos = coord2pos(mc);
+      lat_dist = straight_line_proj(seg_a,seg_b,pc_pos);
+      if(lat_dist > 1.0f)
+        m->g += 20;
+    }
+  }
 }
 
 void Dijkstra::dijkstra3D(CUDA_GEO::coord glb_tgt)
