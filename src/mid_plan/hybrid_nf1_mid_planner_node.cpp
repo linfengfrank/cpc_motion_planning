@@ -37,6 +37,7 @@ ros::Timer glb_plan_timer;
 cpc_motion_planning::ref_data ref;
 cpc_aux_mapping::grid_map nf1_map_msg;
 float3 curr_pose;
+bool recevied_odom = false;
 //---
 void publishMap(int tgt_height_coord)
 {
@@ -182,7 +183,7 @@ void goalCallback(const geometry_msgs::PoseStamped::ConstPtr &msg)
 //---
 void glb_plan(const ros::TimerEvent&)
 {
-  if (!received_cmd || !received_map)
+  if (!received_cmd || !received_map || !recevied_odom)
     return;
 
   auto start_time = std::chrono::steady_clock::now();
@@ -195,7 +196,7 @@ void glb_plan(const ros::TimerEvent&)
 
   CUDA_GEO::coord glb_tgt = mid_map->pos2coord(goal);
   glb_tgt.z = tgt_height_coord;
-  glb_tgt = mid_map->rayCast(start,glb_tgt,2.5f).back();
+  glb_tgt = mid_map->rayCast(start,glb_tgt).back();
 
 #ifdef DEBUG_COST
   static bool done = false;
@@ -204,10 +205,10 @@ void glb_plan(const ros::TimerEvent&)
 #endif
 
   float length = 0.0f;
-  std::vector<CUDA_GEO::coord> path = a_map->AStar2D(glb_tgt,start,false,length);
+  CUDA_GEO::coord local_target = mid_map->hybrid_bfs(curr_pose,glb_tgt);
 
 //  mid_map->dijkstra_with_theta(path[0]);
-  mid_map->hybrid_dijkstra_with_int_theta(path[0]);
+  mid_map->hybrid_dijkstra_with_int_theta(local_target);
 
   setup_map_msg(nf1_map_msg,mid_map,false);
   copy_map_to_msg(nf1_map_msg,mid_map,tgt_height_coord);
@@ -215,9 +216,9 @@ void glb_plan(const ros::TimerEvent&)
 
   //Get the mid goal
   //std::reverse(path.begin(),path.end());
-  unsigned int tgt_idx = a_map->findTargetCoord(path);
+//  unsigned int tgt_idx = a_map->findTargetCoord(path);
   geometry_msgs::PoseStamped mid_goal_pose;
-  CUDA_GEO::pos mid_goal_pos = mid_map->coord2pos(path[tgt_idx]);
+  CUDA_GEO::pos mid_goal_pos = mid_map->coord2pos(local_target);
   mid_goal_pose.header.frame_id="world";
   mid_goal_pose.pose.position.x = mid_goal_pos.x;
   mid_goal_pose.pose.position.y = mid_goal_pos.y;
@@ -268,6 +269,7 @@ float get_heading(const nav_msgs::Odometry &odom)
 //---
 void slam_odo_call_back(const nav_msgs::Odometry::ConstPtr &msg)
 {
+  recevied_odom = true;
   curr_pose.x = msg->pose.pose.position.x;
   curr_pose.y = msg->pose.pose.position.y;
   curr_pose.z = get_heading(*msg);
@@ -281,7 +283,7 @@ int main(int argc, char **argv)
   nf1_pub = new ros::Publisher;
   mid_goal_pub = new ros::Publisher;
   ros::NodeHandle nh;
-  ros::Subscriber map_sub = nh.subscribe("/lowres_map", 1, &mapCallback);
+  ros::Subscriber map_sub = nh.subscribe("/edt_map", 1, &mapCallback);
   ros::Subscriber stuck_sub = nh.subscribe("/stuck", 1, &stuckCallback);
   ros::Subscriber glb_tgt_sub = nh.subscribe("/move_base_simple/goal", 1, &goalCallback);
   ros::Subscriber slam_odom_sub = nh.subscribe("/UgvOdomTopic", 1, &slam_odo_call_back);
@@ -295,7 +297,7 @@ int main(int argc, char **argv)
   nh.param<float>("/nndp_cpp/fly_height",FLY_HEIGHT,0.0);
 
 
-  glb_plan_timer = nh.createTimer(ros::Duration(0.5), glb_plan);
+  glb_plan_timer = nh.createTimer(ros::Duration(2.0), glb_plan);
 
   ros::spin();
 

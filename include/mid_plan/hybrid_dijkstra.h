@@ -13,6 +13,7 @@ public:
   void hybrid_dijkstra_with_int_theta(CUDA_GEO::coord glb_tgt);
   void hybrid_dijkstra_with_int_theta_with_line(CUDA_GEO::coord glb_tgt,CUDA_GEO::pos seg_a, CUDA_GEO::pos seg_b);
   void update_neighbour(const CUDA_GEO::coord &c, const int3 &shift, nodeInfo *m, float trans_cost);
+  CUDA_GEO::coord hybrid_bfs(const float3 &start_pose, CUDA_GEO::coord glb_tgt);
   void hybrid_update_neighbour(const float3 &shift_pose, nodeInfo *m, float trans_cost);
   void hybrid_update_neighbour_with_line(const float3 &shift_pose, nodeInfo *m, float trans_cost,const CUDA_GEO::pos &seg_a, const CUDA_GEO::pos &seg_b);
   ~Dijkstra()
@@ -201,9 +202,19 @@ private:
     float cost = 0;
     float dist = getMinDist(s);
     cost += expf(-9.5f*dist)*50;
-    if (dist < 0.36f)
+    if (dist < 0.51f)
       cost += 1000;
     return cost;
+  }
+
+  bool mm_isfree(CUDA_GEO::coord s) const
+  {
+    float dist = getMinDist(s);
+
+    if (dist < 0.51f)
+      return false;
+    else
+      return true;
   }
 
   float getEDT(const float2 &p) const
@@ -258,6 +269,11 @@ private:
     s.y = floorf( (pose.y - _origin.y) / _gridstep + 0.5f);
     s.z = theta2grid(pose.z);
     return s;
+  }
+
+  float dist2D(const CUDA_GEO::coord & c1, const CUDA_GEO::coord & c2)
+  {
+    return sqrtf((c1.x-c2.x)*(c1.x-c2.x) + (c1.y-c2.y)*(c1.y-c2.y))*getGridStep();
   }
 };
 

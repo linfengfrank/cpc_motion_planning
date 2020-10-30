@@ -131,7 +131,7 @@ public:
     float rd = getMinDist(s,map);
     cost += expf(-10.5f*rd)*50;
 
-    if (rd < 0.31f)
+    if (rd < 0.51f)
       cost += 1000;
 
     if (rd < 0.23f && time < 0.4f)
@@ -166,7 +166,6 @@ public:
         else
         {
           //normal mode
-          cost += expf(-4.5f*rd)*100;
           cost += 0.5f*nf_cost + 0.01f*sqrtf(0.1f*s.v*s.v + 0.1f*s.w*s.w);
         }
       }
