@@ -232,7 +232,7 @@ void load_mission_callback(const std_msgs::Int32::ConstPtr &msg)
   float data[3];
   std::vector<float2> wps;
 
-  corridor_file.open("/home/sp/nndp/Learning_part/tripple_integrator/pso/in.txt");
+  corridor_file.open("/home/ugv/yzchen_ws/omen_deploy/in.txt");
   std::cout<<"Read in data"<<std::endl;
   while(1)
   {
