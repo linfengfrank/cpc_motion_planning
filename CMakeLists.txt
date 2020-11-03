@@ -210,6 +210,7 @@ target_link_libraries(nf1_mid_planning_node
 cuda_add_executable(astar_mid_planning_node
     src/mid_plan/grid_graph.cpp
     src/mid_plan/a_star.cpp
+    src/mid_plan/hybrid_astar.cpp
     src/mid_plan/astar_mid_planner_node.cpp)
 
 target_link_libraries(astar_mid_planning_node
