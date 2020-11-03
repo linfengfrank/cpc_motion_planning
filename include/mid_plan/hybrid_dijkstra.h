@@ -3,7 +3,7 @@
 
 #include <mid_plan/grid_graph.h>
 #include <queue>
-#include <cpc_motion_planning/ugv/evaluator/ugv_hybrid_evaluator.h>
+#define THETA_GRID_SIZE 24
 
 class Dijkstra : public GridGraph
 {
