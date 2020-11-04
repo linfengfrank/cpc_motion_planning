@@ -71,6 +71,7 @@ endif()
    path.msg
    ref_data.msg
    line_target.msg
+   plan_request.msg
  )
 
 ## Generate services in the 'srv' folder

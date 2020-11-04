@@ -7,4 +7,6 @@
 </node>
 <node pkg="cpc_motion_planning" type="nf1_mid_planning_node" name="nf1_mid_planning_node" output="screen">
 </node>
+<node pkg="cpc_motion_planning" type="hybrid_astar_mid_planning_node" name="hybrid_astar_mid_planning_node" output="screen">
+</node>
 </launch>

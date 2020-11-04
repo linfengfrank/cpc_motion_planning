@@ -2,6 +2,7 @@
 #define UGV_MOTION_PLANNER_H
 #include <loc_plan/ugv_base_local_planner.h>
 #include <cpc_motion_planning/line_target.h>
+#include <cpc_motion_planning/path.h>
 #include <std_msgs/Int32.h>
 
 #define SIMPLE_UGV UGV::UGVModel,UGV::UGVDPControl,UGV::SingleTargetEvaluator,UGV::UGVSwarm<3>
@@ -27,16 +28,19 @@ private:
   void nf1_call_back(const cpc_aux_mapping::grid_map::ConstPtr &msg);
   void cycle_init();
   void line_target_call_back(const cpc_motion_planning::line_target::ConstPtr &msg);
+  void hybrid_path_call_back(const cpc_motion_planning::path::ConstPtr &msg);
 
 private:
   ros::Subscriber m_goal_sub;
   ros::Subscriber m_mid_goal_sub;
   ros::Subscriber m_nf1_sub;
   ros::Subscriber m_line_tgt_sub;
+  ros::Subscriber m_hybrid_path_sub;
   ros::Timer m_planning_timer;
   ros::Publisher m_ref_pub;
   ros::Publisher m_status_pub;
   ros::Publisher m_tgt_reached_pub;
+  ros::Publisher m_stuck_plan_request_pub;
 
   bool m_goal_received;
   PSO::Planner<SIMPLE_UGV> *m_pso_planner;
@@ -51,7 +55,9 @@ private:
   std::vector<UGV::UGVModel::State> m_traj;
   bool cycle_initialized;
   int m_braking_start_cycle;
+  int m_plan_request_cycle;
   NF1MapDT *m_nf1_map;
+  cpc_motion_planning::path m_stuck_recover_path;
 };
 
 #endif // UGV_MOTION_PLANNER_H

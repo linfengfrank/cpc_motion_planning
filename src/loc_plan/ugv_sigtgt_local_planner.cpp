@@ -2,6 +2,7 @@
 #include "tf/tf.h"
 #include <chrono>
 #include <std_msgs/String.h>
+#include <cpc_motion_planning/plan_request.h>
 
 UGVSigTgtMotionPlanner::UGVSigTgtMotionPlanner():
   m_goal_received(false),
@@ -14,10 +15,12 @@ UGVSigTgtMotionPlanner::UGVSigTgtMotionPlanner():
   m_mid_goal_sub = m_nh.subscribe("/mid_goal",1,&UGVSigTgtMotionPlanner::mid_goal_call_back, this);
   m_nf1_sub = m_nh.subscribe("/mid_layer/goal",1,&UGVSigTgtMotionPlanner::nf1_call_back, this);
   m_line_tgt_sub = m_nh.subscribe("/line_target",1,&UGVSigTgtMotionPlanner::line_target_call_back,this);
+  m_hybrid_path_sub = m_nh.subscribe("/hybrid_path",1,&UGVSigTgtMotionPlanner::hybrid_path_call_back,this);
 
   m_ref_pub = m_nh.advertise<cpc_motion_planning::ref_data>("ref_traj",1);
   m_status_pub = m_nh.advertise<std_msgs::String>("ref_status_string",1);
   m_tgt_reached_pub = m_nh.advertise<std_msgs::Int32>("target_reached",1);
+  m_stuck_plan_request_pub = m_nh.advertise<cpc_motion_planning::plan_request>("plan_request",1);
 
   m_planning_timer = m_nh.createTimer(ros::Duration(PSO::PSO_REPLAN_DT), &UGVSigTgtMotionPlanner::plan_call_back, this);
 
@@ -34,6 +37,7 @@ UGVSigTgtMotionPlanner::UGVSigTgtMotionPlanner():
   m_v_err_reset_ctt = 0;
   m_w_err_reset_ctt = 0;
   m_tht_err_reset_ctt = 0;
+  m_stuck_recover_path.request_ctt = -1;
   //Initialize the control message
   m_ref_msg.rows = 5;
   m_plan_cycle = 0;
@@ -161,6 +165,13 @@ void UGVSigTgtMotionPlanner::mid_goal_call_back(const geometry_msgs::PoseStamped
   m_mid_goal.x = msg->pose.position.x;
   m_mid_goal.y = msg->pose.position.y;
 }
+
+void UGVSigTgtMotionPlanner::hybrid_path_call_back(const cpc_motion_planning::path::ConstPtr &msg)
+{
+  if (msg->request_ctt != m_plan_request_cycle)
+    return;
+  m_stuck_recover_path = *msg;
+}
 //=====================================
 void UGVSigTgtMotionPlanner::do_start()
 {
@@ -199,6 +210,18 @@ void UGVSigTgtMotionPlanner::do_normal()
     {
       m_status = UGV::STUCK;
       m_braking_start_cycle = m_plan_cycle;
+      m_plan_request_cycle = m_plan_cycle;
+
+      // Prepare and send the request message
+      cpc_motion_planning::plan_request rq_msg;
+      rq_msg.request_ctt = m_plan_cycle;
+      rq_msg.start_x = m_pso_planner->m_model.get_ini_state().p.x;
+      rq_msg.start_y = m_pso_planner->m_model.get_ini_state().p.y;
+      rq_msg.start_theta = m_pso_planner->m_model.get_ini_state().theta;
+      rq_msg.goal_x = m_goal.s.p.x;
+      rq_msg.goal_y = m_goal.s.p.y;
+      rq_msg.goal_theta = m_goal.s.theta;
+      m_stuck_plan_request_pub.publish(rq_msg);
     }
 
     //Goto: Pos_reached
@@ -223,17 +246,28 @@ void UGVSigTgtMotionPlanner::do_stuck()
   cycle_init();
   std::cout<<"STUCK"<<std::endl;
 
-  //Planning
-  m_pso_planner->m_eva.m_stuck = true;
-  m_pso_planner->m_eva.setTarget(m_goal);
-  calculate_trajectory<SIMPLE_UGV>(m_pso_planner, m_traj);
+  full_stop_trajectory(m_traj,m_pso_planner->m_model.get_ini_state());
 
-  //Goto: Normal
-  if (m_plan_cycle - m_braking_start_cycle >= 10)
+  if (m_stuck_recover_path.request_ctt != m_plan_request_cycle)
   {
-     m_status = UGV::NORMAL;
-     m_pso_planner->m_eva.m_stuck = false;
+    // now do nothing
   }
+  else
+  {
+    m_status = UGV::NORMAL;
+  }
+
+//  //Planning
+//  m_pso_planner->m_eva.m_stuck = true;
+//  m_pso_planner->m_eva.setTarget(m_goal);
+//  calculate_trajectory<SIMPLE_UGV>(m_pso_planner, m_traj);
+
+//  //Goto: Normal
+//  if (m_plan_cycle - m_braking_start_cycle >= 10)
+//  {
+//     m_status = UGV::NORMAL;
+//     m_pso_planner->m_eva.m_stuck = false;
+//  }
 }
 //=====================================
 void UGVSigTgtMotionPlanner::do_emergent()
