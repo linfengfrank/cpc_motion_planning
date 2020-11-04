@@ -67,6 +67,8 @@ endif()
 ## Generate messages in the 'msg' folder
  add_message_files(
    FILES
+   path_action.msg
+   path.msg
    ref_data.msg
    line_target.msg
  )
@@ -210,7 +212,6 @@ target_link_libraries(nf1_mid_planning_node
 cuda_add_executable(astar_mid_planning_node
     src/mid_plan/grid_graph.cpp
     src/mid_plan/a_star.cpp
-    src/mid_plan/hybrid_astar.cpp
     src/mid_plan/astar_mid_planner_node.cpp)
 
 target_link_libraries(astar_mid_planning_node
@@ -226,6 +227,17 @@ cuda_add_executable(line_follow_mid_planning_node
     src/mid_plan/line_follow_mid_planner_node.cpp)
 
 target_link_libraries(line_follow_mid_planning_node
+    ${CUDA_curand_LIBRARY}
+    ${CUDA_cublas_LIBRARY}
+    ${CUDA_LIBRARIES}
+    ${catkin_LIBRARIES})
+
+cuda_add_executable(hybrid_astar_mid_planning_node
+    src/mid_plan/grid_graph.cpp
+    src/mid_plan/hybrid_astar.cpp
+    src/mid_plan/hybrid_astar_mid_planner_node.cpp)
+
+target_link_libraries(hybrid_astar_mid_planning_node
     ${CUDA_curand_LIBRARY}
     ${CUDA_cublas_LIBRARY}
     ${CUDA_LIBRARIES}
@@ -247,6 +259,7 @@ add_dependencies(ref_traj_node ${${PROJECT_NAME}_EXPORTED_TARGETS} ${catkin_EXPO
 add_dependencies(nf1_mid_planning_node ${${PROJECT_NAME}_EXPORTED_TARGETS} ${catkin_EXPORTED_TARGETS})
 add_dependencies(astar_mid_planning_node ${${PROJECT_NAME}_EXPORTED_TARGETS} ${catkin_EXPORTED_TARGETS})
 add_dependencies(line_follow_mid_planning_node ${${PROJECT_NAME}_EXPORTED_TARGETS} ${catkin_EXPORTED_TARGETS})
+add_dependencies(hybrid_astar_mid_planning_node ${${PROJECT_NAME}_EXPORTED_TARGETS} ${catkin_EXPORTED_TARGETS})
 ## Specify libraries to link a library or executable target against
 # target_link_libraries(${PROJECT_NAME}_node
 #   ${catkin_LIBRARIES}
