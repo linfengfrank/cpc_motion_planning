@@ -168,6 +168,7 @@ cuda_add_executable(${PROJECT_NAME}_node
     src/loc_plan/sigtgt_loc_planner_node.cpp
     src/loc_plan/ugv_sigtgt_local_planner.cpp
     src/loc_plan/ugv_base_local_planner.cpp
+    src/recover_plan/ugv_recover_planner.cpp
     src/kernel/pso_kernels.cu)
 
 target_link_libraries(${PROJECT_NAME}_node

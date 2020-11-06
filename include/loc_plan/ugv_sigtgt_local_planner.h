@@ -4,6 +4,7 @@
 #include <cpc_motion_planning/line_target.h>
 #include <cpc_motion_planning/path.h>
 #include <std_msgs/Int32.h>
+#include <recover_plan/ugv_recover_planner.h>
 
 #define SIMPLE_UGV UGV::UGVModel,UGV::UGVDPControl,UGV::SingleTargetEvaluator,UGV::UGVSwarm<3>
 class UGVSigTgtMotionPlanner : public UGVLocalMotionPlanner
@@ -58,6 +59,7 @@ private:
   int m_plan_request_cycle;
   NF1MapDT *m_nf1_map;
   cpc_motion_planning::path m_stuck_recover_path;
+  UGVRecMotionPlanner m_recover_planner;
 };
 
 #endif // UGV_MOTION_PLANNER_H

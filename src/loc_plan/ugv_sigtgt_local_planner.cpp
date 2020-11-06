@@ -171,6 +171,7 @@ void UGVSigTgtMotionPlanner::hybrid_path_call_back(const cpc_motion_planning::pa
   if (msg->request_ctt != m_plan_request_cycle)
     return;
   m_stuck_recover_path = *msg;
+  m_recover_planner.set_path_cell(m_stuck_recover_path);
 }
 //=====================================
 void UGVSigTgtMotionPlanner::do_start()
@@ -244,17 +245,42 @@ void UGVSigTgtMotionPlanner::do_normal()
 void UGVSigTgtMotionPlanner::do_stuck()
 {
   cycle_init();
-  std::cout<<"STUCK"<<std::endl;
 
-  full_stop_trajectory(m_traj,m_pso_planner->m_model.get_ini_state());
 
   if (m_stuck_recover_path.request_ctt != m_plan_request_cycle)
   {
-    // now do nothing
+    std::cout<<"STUCK"<<std::endl;
+    // have not received response yet
+    full_stop_trajectory(m_traj,m_pso_planner->m_model.get_ini_state());
   }
   else
   {
-    m_status = UGV::NORMAL;
+    std::cout<<"RECOVER"<<std::endl;
+    bool finished = m_recover_planner.calculate_trajectory(m_pso_planner->m_model.get_ini_state(),
+                                                           m_edt_map,
+                                                           m_traj);
+    if(finished)
+    {
+      m_status = UGV::NORMAL;
+    }
+
+    if(is_stuck(m_traj,m_goal.s))
+    {
+       m_status = UGV::NORMAL;
+//      m_braking_start_cycle = m_plan_cycle;
+//      m_plan_request_cycle = m_plan_cycle;
+
+//      // Prepare and send the request message
+//      cpc_motion_planning::plan_request rq_msg;
+//      rq_msg.request_ctt = m_plan_cycle;
+//      rq_msg.start_x = m_pso_planner->m_model.get_ini_state().p.x;
+//      rq_msg.start_y = m_pso_planner->m_model.get_ini_state().p.y;
+//      rq_msg.start_theta = m_pso_planner->m_model.get_ini_state().theta;
+//      rq_msg.goal_x = m_goal.s.p.x;
+//      rq_msg.goal_y = m_goal.s.p.y;
+//      rq_msg.goal_theta = m_goal.s.theta;
+//      m_stuck_plan_request_pub.publish(rq_msg);
+    }
   }
 
 //  //Planning
