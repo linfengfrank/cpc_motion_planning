@@ -134,25 +134,28 @@ cpc_motion_planning::path HybridAstar::split_path(std::vector<path_info> path)
 
 
   size_t seg_start_idx = 0;
-  for (size_t i = 0;i<split_idx.size()-1;i++)
-  {
-    float3 dev_info = angle_dev(path,split_idx[i],split_idx[i+1]);
+//  if (split_idx.size() >=1 )
+//  {
+//    for (size_t i = 0;i<split_idx.size()-1;i++)
+//    {
+//      float3 dev_info = angle_dev(path,split_idx[i],split_idx[i+1]);
 
-    if (dev_info.x >2.5f && dev_info.y > 3.1415f*0.2f)
-    {
-      // detected a turning part
+//      if (dev_info.x >5.5f && dev_info.y > 3.1415f*0.2f)
+//      {
+//        // detected a turning part
 
-      // add moving part
-      split_forward_backward_driving(cell,select_between_idx(path,seg_start_idx,split_idx[i]));
+//        // add moving part
+//        split_forward_backward_driving(cell,select_between_idx(path,seg_start_idx,split_idx[i]));
 
-      // add turning part
-      cell.actions.push_back(construct_path_action(select_between_idx(path,split_idx[i],split_idx[i+1]), 1));
+//        // add turning part
+//        cell.actions.push_back(construct_path_action(select_between_idx(path,split_idx[i],split_idx[i+1]), 1));
 
-      seg_start_idx = split_idx[i+1];
-    }
-  }
+//        seg_start_idx = split_idx[i+1];
+//      }
+//    }
+//  }
 
-  if (seg_start_idx < path.size() - 1)
+  if (path.size()>=1 && seg_start_idx < path.size() - 1)
   {
     split_forward_backward_driving(cell,select_between_idx(path,seg_start_idx,path.size() - 1));
   }
@@ -167,7 +170,7 @@ std::vector<size_t> HybridAstar::split_merge(const std::vector<path_info> &path)
   std::vector<size_t> split_idx;
 
   // If there is no path, return the center point
-  if (path.size() == 0)
+  if (path.size() <= 1)
   {
     return split_idx;
   }
@@ -188,7 +191,7 @@ std::vector<size_t> HybridAstar::split_merge(const std::vector<path_info> &path)
     float max_dist = 0;
     for (unsigned int j = target; j< anchor; j++)
     {
-      float dist = pnt2lineseg_dist(path[anchor].pose,path[target].pose,path[j].pose);
+      float dist = pnt2line_dist(path[anchor].pose,path[target].pose,path[j].pose);
       if (dist > max_dist)
       {
         max_dist = dist;
@@ -207,6 +210,7 @@ std::vector<size_t> HybridAstar::split_merge(const std::vector<path_info> &path)
       split_idx.push_back(target);
       if (target >= check)
       {
+        std::cout<<"path size: "<<path.size()<<std::endl;
         ROS_ERROR("Wrong split sequence");
         exit(-1);
       }
@@ -237,6 +241,7 @@ void HybridAstar::split_forward_backward_driving(cpc_motion_planning::path &cell
         //detected a change of velocity sign
         cell.actions.push_back(construct_path_action(select_between_idx(path,seg_start_idx,i), moving_dir));
         seg_start_idx = i;
+        moving_dir = dir;
       }
     }
   }

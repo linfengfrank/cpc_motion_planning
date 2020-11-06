@@ -255,11 +255,18 @@ void UGVSigTgtMotionPlanner::do_stuck()
   }
   else
   {
+    if (m_stuck_recover_path.actions.size() == 0)
+    {
+      // the response is empty, then do nothing and go back to normal mode
+      full_stop_trajectory(m_traj,m_pso_planner->m_model.get_ini_state());
+      m_status = UGV::NORMAL;
+    }
+
     std::cout<<"RECOVER"<<std::endl;
     bool finished = m_recover_planner.calculate_trajectory(m_pso_planner->m_model.get_ini_state(),
                                                            m_edt_map,
                                                            m_traj);
-    if(finished)
+    if(finished || m_plan_cycle - m_braking_start_cycle >= 20)
     {
       m_status = UGV::NORMAL;
     }

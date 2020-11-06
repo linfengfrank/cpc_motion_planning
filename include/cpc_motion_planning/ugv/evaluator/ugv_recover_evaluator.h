@@ -29,6 +29,22 @@ public:
   }
 
   __host__ __device__
+  float pnt2line_dist(const float2 & c1, const float2 & c2, const float2 & c0) const
+  {
+    float2 a = c1-c0;
+    float2 b = c2-c1;
+
+    float a_square = dot(a,a);
+    float b_square = dot(b,b);
+    float a_dot_b = a.x*b.x + a.y*b.y;
+
+    if (b_square < 1e-3)
+      return sqrtf(static_cast<float>(a_square));
+
+    return sqrtf(static_cast<float>(a_square*b_square - a_dot_b*a_dot_b)/static_cast<float>(b_square));
+  }
+
+  __host__ __device__
   void setTarget(const UGVModel::State &goal)
   {
     m_goal = goal;
@@ -128,6 +144,8 @@ public:
       if (yaw_gain > 1.0f) yaw_gain = 1.0f;
       cost += 0.5f*yaw_gain*fabsf(yaw_diff);
 
+      cost += 4.0f*pnt2line_dist(line_a,line_b,s.p);
+
       break;
     }
       //---
@@ -143,6 +161,8 @@ public:
       float yaw_gain = dist_val*dist_val;
       if (yaw_gain > 1.0f) yaw_gain = 1.0f;
       cost += 0.5f*yaw_gain*fabsf(yaw_diff);
+
+      cost += 4.0f*pnt2line_dist(line_a,line_b,s.p);
 
       break;
     }
@@ -167,6 +187,7 @@ public:
   UGVModel::State m_goal;
   //0:nothing, 1:turning, 2:forward, 3:backward
   unsigned char m_mode;
+  float2 line_a,line_b;
 };
 }
 

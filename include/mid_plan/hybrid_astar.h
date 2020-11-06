@@ -80,7 +80,7 @@ public:
   {
     std::vector<float3> mps;
     float delta_t = 0;
-    delta_t = 0.5f;
+    delta_t = 0.4f;
     add_motion_rotation(mps, 2.0f*M_PI/(delta_t*static_cast<float>(THETA_GRID_SIZE)), delta_t);
     delta_t = 1.0f;
     add_motion_straight_move(mps, 1.01f*getGridStep()/delta_t, delta_t);
@@ -206,9 +206,7 @@ private:
   {
     float cost = 0;
     float dist = getMinDist(s);
-    cost += expf(-9.5f*dist)*50;
-    if (dist < 0.51f)
-      cost += 1000;
+    cost += expf(-9.5f*dist)*150;
     return cost;
   }
 
@@ -216,7 +214,7 @@ private:
   {
     float dist = getMinDist(s);
 
-    if (dist < 0.51f)
+    if (dist < 0.41f)
       return false;
     else
       return true;
@@ -286,7 +284,7 @@ private:
     return in - floor((in + M_PI) / (2 * M_PI)) * 2 * M_PI;
   }
 
-  inline float pnt2lineseg_dist(const float3 & c1, const float3 & c2, const float3 & c0, float scale_verticle = 1.0f)
+  inline float pnt2line_dist(const float3 & c1, const float3 & c2, const float3 & c0, float scale_verticle = 1.0f)
   {
     float3 a = c1-c0;
     float3 b = c2-c1;
