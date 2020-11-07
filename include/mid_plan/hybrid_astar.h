@@ -80,7 +80,7 @@ public:
   {
     std::vector<float3> mps;
     float delta_t = 0;
-    delta_t = 0.4f;
+    delta_t = 1.0f;
     add_motion_rotation(mps, 2.0f*M_PI/(delta_t*static_cast<float>(THETA_GRID_SIZE)), delta_t);
     delta_t = 1.0f;
     add_motion_straight_move(mps, 1.01f*getGridStep()/delta_t, delta_t);
@@ -207,6 +207,8 @@ private:
     float cost = 0;
     float dist = getMinDist(s);
     cost += expf(-9.5f*dist)*150;
+    if (dist < 0.41f)
+      cost += 1000;
     return cost;
   }
 

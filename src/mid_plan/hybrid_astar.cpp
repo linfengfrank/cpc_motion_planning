@@ -134,26 +134,26 @@ cpc_motion_planning::path HybridAstar::split_path(std::vector<path_info> path)
 
 
   size_t seg_start_idx = 0;
-//  if (split_idx.size() >=1 )
-//  {
-//    for (size_t i = 0;i<split_idx.size()-1;i++)
-//    {
-//      float3 dev_info = angle_dev(path,split_idx[i],split_idx[i+1]);
+  if (split_idx.size() >=1 )
+  {
+    for (size_t i = 0;i<split_idx.size()-1;i++)
+    {
+      float3 dev_info = angle_dev(path,split_idx[i],split_idx[i+1]);
 
-//      if (dev_info.x >5.5f && dev_info.y > 3.1415f*0.2f)
-//      {
-//        // detected a turning part
+      if (dev_info.x >3.5f && dev_info.y > 3.1415f*0.2f)
+      {
+        // detected a turning part
 
-//        // add moving part
-//        split_forward_backward_driving(cell,select_between_idx(path,seg_start_idx,split_idx[i]));
+        // add moving part
+        split_forward_backward_driving(cell,select_between_idx(path,seg_start_idx,split_idx[i]));
 
-//        // add turning part
-//        cell.actions.push_back(construct_path_action(select_between_idx(path,split_idx[i],split_idx[i+1]), 1));
+        // add turning part
+        cell.actions.push_back(construct_path_action(select_between_idx(path,split_idx[i],split_idx[i+1]), 1));
 
-//        seg_start_idx = split_idx[i+1];
-//      }
-//    }
-//  }
+        seg_start_idx = split_idx[i+1];
+      }
+    }
+  }
 
   if (path.size()>=1 && seg_start_idx < path.size() - 1)
   {

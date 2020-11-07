@@ -144,7 +144,10 @@ public:
       if (yaw_gain > 1.0f) yaw_gain = 1.0f;
       cost += 0.5f*yaw_gain*fabsf(yaw_diff);
 
-      cost += 4.0f*pnt2line_dist(line_a,line_b,s.p);
+      float line_dist = pnt2line_dist(line_a,line_b,s.p);
+      cost += 1.0f*line_dist;
+      if (line_dist > 0.2f)
+        cost += 4.0f;
 
       break;
     }
@@ -162,7 +165,10 @@ public:
       if (yaw_gain > 1.0f) yaw_gain = 1.0f;
       cost += 0.5f*yaw_gain*fabsf(yaw_diff);
 
-      cost += 4.0f*pnt2line_dist(line_a,line_b,s.p);
+      float line_dist = pnt2line_dist(line_a,line_b,s.p);
+      cost += 1.0f*line_dist;
+      if (line_dist > 0.2f)
+        cost += 4.0f;
 
       break;
     }
@@ -180,6 +186,31 @@ public:
   float final_cost(const UGVModel::State &s, const EDTMap &map) const
   {
     float cost = 0;
+
+    switch (m_mode)
+    {
+    case 0: // don't move
+      break;
+      //---
+    case 1: // spot turn
+      break;
+      //---
+    case 2:
+    {
+      float2 dist_err = m_goal.p - s.p;
+      float dist_val = sqrtf(dist_err.x*dist_err.x + dist_err.y*dist_err.y);
+      cost += 30.0f*dist_val;
+      break;
+    }
+      //---
+    case 3:
+    {
+      float2 dist_err = m_goal.p - s.p;
+      float dist_val = sqrtf(dist_err.x*dist_err.x + dist_err.y*dist_err.y);
+      cost += 30.0f*dist_val;
+      break;
+    }
+    }
 
     return  cost;
   }

@@ -266,7 +266,7 @@ void UGVSigTgtMotionPlanner::do_stuck()
     bool finished = m_recover_planner.calculate_trajectory(m_pso_planner->m_model.get_ini_state(),
                                                            m_edt_map,
                                                            m_traj);
-    if(finished || m_plan_cycle - m_braking_start_cycle >= 20)
+    if(finished || m_plan_cycle - m_braking_start_cycle >= 50)
     {
       m_status = UGV::NORMAL;
     }

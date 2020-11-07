@@ -171,7 +171,7 @@ bool UGVRecMotionPlanner::check_action_finish(const cpc_motion_planning::path_ac
     //---
   case 1: // turning
   {
-    float yaw_diff = s.theta - pa.theta.back();
+    float yaw_diff = s.theta - m_pso_planner->m_eva.m_goal.theta;//pa.theta.back();
     yaw_diff = yaw_diff - floorf((yaw_diff + M_PI) / (2 * M_PI)) * 2 * M_PI;
     if(fabsf(yaw_diff) < 0.2f && fabsf(s.w)<0.2f)
       return true;
@@ -243,7 +243,7 @@ bool UGVRecMotionPlanner::is_curvature_too_big(const cpc_motion_planning::path_a
       max_deviation = deviation;
   }
 
-  if (max_deviation > 0.1f)
+  if (max_deviation > 0.15f)
     return true;
   else
     return false;
