@@ -15,6 +15,7 @@
 #include <nav_msgs/Odometry.h>
 #include <tf/tf.h>
 #include <cpc_motion_planning/plan_request.h>
+#include <cpc_motion_planning/collision_check.h>
 #define SHOWPC
 //#define DEBUG_COST
 typedef pcl::PointCloud<pcl::PointXYZRGB> PointCloud;
@@ -100,6 +101,24 @@ void glb_plan(const cpc_motion_planning::plan_request::ConstPtr &msg)
             << std::chrono::duration_cast<std::chrono::milliseconds>(end_time - start_time).count()
             << " ms" << std::endl;
 }
+
+bool collision_check(cpc_motion_planning::collision_check::Request &req,
+                     cpc_motion_planning::collision_check::Response &res)
+{
+  res.collision = false;
+  for(size_t i = 0; i<req.collision_checking_path.x.size(); i++)
+  {
+    float3 pose = make_float3(req.collision_checking_path.x[i],
+                              req.collision_checking_path.y[i],
+                              req.collision_checking_path.theta[i]);
+    if (!ha_map->hybrid_isfree(pose))
+    {
+      res.collision = true;
+      break;
+    }
+  }
+  return true;
+}
 //---
 int main(int argc, char **argv)
 {
@@ -110,6 +129,7 @@ int main(int argc, char **argv)
   ros::NodeHandle nh;
   ros::Subscriber map_sub = nh.subscribe("/edt_map", 1, &mapCallback);
   ros::Subscriber mid_plan_sub = nh.subscribe("/plan_request", 1, &glb_plan);
+  ros::ServiceServer service = nh.advertiseService("/collision_check", collision_check);
 
   *path_vis_pub = nh.advertise<PointCloud> ("/path_vis", 1);
   *path_pub = nh.advertise<cpc_motion_planning::path> ("/hybrid_path", 1);

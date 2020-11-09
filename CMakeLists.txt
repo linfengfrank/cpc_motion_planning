@@ -78,6 +78,7 @@ endif()
  add_service_files(
    FILES
    astar_service.srv
+   collision_check.srv
  )
 
 ## Generate actions in the 'action' folder

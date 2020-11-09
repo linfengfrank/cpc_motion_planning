@@ -103,7 +103,11 @@ public:
       }
     }
   }
-
+  //---
+  bool hybrid_isfree(const float3& pose) const
+  {
+    return hybrid_isfree(float32coord(pose));
+  }
 private:
   std::vector<shift_child> children[THETA_GRID_SIZE];
   nodeInfo *m_id_map; // Identity map, store HybridAstar related params
@@ -202,7 +206,7 @@ private:
     mps.push_back(make_float3(0,-v,t));
   }
 
-  float hybrid_obsCostAt(CUDA_GEO::coord s, float default_value) const
+  float hybrid_obsCostAt(const CUDA_GEO::coord &s, float default_value) const
   {
     float cost = 0;
     float dist = getMinDist(s);
@@ -212,7 +216,7 @@ private:
     return cost;
   }
 
-  bool hybrid_isfree(CUDA_GEO::coord s) const
+  bool hybrid_isfree(const CUDA_GEO::coord &s) const
   {
     float dist = getMinDist(s);
 
@@ -267,7 +271,7 @@ private:
     return output;
   }
 
-  CUDA_GEO::coord float32coord(const float3& pose)
+  CUDA_GEO::coord float32coord(const float3& pose) const
   {
     CUDA_GEO::coord s;
     s.x = floorf( (pose.x - _origin.x) / _gridstep + 0.5f);
