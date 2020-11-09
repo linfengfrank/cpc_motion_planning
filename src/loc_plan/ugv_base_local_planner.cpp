@@ -219,12 +219,13 @@ bool UGVLocalMotionPlanner::is_stuck(const std::vector<UGV::UGVModel::State> &tr
 
   if (m_stuck_pbty > 1)
   {
-      m_stuck_pbty = 0;
-      return true;
+    m_lowpass_stuck_pbty = 0;
+    m_stuck_pbty = 0;
+    return true;
   }
   else
   {
-      return false;
+    return false;
   }
 }
 
@@ -315,6 +316,7 @@ bool UGVLocalMotionPlanner::is_stuck_lowpass(const UGV::UGVModel::State& s)
   if (m_lowpass_stuck_pbty > 1)
   {
     m_lowpass_stuck_pbty = 0;
+    m_stuck_pbty = 0;
     return true;
   }
   else

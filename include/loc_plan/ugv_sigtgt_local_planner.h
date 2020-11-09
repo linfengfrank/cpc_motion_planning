@@ -9,6 +9,12 @@
 #define SIMPLE_UGV UGV::UGVModel,UGV::UGVDPControl,UGV::SingleTargetEvaluator,UGV::UGVSwarm<3>
 class UGVSigTgtMotionPlanner : public UGVLocalMotionPlanner
 {
+  enum STUCK_SUB_MODE
+  {
+    RECOVER = 0,
+    FULL_STUCK
+  };
+
 public:
   UGVSigTgtMotionPlanner();
   ~UGVSigTgtMotionPlanner();
@@ -22,6 +28,9 @@ protected:
   virtual void do_pos_reached();
   virtual void do_fully_reached();
   virtual void do_dropoff();
+private:
+  void do_recover();
+  void do_full_stuck();
 private:
   void plan_call_back(const ros::TimerEvent&);
   void goal_call_back(const geometry_msgs::PoseStamped::ConstPtr &msg);
@@ -60,6 +69,9 @@ private:
   NF1MapDT *m_nf1_map;
   cpc_motion_planning::path m_stuck_recover_path;
   UGVRecMotionPlanner m_recover_planner;
+  ros::ServiceClient m_collision_check_client;
+  STUCK_SUB_MODE m_stuck_submode;
+  int m_full_stuck_ctt;
 };
 
 #endif // UGV_MOTION_PLANNER_H

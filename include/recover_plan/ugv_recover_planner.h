@@ -14,6 +14,10 @@ public:
 
   bool calculate_trajectory(const UGV::UGVModel::State &s, EDTMap *edt_map, std::vector<UGV::UGVModel::State> &traj);
   void set_path_cell(const cpc_motion_planning::path &path);
+  cpc_motion_planning::path_action get_collision_checking_path()
+  {
+    return collision_checking_path;
+  }
 
 private:
   UGV::UGVModel::State calculate_tgt_state(const cpc_motion_planning::path_action &pa);
