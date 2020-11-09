@@ -215,6 +215,7 @@ void UGVSigTgtMotionPlanner::do_normal()
       m_stuck_submode = STUCK_SUB_MODE::RECOVER;
       m_braking_start_cycle = m_plan_cycle;
       m_plan_request_cycle = m_plan_cycle;
+      m_full_stuck_ctt = m_plan_cycle;
 
       // Prepare and send the request message
       cpc_motion_planning::plan_request rq_msg;
