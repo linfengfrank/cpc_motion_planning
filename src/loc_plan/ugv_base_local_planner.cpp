@@ -6,7 +6,10 @@ UGVLocalMotionPlanner::UGVLocalMotionPlanner():
   m_slam_odo_received(false),
   m_edt_map(nullptr),
   m_status(UGV::START),
-  m_stuck_pbty(0.0f)
+  m_stuck_pbty(0.0f),
+  m_lowpass_stuck_pbty(0.0f),
+  m_lowpass_v(0.0f),
+  m_lowpass_w(0.0f)
 {
   m_map_sub = m_nh.subscribe("/edt_map", 1, &UGVLocalMotionPlanner::map_call_back, this);
   m_raw_odom_sub = m_nh.subscribe("/raw_odom", 1, &UGVLocalMotionPlanner::raw_odo_call_back, this);
@@ -295,5 +298,28 @@ bool UGVLocalMotionPlanner::is_stuck_instant_horizon(const std::vector<UGV::UGVM
 
 
   return far_from_tgt && no_moving_intention;
+}
+
+bool UGVLocalMotionPlanner::is_stuck_lowpass(const UGV::UGVModel::State& s)
+{
+  m_lowpass_v = 0.8f*m_lowpass_v + 0.2f*s.v;
+  m_lowpass_w = 0.8f*m_lowpass_w + 0.2f*s.w;
+
+  if (fabsf(m_lowpass_v) < 0.08f && fabsf(m_lowpass_w) < 0.08f)
+    m_lowpass_stuck_pbty +=0.1f;
+  else
+    m_lowpass_stuck_pbty *=0.8f;
+
+  //std::cout<<"****"<<m_lowpass_v<<" "<<m_lowpass_w<<" "<<m_lowpass_stuck_pbty<<std::endl;
+
+  if (m_lowpass_stuck_pbty > 1)
+  {
+    m_lowpass_stuck_pbty = 0;
+    return true;
+  }
+  else
+  {
+    return false;
+  }
 }
 

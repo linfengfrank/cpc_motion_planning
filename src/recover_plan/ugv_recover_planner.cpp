@@ -67,10 +67,12 @@ void UGVRecMotionPlanner::set_path_cell(const cpc_motion_planning::path &path)
 UGV::UGVModel::State UGVRecMotionPlanner::calculate_tgt_state(const cpc_motion_planning::path_action &pa)
 {
   UGV::UGVModel::State gs; //goal state
+  clear_collision_checking_path();
   switch (pa.type)
   {
   case 0: // should not happen
     ROS_ERROR("case 0 action appeared");
+    collision_checking_path = pa;
     break;
     //---
   case 1: // turning
@@ -78,33 +80,38 @@ UGV::UGVModel::State UGVRecMotionPlanner::calculate_tgt_state(const cpc_motion_p
     gs.p.x = pa.x[0];
     gs.p.y = pa.y[0];
     gs.theta = find_turning_angle(pa);
+    populate_collision_checking_path_turning(gs.p,  m_pso_planner->m_model.get_ini_state().theta, gs.theta);
     break;
   }
     //---
   case 2:
   {
-    float2 line_a, line_b;
-    gs = find_carrot(pa, line_a, line_b);
-    m_pso_planner->m_eva.line_a = line_a;
-    m_pso_planner->m_eva.line_b = line_b;
+    size_t start_id, end_id;
+    gs = find_carrot(pa, start_id, end_id);
+    populate_collision_checking_path_moving(pa,start_id,end_id);
+    m_pso_planner->m_eva.line_a = make_float2(pa.x[start_id], pa.y[start_id]);
+    m_pso_planner->m_eva.line_b = make_float2(pa.x[end_id], pa.y[end_id]);
     break;
   }
     //---
   case 3:
   {
-    float2 line_a, line_b;
-    gs = find_carrot(pa, line_a, line_b);
+    size_t start_id, end_id;
+    gs = find_carrot(pa, start_id, end_id);
+    populate_collision_checking_path_moving(pa,start_id,end_id);
     gs.theta += M_PI;
-    m_pso_planner->m_eva.line_a = line_a;
-    m_pso_planner->m_eva.line_b = line_b;
+    m_pso_planner->m_eva.line_a = make_float2(pa.x[start_id], pa.y[start_id]);
+    m_pso_planner->m_eva.line_b = make_float2(pa.x[end_id], pa.y[end_id]);
   }
   default:
     break;
   }
+
+  //std::cout<<"col check path: "<<collision_checking_path.x.size()<<std::endl;
   return gs;
 }
 
-UGV::UGVModel::State UGVRecMotionPlanner::find_carrot(const cpc_motion_planning::path_action &pa, float2 &line_a, float2 &line_b)
+UGV::UGVModel::State UGVRecMotionPlanner::find_carrot(const cpc_motion_planning::path_action &pa, size_t &line_idx_a, size_t &line_idx_b)
 {
   UGV::UGVModel::State s = m_pso_planner->m_model.get_ini_state();
   UGV::UGVModel::State carrot;
@@ -134,28 +141,26 @@ UGV::UGVModel::State UGVRecMotionPlanner::find_carrot(const cpc_motion_planning:
   diff = make_float2(pa.x[min_id] - s.p.x, pa.y[min_id]-s.p.y);
   carrot.theta = atan2f(diff.y, diff.x);
 
+  size_t carrot_id = min_id;
   for (size_t i = min_id; i < pa.x.size(); i++)
   {
     diff = make_float2(pa.x[i] - s.p.x, pa.y[i]-s.p.y);
     diff_dist = sqrtf(dot(diff,diff));
 
     if (diff_dist < 2.5f && !is_curvature_too_big(pa, min_id, i))
-    {
-      carrot.p.x = pa.x[i];
-      carrot.p.y = pa.y[i];
-
-      // calcuate the angle
-      diff = make_float2(pa.x[i] - s.p.x, pa.y[i]-s.p.y);
-      carrot.theta = atan2f(diff.y, diff.x);
-    }
+      carrot_id = i;
     else
-    {
       break;
-    }
   }
 
-  line_a = make_float2(pa.x[min_id],pa.y[min_id]);
-  line_b = make_float2(carrot.p.x, carrot.p.y);
+  line_idx_a = min_id;
+  line_idx_b = carrot_id;
+
+  // calculate the carrot
+  carrot.p.x = pa.x[carrot_id];
+  carrot.p.y = pa.y[carrot_id];
+  diff = make_float2(pa.x[carrot_id] - s.p.x, pa.y[carrot_id]-s.p.y);
+  carrot.theta = atan2f(diff.y, diff.x);
 
   return carrot;
 }
