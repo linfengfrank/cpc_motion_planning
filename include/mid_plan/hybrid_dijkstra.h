@@ -201,9 +201,9 @@ private:
   {
     float cost = 0;
     float dist = getMinDist(s);
-    cost += expf(-9.5f*dist)*50;
-    if (dist < 0.51f)
-      cost += 1000;
+    cost += expf(-9.5f*dist)*10;
+    if (dist < 0.41f)
+      cost += 4000;
     return cost;
   }
 
@@ -211,7 +211,7 @@ private:
   {
     float dist = getMinDist(s);
 
-    if (dist < 0.51f)
+    if (dist < 0.41f)
       return false;
     else
       return true;
