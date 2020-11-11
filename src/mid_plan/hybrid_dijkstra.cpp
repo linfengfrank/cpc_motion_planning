@@ -28,13 +28,13 @@ void Dijkstra::dijkstra_with_theta(CUDA_GEO::coord glb_tgt)
   CUDA_GEO::coord pc;
   nodeInfo* m;
   // insert the root
-  m=m_getNode(mc);
+  m=hybrid_getNode(mc);
   if (m)
   {
     for (int z=0;z<THETA_GRID_SIZE;z++) {
       mc.z=z;
-      m=m_getNode(mc);
-      m->g = 0 + mm_obsCostAt(mc,0);
+      m=hybrid_getNode(mc);
+      m->g = 0 + hybrid_obsCostAt(mc,0);
       _PQ.insert(m,m->g);
     }
 
@@ -61,16 +61,16 @@ void Dijkstra::hybrid_dijkstra_with_int_theta(CUDA_GEO::coord glb_tgt)
   nodeInfo* p;
 
   // insert the root
-  m=m_getNode(mc);
+  m=hybrid_getNode(mc);
   if (m)
   {
     for (int z=0;z<THETA_GRID_SIZE;z++)
     {
       mc.z=z;
-      m=m_getNode(mc);
+      m=hybrid_getNode(mc);
       m->pose = coord2float3(mc);
       m->ptr2parent = nullptr;
-      m->g = 0 + mm_obsCostAt(mc,0);
+      m->g = 0 + hybrid_obsCostAt(mc,0);
       _PQ.insert(m,m->g);
     }
   }
@@ -98,16 +98,16 @@ void Dijkstra::hybrid_dijkstra_with_int_theta_with_line(CUDA_GEO::coord glb_tgt,
   nodeInfo* p;
 
   // insert the root
-  m=m_getNode(mc);
+  m=hybrid_getNode(mc);
   if (m)
   {
     for (int z=0;z<THETA_GRID_SIZE;z++)
     {
       mc.z=z;
-      m=m_getNode(mc);
+      m=hybrid_getNode(mc);
       m->pose = coord2float3(mc);
       m->ptr2parent = nullptr;
-      m->g = 0 + mm_obsCostAt(mc,0);
+      m->g = 0 + hybrid_obsCostAt(mc,0);
       _PQ.insert(m,m->g);
     }
   }
@@ -133,14 +133,14 @@ void Dijkstra::update_neighbour(const CUDA_GEO::coord &c, const int3 &shift, nod
   pc.z = c.z + shift.z;
 
   pc.z = positive_modulo(pc.z,THETA_GRID_SIZE);
-  nodeInfo* p = m_getNode(pc);
+  nodeInfo* p = hybrid_getNode(pc);
 
   if (p)
   {
     if (!p->inClosed)
     {
       float new_g = trans_cost +
-          m->g + mm_obsCostAt(pc,0);
+          m->g + hybrid_obsCostAt(pc,0);
 
 
       if (p->g > new_g)
@@ -157,11 +157,11 @@ void Dijkstra::hybrid_update_neighbour(const float3 &shift_pose, nodeInfo *m, fl
 {
   float3 child_pose = shift_pose + m->pose;
   CUDA_GEO::coord pc = float32coord(child_pose);
-  nodeInfo* p = m_getNode(pc);
+  nodeInfo* p = hybrid_getNode(pc);
 
   if (p && !p->inClosed)
   {
-    float new_g = trans_cost + m->g + mm_obsCostAt(pc,0);
+    float new_g = trans_cost + m->g + hybrid_obsCostAt(pc,0);
     if (p->g > new_g)
     {
       p->g = new_g;
@@ -184,7 +184,7 @@ CUDA_GEO::coord  Dijkstra::hybrid_bfs(const float3 &start_pose, CUDA_GEO::coord 
 
   //Set the root
   start = float32coord(start_pose);
-  nodeInfo* ni=m_getNode(start);
+  nodeInfo* ni=hybrid_getNode(start);
   if (ni)
   {
     ni->g = 0;
@@ -209,7 +209,7 @@ CUDA_GEO::coord  Dijkstra::hybrid_bfs(const float3 &start_pose, CUDA_GEO::coord 
     ni=_PQ.pop();
     ni->inClosed = true;
 
-    if(mm_isfree(ni->c))
+    if(hybrid_is_free(ni->c))
       reached_free_zone = true;
 
     if (min_h > ni->h)
@@ -224,13 +224,13 @@ CUDA_GEO::coord  Dijkstra::hybrid_bfs(const float3 &start_pose, CUDA_GEO::coord 
       float3 child_pose = child.shift_pose + ni->pose;
       CUDA_GEO::coord pc = float32coord(child_pose);
 //      std::cout<<pc.x<<" "<<pc.y<<std::endl;
-      nodeInfo* p = m_getNode(pc);
+      nodeInfo* p = hybrid_getNode(pc);
 
       if (p && !p->inClosed)
       {
 //        std::cout<<p->c.x<<" "<<p->c.y<<std::endl;
-        float new_g = child.cost + ni->g + mm_obsCostAt(pc,0);
-        if (p->g > new_g && !(!mm_isfree(pc) && reached_free_zone))
+        float new_g = child.cost + ni->g + hybrid_obsCostAt(pc,0);
+        if (p->g > new_g && !(!hybrid_is_free(pc) && reached_free_zone))
         {
 //          std::cout<<"asdf"<<std::endl;
           p->g = new_g;
@@ -250,11 +250,11 @@ void Dijkstra::hybrid_update_neighbour_with_line(const float3 &shift_pose, nodeI
 {
   float3 child_pose = shift_pose + m->pose;
   CUDA_GEO::coord pc = float32coord(child_pose);
-  nodeInfo* p = m_getNode(pc);
+  nodeInfo* p = hybrid_getNode(pc);
 
   if (p && !p->inClosed)
   {
-    float new_g = trans_cost + m->g + mm_obsCostAt(pc,0);
+    float new_g = trans_cost + m->g + hybrid_obsCostAt(pc,0);
 
     CUDA_GEO::pos pc_pos = coord2pos(pc);
     pc_pos.z = 0;

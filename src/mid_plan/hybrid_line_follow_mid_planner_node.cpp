@@ -80,7 +80,7 @@ void publishMap(int tgt_height_coord)
         c.x = x;
         c.y = y;
         c.z = z;
-        float d_c = mid_map->m_getCost2Come(c,0.0f)*15;
+        float d_c = mid_map->hybrid_getCost2Come(c,0.0f)*15;
         if (d_c > 255) d_c = 255;
         int d = static_cast<int>(d_c);
 
@@ -167,7 +167,7 @@ void copy_map_to_msg(cpc_aux_mapping::grid_map &msg, GridGraph* map,int tgt_heig
         c.x = x;
         c.y = y;
         c.z = z;
-        float d_c = mid_map->m_getCost2Come(c,0.0);
+        float d_c = mid_map->hybrid_getCost2Come(c,0.0);
         tmp[i++]=d_c;
 #ifdef DEBUG_COST
         mylog<<d_c<<" ";

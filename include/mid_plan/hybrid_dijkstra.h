@@ -23,7 +23,7 @@ public:
   }
 
 
-  float m_getCost2Come(const CUDA_GEO::coord & s, const float &default_value) const
+  float hybrid_getCost2Come(const CUDA_GEO::coord & s, const float &default_value) const
   {
     if (s.x<0 || s.x>=_w || s.y<0 || s.y>=_h || s.z<0 || s.z>=THETA_GRID_SIZE)
     {
@@ -52,7 +52,7 @@ public:
     s.z = theta2grid(in.z);
 
     //Find the next minimum coord
-    nodeInfo* s_node = m_getNode(s);
+    nodeInfo* s_node = hybrid_getNode(s);
     while(1)
     {
       if(s_node)
@@ -110,7 +110,7 @@ private:
   }
 
 
-  nodeInfo* m_getNode(CUDA_GEO::coord s)
+  nodeInfo* hybrid_getNode(CUDA_GEO::coord s)
   {
     if (s.x<0 || s.x>=_w ||
         s.y<0 || s.y>=_h ||
@@ -118,12 +118,6 @@ private:
       return nullptr;
 
     return &m_id_map[coord2index(s)];
-  }
-
-  float m_obsCostAt(CUDA_GEO::coord s, float default_value, bool &occupied)
-  {
-    s.z = 0;
-    return obsCostAt(s,default_value,occupied);
   }
 
   float grid2theta(int grid) const
@@ -197,7 +191,7 @@ private:
     mps.push_back(make_float3(0,-v,t));
   }
 
-  float mm_obsCostAt(CUDA_GEO::coord s, float default_value) const
+  float hybrid_obsCostAt(CUDA_GEO::coord s, float default_value) const
   {
     float cost = 0;
     float dist = getMinDist(s);
@@ -207,7 +201,7 @@ private:
     return cost;
   }
 
-  bool mm_isfree(CUDA_GEO::coord s) const
+  bool hybrid_is_free(CUDA_GEO::coord s) const
   {
     float dist = getMinDist(s);
 

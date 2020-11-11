@@ -131,12 +131,6 @@ private:
     return &m_id_map[coord2index(s)];
   }
 
-  float m_obsCostAt(CUDA_GEO::coord s, float default_value, bool &occupied)
-  {
-    s.z = 0;
-    return obsCostAt(s,default_value,occupied);
-  }
-
   float grid2theta(int grid) const
   {
     grid = positive_modulo(grid,THETA_GRID_SIZE);
