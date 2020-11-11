@@ -187,6 +187,7 @@ protected:
   bool is_stuck(const std::vector<UGV::UGVModel::State> &traj, const UGV::UGVModel::State &tgt_state);
   bool is_stuck_instant(const std::vector<UGV::UGVModel::State> &traj, const UGV::UGVModel::State &tgt_state);
   bool is_stuck_instant_horizon(const std::vector<UGV::UGVModel::State> &traj, const UGV::UGVModel::State &tgt_state);
+  bool is_stuck_lowpass(const UGV::UGVModel::State& s);
   virtual void do_start() = 0;
   virtual void do_normal() = 0;
   virtual void do_stuck() = 0;
@@ -217,7 +218,8 @@ protected:
 #endif
 
   UGV::STATUS m_status;
-  float m_stuck_pbty;
+  float m_stuck_pbty,m_lowpass_stuck_pbty;
+  float m_lowpass_v,m_lowpass_w;
 };
 
 #endif // UGV_BASE_LOCAL_PLANNER_H

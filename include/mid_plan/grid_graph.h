@@ -14,6 +14,8 @@ struct nodeInfo
   float h;
   float theta;
   float3 pose;
+  float3 action;
+  float3 action_lead2me;
   CUDA_GEO::coord c;
   nodeInfo* ptr2parent;
   std::multiset<std::pair<float, nodeInfo*>>::iterator it;
@@ -24,6 +26,8 @@ struct nodeInfo
     h(std::numeric_limits<float>::infinity()),
     theta(0),
     pose(make_float3(0,0,0)),
+    action(make_float3(0,0,0)),
+    action_lead2me(make_float3(0,0,0)),
     ptr2parent(nullptr)
   {
 

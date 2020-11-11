@@ -67,14 +67,18 @@ endif()
 ## Generate messages in the 'msg' folder
  add_message_files(
    FILES
+   path_action.msg
+   path.msg
    ref_data.msg
    line_target.msg
+   plan_request.msg
  )
 
 ## Generate services in the 'srv' folder
  add_service_files(
    FILES
    astar_service.srv
+   collision_check.srv
  )
 
 ## Generate actions in the 'action' folder
@@ -165,6 +169,7 @@ cuda_add_executable(${PROJECT_NAME}_node
     src/loc_plan/sigtgt_loc_planner_node.cpp
     src/loc_plan/ugv_sigtgt_local_planner.cpp
     src/loc_plan/ugv_base_local_planner.cpp
+    src/recover_plan/ugv_recover_planner.cpp
     src/kernel/pso_kernels.cu)
 
 target_link_libraries(${PROJECT_NAME}_node
@@ -253,6 +258,16 @@ target_link_libraries(line_follow_mid_planning_node
     ${CUDA_cublas_LIBRARY}
     ${CUDA_LIBRARIES}
     ${catkin_LIBRARIES})
+cuda_add_executable(hybrid_astar_mid_planning_node
+    src/mid_plan/grid_graph.cpp
+    src/mid_plan/hybrid_astar.cpp
+    src/mid_plan/hybrid_astar_mid_planner_node.cpp)
+
+target_link_libraries(hybrid_astar_mid_planning_node
+    ${CUDA_curand_LIBRARY}
+    ${CUDA_cublas_LIBRARY}
+    ${CUDA_LIBRARIES}
+    ${catkin_LIBRARIES})
 
 cuda_add_executable(hybrid_line_follow_mid_planning_node
     src/mid_plan/grid_graph.cpp
@@ -265,6 +280,7 @@ target_link_libraries(hybrid_line_follow_mid_planning_node
     ${CUDA_cublas_LIBRARY}
     ${CUDA_LIBRARIES}
     ${catkin_LIBRARIES})
+
 
 
 ## Rename C++ executable without prefix
@@ -281,9 +297,11 @@ add_dependencies(ref_traj_node ${${PROJECT_NAME}_EXPORTED_TARGETS} ${catkin_EXPO
 add_dependencies(nf1_mid_planning_node ${${PROJECT_NAME}_EXPORTED_TARGETS} ${catkin_EXPORTED_TARGETS})
 add_dependencies(astar_mid_planning_node ${${PROJECT_NAME}_EXPORTED_TARGETS} ${catkin_EXPORTED_TARGETS})
 add_dependencies(line_follow_mid_planning_node ${${PROJECT_NAME}_EXPORTED_TARGETS} ${catkin_EXPORTED_TARGETS})
+add_dependencies(hybrid_astar_mid_planning_node ${${PROJECT_NAME}_EXPORTED_TARGETS} ${catkin_EXPORTED_TARGETS})
 add_dependencies(hybrid_local_planner_node ${${PROJECT_NAME}_EXPORTED_TARGETS} ${catkin_EXPORTED_TARGETS})
 add_dependencies(hybrid_nf1_mid_planning_node ${${PROJECT_NAME}_EXPORTED_TARGETS} ${catkin_EXPORTED_TARGETS})
 add_dependencies(hybrid_line_follow_mid_planning_node ${${PROJECT_NAME}_EXPORTED_TARGETS} ${catkin_EXPORTED_TARGETS})
+
 ## Specify libraries to link a library or executable target against
 # target_link_libraries(${PROJECT_NAME}_node
 #   ${catkin_LIBRARIES}
