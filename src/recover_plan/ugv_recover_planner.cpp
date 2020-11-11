@@ -26,6 +26,7 @@ bool UGVRecMotionPlanner::calculate_trajectory(const UGV::UGVModel::State &s, ED
   m_pso_planner->m_eva.m_mode = m_path.actions[m_curr_action_id].type;
   m_pso_planner->m_eva.setTarget(calculate_tgt_state(m_path.actions[m_curr_action_id]));
 
+  //std::cout<<"MMMMMMMMMMMMMMM: "<<(int)m_pso_planner->m_eva.m_mode<<std::endl;
   geometry_msgs::PoseStamped carrot_msg;
   carrot_msg.header.frame_id="world";
   carrot_msg.pose.position.x = m_pso_planner->m_eva.m_goal.p.x;

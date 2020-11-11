@@ -135,7 +135,7 @@ public:
     {
       float2 dist_err = m_goal.p - s.p;
       float dist_val = sqrtf(dist_err.x*dist_err.x + dist_err.y*dist_err.y);
-      cost += 0.5f*dist_val + sqrtf(0.1f*s.v*s.v + 0.1f*s.w*s.w);
+      cost += 1.0f*dist_val + sqrtf(0.1f*s.v*s.v + 0.1f*s.w*s.w);
 
       float yaw_diff = s.theta - m_goal.theta;
       yaw_diff = yaw_diff - floorf((yaw_diff + M_PI) / (2 * M_PI)) * 2 * M_PI;
@@ -145,8 +145,8 @@ public:
       cost += 0.5f*yaw_gain*fabsf(yaw_diff);
 
       float line_dist = pnt2line_dist(line_a,line_b,s.p);
-      cost += 1.0f*line_dist;
-      if (line_dist > 0.2f)
+      cost += 0.2f*line_dist;
+      if (line_dist > 0.3f)
         cost += 4.0f;
 
       break;
@@ -156,7 +156,7 @@ public:
     {
       float2 dist_err = m_goal.p - s.p;
       float dist_val = sqrtf(dist_err.x*dist_err.x + dist_err.y*dist_err.y);
-      cost += 0.5f*dist_val + sqrtf(0.1f*s.v*s.v + 0.1f*s.w*s.w);
+      cost += 1.0f*dist_val + sqrtf(0.1f*s.v*s.v + 0.1f*s.w*s.w);
 
       float yaw_diff = s.theta - m_goal.theta;
       yaw_diff = yaw_diff - floorf((yaw_diff + M_PI) / (2 * M_PI)) * 2 * M_PI;
@@ -166,8 +166,8 @@ public:
       cost += 0.5f*yaw_gain*fabsf(yaw_diff);
 
       float line_dist = pnt2line_dist(line_a,line_b,s.p);
-      cost += 1.0f*line_dist;
-      if (line_dist > 0.2f)
+      cost += 0.2f*line_dist;
+      if (line_dist > 0.3f)
         cost += 4.0f;
 
       break;

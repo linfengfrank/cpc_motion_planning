@@ -182,6 +182,8 @@ private:
     child.shift_pose.z = w*dt;
 
     child.cost = 0.2f*fabsf(dt);
+    if (v < 0)
+      child.cost += 0.4f;
 
     child.action = make_float3(w,v,dt);
 
