@@ -1,5 +1,5 @@
 #include <ros/ros.h>
-#include <loc_plan/ugv_hybrid_local_planner.h>
+#include <loc_plan/hybrid/ugv_hybrid_local_planner.h>
 #include <chrono>
 
 float RandomFloat(float a, float b) {

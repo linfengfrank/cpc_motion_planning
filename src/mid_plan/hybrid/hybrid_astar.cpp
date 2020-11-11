@@ -1,4 +1,4 @@
-#include "mid_plan/hybrid_astar.h"
+#include "mid_plan/hybrid/hybrid_astar.h"
 #include <ros/console.h>
 #include <stack>
 

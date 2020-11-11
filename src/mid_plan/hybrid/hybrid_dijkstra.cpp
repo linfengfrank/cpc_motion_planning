@@ -1,7 +1,7 @@
-#include "mid_plan/hybrid_dijkstra.h"
+#include "mid_plan/hybrid/hybrid_dijkstra.h"
 #include <ros/console.h>
 
-Dijkstra::Dijkstra(int maxX, int maxY, int maxZ):
+HybridDijkstra::HybridDijkstra(int maxX, int maxY, int maxZ):
   GridGraph(maxX,maxY,maxZ)
 {
   m_id_map = new nodeInfo[_w*_h*THETA_GRID_SIZE];
@@ -20,10 +20,10 @@ Dijkstra::Dijkstra(int maxX, int maxY, int maxZ):
     }
   }
 }
-void Dijkstra::dijkstra_with_theta(CUDA_GEO::coord glb_tgt)
+void HybridDijkstra::dijkstra_with_theta(CUDA_GEO::coord glb_tgt)
 {
   memcpy(m_id_map,m_init_id_map,sizeof(nodeInfo)*static_cast<size_t>(_w*_h*THETA_GRID_SIZE));
-  //Get the local Dijkstra target
+  //Get the local HybridDijkstra target
   CUDA_GEO::coord mc = glb_tgt;
   CUDA_GEO::coord pc;
   nodeInfo* m;
@@ -51,10 +51,10 @@ void Dijkstra::dijkstra_with_theta(CUDA_GEO::coord glb_tgt)
   }
 }
 
-void Dijkstra::hybrid_dijkstra_with_int_theta(CUDA_GEO::coord glb_tgt)
+void HybridDijkstra::hybrid_dijkstra_with_int_theta(CUDA_GEO::coord glb_tgt)
 {
   memcpy(m_id_map,m_init_id_map,sizeof(nodeInfo)*static_cast<size_t>(_w*_h*THETA_GRID_SIZE));
-  //Get the local Dijkstra target
+  //Get the local HybridDijkstra target
   CUDA_GEO::coord mc = glb_tgt;
   CUDA_GEO::coord pc;
   nodeInfo* m;
@@ -88,10 +88,10 @@ void Dijkstra::hybrid_dijkstra_with_int_theta(CUDA_GEO::coord glb_tgt)
   }
 }
 
-void Dijkstra::hybrid_dijkstra_with_int_theta_with_line(CUDA_GEO::coord glb_tgt,CUDA_GEO::pos seg_a, CUDA_GEO::pos seg_b)
+void HybridDijkstra::hybrid_dijkstra_with_int_theta_with_line(CUDA_GEO::coord glb_tgt,CUDA_GEO::pos seg_a, CUDA_GEO::pos seg_b)
 {
   memcpy(m_id_map,m_init_id_map,sizeof(nodeInfo)*static_cast<size_t>(_w*_h*THETA_GRID_SIZE));
-  //Get the local Dijkstra target
+  //Get the local HybridDijkstra target
   CUDA_GEO::coord mc = glb_tgt;
   CUDA_GEO::coord pc;
   nodeInfo* m;
@@ -125,7 +125,7 @@ void Dijkstra::hybrid_dijkstra_with_int_theta_with_line(CUDA_GEO::coord glb_tgt,
   }
 }
 
-void Dijkstra::update_neighbour(const CUDA_GEO::coord &c, const int3 &shift, nodeInfo* m, float trans_cost)
+void HybridDijkstra::update_neighbour(const CUDA_GEO::coord &c, const int3 &shift, nodeInfo* m, float trans_cost)
 {
   CUDA_GEO::coord pc;
   pc.x = c.x + shift.x;
@@ -153,7 +153,7 @@ void Dijkstra::update_neighbour(const CUDA_GEO::coord &c, const int3 &shift, nod
   }
 }
 
-void Dijkstra::hybrid_update_neighbour(const float3 &shift_pose, nodeInfo *m, float trans_cost)
+void HybridDijkstra::hybrid_update_neighbour(const float3 &shift_pose, nodeInfo *m, float trans_cost)
 {
   float3 child_pose = shift_pose + m->pose;
   CUDA_GEO::coord pc = float32coord(child_pose);
@@ -172,7 +172,7 @@ void Dijkstra::hybrid_update_neighbour(const float3 &shift_pose, nodeInfo *m, fl
   }
 }
 
-CUDA_GEO::coord  Dijkstra::hybrid_bfs(const float3 &start_pose, CUDA_GEO::coord glb_tgt)
+CUDA_GEO::coord  HybridDijkstra::hybrid_bfs(const float3 &start_pose, CUDA_GEO::coord glb_tgt)
 {
   //First clear the old information
   memcpy(m_id_map,m_init_id_map,sizeof(nodeInfo)*static_cast<size_t>(_w*_h*THETA_GRID_SIZE));
@@ -246,7 +246,7 @@ CUDA_GEO::coord  Dijkstra::hybrid_bfs(const float3 &start_pose, CUDA_GEO::coord 
   return closest_coord;
 }
 
-void Dijkstra::hybrid_update_neighbour_with_line(const float3 &shift_pose, nodeInfo *m, float trans_cost,const CUDA_GEO::pos &seg_a, const CUDA_GEO::pos &seg_b)
+void HybridDijkstra::hybrid_update_neighbour_with_line(const float3 &shift_pose, nodeInfo *m, float trans_cost,const CUDA_GEO::pos &seg_a, const CUDA_GEO::pos &seg_b)
 {
   float3 child_pose = shift_pose + m->pose;
   CUDA_GEO::coord pc = float32coord(child_pose);

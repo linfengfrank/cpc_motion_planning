@@ -5,10 +5,10 @@
 #include <queue>
 #include <cpc_motion_planning/ugv/evaluator/ugv_hybrid_evaluator.h>
 
-class Dijkstra : public GridGraph
+class HybridDijkstra : public GridGraph
 {
 public:
-  Dijkstra(int maxX, int maxY, int maxZ);
+  HybridDijkstra(int maxX, int maxY, int maxZ);
   void dijkstra_with_theta(CUDA_GEO::coord glb_tgt);
   void hybrid_dijkstra_with_int_theta(CUDA_GEO::coord glb_tgt);
   void hybrid_dijkstra_with_int_theta_with_line(CUDA_GEO::coord glb_tgt,CUDA_GEO::pos seg_a, CUDA_GEO::pos seg_b);
@@ -16,7 +16,7 @@ public:
   CUDA_GEO::coord hybrid_bfs(const float3 &start_pose, CUDA_GEO::coord glb_tgt);
   void hybrid_update_neighbour(const float3 &shift_pose, nodeInfo *m, float trans_cost);
   void hybrid_update_neighbour_with_line(const float3 &shift_pose, nodeInfo *m, float trans_cost,const CUDA_GEO::pos &seg_a, const CUDA_GEO::pos &seg_b);
-  ~Dijkstra()
+  ~HybridDijkstra()
   {
     delete [] m_id_map;
     delete [] m_init_id_map;
@@ -99,7 +99,7 @@ public:
 
 private:
   std::vector<shift_child> children[THETA_GRID_SIZE];
-  nodeInfo *m_id_map; // Identity map, store Dijkstra related params
+  nodeInfo *m_id_map; // Identity map, store HybridDijkstra related params
   nodeInfo *m_init_id_map; // A copy for reset
   std::queue<nodeInfo*> _Q;
   SortedSet<nodeInfo*> _OQ;

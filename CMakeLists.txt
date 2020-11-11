@@ -179,8 +179,8 @@ target_link_libraries(${PROJECT_NAME}_node
     ${catkin_LIBRARIES})
 
 cuda_add_executable(hybrid_local_planner_node
-    src/loc_plan/hybrid_loc_planner_node.cpp
-    src/loc_plan/ugv_hybrid_local_planner.cpp
+    src/loc_plan/hybrid/hybrid_loc_planner_node.cpp
+    src/loc_plan/hybrid/ugv_hybrid_local_planner.cpp
     src/loc_plan/ugv_base_local_planner.cpp
     src/kernel/pso_kernels.cu)
 
@@ -226,9 +226,9 @@ target_link_libraries(nf1_mid_planning_node
 
 cuda_add_executable(hybrid_nf1_mid_planning_node
     src/mid_plan/grid_graph.cpp
-    src/mid_plan/hybrid_dijkstra.cpp
+    src/mid_plan/hybrid/hybrid_dijkstra.cpp
     src/mid_plan/a_star.cpp
-    src/mid_plan/hybrid_nf1_mid_planner_node.cpp)
+    src/mid_plan/hybrid/hybrid_nf1_mid_planner_node.cpp)
 
 target_link_libraries(hybrid_nf1_mid_planning_node
     ${CUDA_curand_LIBRARY}
@@ -260,8 +260,8 @@ target_link_libraries(line_follow_mid_planning_node
     ${catkin_LIBRARIES})
 cuda_add_executable(hybrid_astar_mid_planning_node
     src/mid_plan/grid_graph.cpp
-    src/mid_plan/hybrid_astar.cpp
-    src/mid_plan/hybrid_astar_mid_planner_node.cpp)
+    src/mid_plan/hybrid/hybrid_astar.cpp
+    src/mid_plan/hybrid/hybrid_astar_mid_planner_node.cpp)
 
 target_link_libraries(hybrid_astar_mid_planning_node
     ${CUDA_curand_LIBRARY}
@@ -271,9 +271,9 @@ target_link_libraries(hybrid_astar_mid_planning_node
 
 cuda_add_executable(hybrid_line_follow_mid_planning_node
     src/mid_plan/grid_graph.cpp
-    src/mid_plan/hybrid_dijkstra.cpp
+    src/mid_plan/hybrid/hybrid_dijkstra.cpp
     src/mid_plan/a_star.cpp
-    src/mid_plan/hybrid_line_follow_mid_planner_node.cpp)
+    src/mid_plan/hybrid/hybrid_line_follow_mid_planner_node.cpp)
 
 target_link_libraries(hybrid_line_follow_mid_planning_node
     ${CUDA_curand_LIBRARY}

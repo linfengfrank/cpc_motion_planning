@@ -10,7 +10,7 @@
 #include <std_msgs/Bool.h>
 #include <algorithm>
 #include "cpc_motion_planning/ref_data.h"
-#include <mid_plan/hybrid_astar.h>
+#include <mid_plan/hybrid/hybrid_astar.h>
 #include <mid_plan/a_star.h>
 #include <nav_msgs/Odometry.h>
 #include <tf/tf.h>
