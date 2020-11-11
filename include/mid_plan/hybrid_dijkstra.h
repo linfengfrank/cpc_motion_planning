@@ -3,41 +3,27 @@
 
 #include <mid_plan/grid_graph.h>
 #include <queue>
-#include <cpc_motion_planning/path.h>
 #include <cpc_motion_planning/ugv/evaluator/ugv_hybrid_evaluator.h>
 
-class HybridAstar : public GridGraph
+class Dijkstra : public GridGraph
 {
 public:
-  struct path_info
-  {
-    float3 pose;
-    float3 action;
-  };
-
-  struct shift_child
-  {
-    int3 shift;
-    float3 shift_pose;
-    float3 action;
-    float cost;
-  };
-
-  HybridAstar(int maxX, int maxY, int maxZ);
-
-  std::vector<path_info> plan(const float3 &start_pose, CUDA_GEO::coord glb_tgt);
-  cpc_motion_planning::path split_path(std::vector<path_info> raw_path);
-  std::vector<size_t> split_merge(const std::vector<path_info> &path);
-  void split_forward_backward_driving(cpc_motion_planning::path &cell, const std::vector<path_info> &path);
-
-  ~HybridAstar()
+  Dijkstra(int maxX, int maxY, int maxZ);
+  void dijkstra_with_theta(CUDA_GEO::coord glb_tgt);
+  void hybrid_dijkstra_with_int_theta(CUDA_GEO::coord glb_tgt);
+  void hybrid_dijkstra_with_int_theta_with_line(CUDA_GEO::coord glb_tgt,CUDA_GEO::pos seg_a, CUDA_GEO::pos seg_b);
+  void update_neighbour(const CUDA_GEO::coord &c, const int3 &shift, nodeInfo *m, float trans_cost);
+  CUDA_GEO::coord hybrid_bfs(const float3 &start_pose, CUDA_GEO::coord glb_tgt);
+  void hybrid_update_neighbour(const float3 &shift_pose, nodeInfo *m, float trans_cost);
+  void hybrid_update_neighbour_with_line(const float3 &shift_pose, nodeInfo *m, float trans_cost,const CUDA_GEO::pos &seg_a, const CUDA_GEO::pos &seg_b);
+  ~Dijkstra()
   {
     delete [] m_id_map;
     delete [] m_init_id_map;
   }
 
 
-  float hybrid_getCost2Come(const CUDA_GEO::coord & s, const float &default_value) const
+  float m_getCost2Come(const CUDA_GEO::coord & s, const float &default_value) const
   {
     if (s.x<0 || s.x>=_w || s.y<0 || s.y>=_h || s.z<0 || s.z>=THETA_GRID_SIZE)
     {
@@ -48,6 +34,13 @@ public:
       return m_id_map[coord2index(s)].g;
     }
   }
+
+  struct shift_child
+  {
+    int3 shift;
+    float3 shift_pose;
+    float cost;
+  };
 
   //---
   std::vector<float3> get_shortest_path(const float3 &in)
@@ -82,7 +75,7 @@ public:
     float delta_t = 0;
     delta_t = 1.0f;
     add_motion_rotation(mps, 2.0f*M_PI/(delta_t*static_cast<float>(THETA_GRID_SIZE)), delta_t);
-    delta_t = 1.0f;
+    delta_t = 0.4f;
     add_motion_straight_move(mps, 1.01f*getGridStep()/delta_t, delta_t);
 
     for (size_t i = 0; i< THETA_GRID_SIZE; i++)
@@ -103,14 +96,10 @@ public:
       }
     }
   }
-  //---
-  bool hybrid_isfree(const float3& pose) const
-  {
-    return hybrid_isfree(float32coord(pose));
-  }
+
 private:
   std::vector<shift_child> children[THETA_GRID_SIZE];
-  nodeInfo *m_id_map; // Identity map, store HybridAstar related params
+  nodeInfo *m_id_map; // Identity map, store Dijkstra related params
   nodeInfo *m_init_id_map; // A copy for reset
   std::queue<nodeInfo*> _Q;
   SortedSet<nodeInfo*> _OQ;
@@ -189,7 +178,9 @@ private:
 
     child.cost = 0.2f*fabsf(dt);
 
-    child.action = make_float3(w,v,dt);
+    // while doing dijkstra, we start from the goal so very thing is growing backaward
+    if (v > 0.1f)
+      child.cost += fabsf(2.0f*v);
 
     return child;
   }
@@ -206,17 +197,17 @@ private:
     mps.push_back(make_float3(0,-v,t));
   }
 
-  float hybrid_obsCostAt(const CUDA_GEO::coord &s, float default_value) const
+  float mm_obsCostAt(CUDA_GEO::coord s, float default_value) const
   {
     float cost = 0;
     float dist = getMinDist(s);
-    cost += expf(-9.5f*dist)*150;
+    cost += expf(-9.5f*dist)*10;
     if (dist < 0.41f)
-      cost += 1000;
+      cost += 4000;
     return cost;
   }
 
-  bool hybrid_isfree(const CUDA_GEO::coord &s) const
+  bool mm_isfree(CUDA_GEO::coord s) const
   {
     float dist = getMinDist(s);
 
@@ -271,7 +262,7 @@ private:
     return output;
   }
 
-  CUDA_GEO::coord float32coord(const float3& pose) const
+  CUDA_GEO::coord float32coord(const float3& pose)
   {
     CUDA_GEO::coord s;
     s.x = floorf( (pose.x - _origin.x) / _gridstep + 0.5f);
@@ -283,97 +274,6 @@ private:
   float dist2D(const CUDA_GEO::coord & c1, const CUDA_GEO::coord & c2)
   {
     return sqrtf((c1.x-c2.x)*(c1.x-c2.x) + (c1.y-c2.y)*(c1.y-c2.y))*getGridStep();
-  }
-
-  float in_pi(float in)
-  {
-    return in - floor((in + M_PI) / (2 * M_PI)) * 2 * M_PI;
-  }
-
-  inline float pnt2line_dist(const float3 & c1, const float3 & c2, const float3 & c0, float scale_verticle = 1.0f)
-  {
-    float3 a = c1-c0;
-    float3 b = c2-c1;
-
-    a.z = a.z * scale_verticle;
-    b.z = b.z * scale_verticle;
-
-    float a_square = dot(a,a);
-    float b_square = dot(b,b);
-    float a_dot_b = a.x*b.x + a.y*b.y + a.z*b.z;
-
-    if (b_square < 1e-3)
-      return sqrtf(static_cast<float>(a_square));
-
-    return sqrtf(static_cast<float>(a_square*b_square - a_dot_b*a_dot_b)/static_cast<float>(b_square));
-  }
-
-  std::vector<path_info> select_between_idx(const std::vector<path_info> &path, size_t start, size_t end)
-  {
-    std::vector<path_info> output;
-    for (size_t i=start; i<=end; i++)
-    {
-      output.push_back(path[i]);
-    }
-    return output;
-  }
-
-  unsigned char determine_action_case(const float3 &action)
-  {
-    // 0 -> done nothing
-    // 1 -> rotate
-    // 2 -> forward
-    // 3 -> backward
-
-    float w = action.x;
-    float v = action.y;
-    float dt = action.z;
-
-    if (fabsf(w*dt) > 0.01f)
-        return 1;
-
-
-    if (v*dt > 0.01f)
-        return 2;
-
-    if (v*dt < -0.01f)
-        return 3;
-
-    return 0;
-  }
-
-  cpc_motion_planning::path_action construct_path_action(const std::vector<path_info> &path, unsigned char t)
-  {
-    cpc_motion_planning::path_action output;
-    output.type = t;
-    for (size_t i=0; i<path.size(); i++)
-    {
-      output.x.push_back(path[i].pose.x);
-      output.y.push_back(path[i].pose.y);
-      output.theta.push_back(path[i].pose.z);
-    }
-    return output;
-  }
-
-  float3 angle_dev(const std::vector<path_info> &path, size_t idx_a, size_t idx_b)
-  {
-    float3 output; //x for dev, y for angle_diff, z for horizontal distance
-    float3 delta = path[idx_a].pose - path[idx_b].pose;
-
-    float horizon_dist = sqrtf(delta.x*delta.x + delta.y*delta.y);
-    float angle_diff = fabsf(delta.z);
-
-    float dev;
-    if (horizon_dist > 1e-3)
-      dev = angle_diff / horizon_dist;
-    else
-      dev = 1000.0f;
-
-    output.x = dev;
-    output.y = angle_diff;
-    output.z = horizon_dist;
-
-    return  output;
   }
 };
 
