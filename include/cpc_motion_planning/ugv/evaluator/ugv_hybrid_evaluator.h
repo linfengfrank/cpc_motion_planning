@@ -129,10 +129,10 @@ public:
 
     // Collision cost
     float rd = getMinDist(s,map);
-    cost += expf(-10.5f*rd)*50;
+    cost += expf(-10.5f*rd)*10;
 
-    if (rd < 0.51f)
-      cost += 1000;
+    if (rd < 0.41f)
+      cost += 4000;
 
     if (rd < 0.23f && time < 0.4f)
     {
@@ -183,7 +183,13 @@ public:
   float final_cost(const UGVModel::State &s, const EDTMap &map) const
   {
     float cost = 0;
-
+    CUDA_GEO::coord c = m_nf1_map.pos2coord(make_float3(s.p.x,s.p.y,0));
+    c.z = theta2grid(s.theta);
+    float nf_cost = 0;
+#ifdef  __CUDA_ARCH__
+    nf_cost = 20.0f*m_nf1_map.nf1_const_at(c.x,c.y,c.z);
+#endif
+    cost += nf_cost;
     return  cost;
   }
 

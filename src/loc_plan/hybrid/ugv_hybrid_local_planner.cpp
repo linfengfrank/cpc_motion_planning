@@ -1,4 +1,4 @@
-#include "loc_plan/ugv_hybrid_local_planner.h"
+#include "loc_plan/hybrid/ugv_hybrid_local_planner.h"
 #include "tf/tf.h"
 #include <chrono>
 #include <std_msgs/String.h>

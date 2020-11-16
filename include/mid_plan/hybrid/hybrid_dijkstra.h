@@ -5,10 +5,10 @@
 #include <queue>
 #include <cpc_motion_planning/ugv/evaluator/ugv_hybrid_evaluator.h>
 
-class Dijkstra : public GridGraph
+class HybridDijkstra : public GridGraph
 {
 public:
-  Dijkstra(int maxX, int maxY, int maxZ);
+  HybridDijkstra(int maxX, int maxY, int maxZ);
   void dijkstra_with_theta(CUDA_GEO::coord glb_tgt);
   void hybrid_dijkstra_with_int_theta(CUDA_GEO::coord glb_tgt);
   void hybrid_dijkstra_with_int_theta_with_line(CUDA_GEO::coord glb_tgt,CUDA_GEO::pos seg_a, CUDA_GEO::pos seg_b);
@@ -16,14 +16,14 @@ public:
   CUDA_GEO::coord hybrid_bfs(const float3 &start_pose, CUDA_GEO::coord glb_tgt);
   void hybrid_update_neighbour(const float3 &shift_pose, nodeInfo *m, float trans_cost);
   void hybrid_update_neighbour_with_line(const float3 &shift_pose, nodeInfo *m, float trans_cost,const CUDA_GEO::pos &seg_a, const CUDA_GEO::pos &seg_b);
-  ~Dijkstra()
+  ~HybridDijkstra()
   {
     delete [] m_id_map;
     delete [] m_init_id_map;
   }
 
 
-  float m_getCost2Come(const CUDA_GEO::coord & s, const float &default_value) const
+  float hybrid_getCost2Come(const CUDA_GEO::coord & s, const float &default_value) const
   {
     if (s.x<0 || s.x>=_w || s.y<0 || s.y>=_h || s.z<0 || s.z>=THETA_GRID_SIZE)
     {
@@ -52,7 +52,7 @@ public:
     s.z = theta2grid(in.z);
 
     //Find the next minimum coord
-    nodeInfo* s_node = m_getNode(s);
+    nodeInfo* s_node = hybrid_getNode(s);
     while(1)
     {
       if(s_node)
@@ -99,7 +99,7 @@ public:
 
 private:
   std::vector<shift_child> children[THETA_GRID_SIZE];
-  nodeInfo *m_id_map; // Identity map, store Dijkstra related params
+  nodeInfo *m_id_map; // Identity map, store HybridDijkstra related params
   nodeInfo *m_init_id_map; // A copy for reset
   std::queue<nodeInfo*> _Q;
   SortedSet<nodeInfo*> _OQ;
@@ -110,7 +110,7 @@ private:
   }
 
 
-  nodeInfo* m_getNode(CUDA_GEO::coord s)
+  nodeInfo* hybrid_getNode(CUDA_GEO::coord s)
   {
     if (s.x<0 || s.x>=_w ||
         s.y<0 || s.y>=_h ||
@@ -118,12 +118,6 @@ private:
       return nullptr;
 
     return &m_id_map[coord2index(s)];
-  }
-
-  float m_obsCostAt(CUDA_GEO::coord s, float default_value, bool &occupied)
-  {
-    s.z = 0;
-    return obsCostAt(s,default_value,occupied);
   }
 
   float grid2theta(int grid) const
@@ -197,21 +191,21 @@ private:
     mps.push_back(make_float3(0,-v,t));
   }
 
-  float mm_obsCostAt(CUDA_GEO::coord s, float default_value) const
+  float hybrid_obsCostAt(CUDA_GEO::coord s, float default_value) const
   {
     float cost = 0;
     float dist = getMinDist(s);
-    cost += expf(-9.5f*dist)*50;
-    if (dist < 0.51f)
-      cost += 1000;
+    cost += expf(-9.5f*dist)*10;
+    if (dist < 0.41f)
+      cost += 4000;
     return cost;
   }
 
-  bool mm_isfree(CUDA_GEO::coord s) const
+  bool hybrid_is_free(CUDA_GEO::coord s) const
   {
     float dist = getMinDist(s);
 
-    if (dist < 0.51f)
+    if (dist < 0.41f)
       return false;
     else
       return true;
