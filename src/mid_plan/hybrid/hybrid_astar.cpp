@@ -68,22 +68,22 @@ std::vector<HybridAstar::path_info> HybridAstar::plan(const float3 &start_pose, 
       closest_coord = ni->c;
     }
 
-    for (shift_child child : children[positive_modulo(ni->c.z,THETA_GRID_SIZE)])
+    for (Transition tr : m_theta_based_trans[positive_modulo(ni->c.z,THETA_GRID_SIZE)])
     {
 
-      float3 child_pose = child.shift_pose + ni->pose;
-      CUDA_GEO::coord pc = float32coord(child_pose);
+      CUDA_GEO::coord pc = tr.shift_children + ni->c;
+      pc.z = positive_modulo(pc.z,THETA_GRID_SIZE);
       nodeInfo* p = m_getNode(pc);
 
       if (p && !p->inClosed)
       {
-        float new_g = child.cost + ni->g + hybrid_obsCostAt(pc,0);
+        float new_g = tr.cost + ni->g + hybrid_obsCostAt(pc,0);
         if (p->g > new_g && !(!hybrid_isfree(pc) && reached_free_zone))
         {
           p->g = new_g;
-          p->pose = child_pose;
+          p->pose = coord2float3(p->c);
           p->ptr2parent = ni;
-          p->action_lead2me = child.action;
+          p->action_lead2me = tr.action;
           p->h = dist2D(p->c,glb_tgt);
           _PQ.insert(p,p->g);
         }

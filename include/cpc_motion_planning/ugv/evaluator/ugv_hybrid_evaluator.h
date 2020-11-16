@@ -5,8 +5,8 @@
 #include <cpc_motion_planning/dynamic_programming.cuh>
 #include <cuda_geometry/cuda_edtmap.cuh>
 #include <cuda_geometry/cuda_nf1map.cuh>
-
-#define THETA_GRID_SIZE 24
+#define NB_SQ_W 5
+#define THETA_GRID_SIZE (4*NB_SQ_W-4)
 namespace UGV
 {
 class HybridEvaluator

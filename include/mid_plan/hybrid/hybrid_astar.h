@@ -15,10 +15,9 @@ public:
     float3 action;
   };
 
-  struct shift_child
+  struct Transition
   {
-    int3 shift;
-    float3 shift_pose;
+    CUDA_GEO::coord shift_children;
     float3 action;
     float cost;
   };
@@ -78,29 +77,30 @@ public:
   //---
   void set_neighbours()
   {
-    std::vector<float3> mps;
-    float delta_t = 0;
-    delta_t = 1.0f;
-    add_motion_rotation(mps, 2.0f*M_PI/(delta_t*static_cast<float>(THETA_GRID_SIZE)), delta_t);
-    delta_t = 1.0f;
-    add_motion_straight_move(mps, 1.01f*getGridStep()/delta_t, delta_t);
-
-    for (size_t i = 0; i< THETA_GRID_SIZE; i++)
+    // First set the angle discretization
+    for (int i=0; i<THETA_GRID_SIZE; i++)
     {
-      float theta = grid2theta(static_cast<int>(i));
+      int2 dxdy = idx2dxdy(NB_SQ_W,i);
+      m_theta_grid[i] = atan2(dxdy.y, dxdy.x);
+      //std::cout<<"Theta: "<<m_theta_grid[i]<<std::endl;
+    }
 
-      for (float3 mp : mps)
-      {
-        float v = mp.y;
-        float w = mp.x;
-        float dt = mp.z;
-        shift_child child = get_shift_child(theta,w,v,dt);
+    // Populate the transition vector
+    for (int i=0; i<THETA_GRID_SIZE; i++)
+    {
+      add_trans_rotation(i,m_theta_based_trans[i]);
+      add_trans_straight_move(i,m_theta_based_trans[i]);
 
-        if (child.shift.x == 0 && child.shift.y == 0 && child.shift.z == 0)
-          continue;
-
-        children[i].push_back(child);
-      }
+//      std::cout<<i<<": "<<m_theta_based_trans[i].size()<<std::endl;
+//      for (int j=0;j<m_theta_based_trans[i].size();j++)
+//      {
+//        Transition tr = m_theta_based_trans[i][j];
+//        std::cout<<"theta: "<<i<<", "<<m_theta_grid[i]<<std::endl;
+//        std::cout<<"int3: "<<tr.shift_children.x<<" "<<tr.shift_children.y<<" "<<tr.shift_children.z<<std::endl;
+//        std::cout<<"action: "<<tr.action.x<<" "<<tr.action.y<<" "<<tr.action.z<<std::endl;
+//        std::cout<<"cost: "<<tr.cost<<std::endl;
+//        std::cout<<"-------------------"<<std::endl;
+//      }
     }
   }
   //---
@@ -109,7 +109,8 @@ public:
     return hybrid_isfree(float32coord(pose));
   }
 private:
-  std::vector<shift_child> children[THETA_GRID_SIZE];
+  std::vector<Transition> m_theta_based_trans[THETA_GRID_SIZE];
+  float m_theta_grid[THETA_GRID_SIZE];
   nodeInfo *m_id_map; // Identity map, store HybridAstar related params
   nodeInfo *m_init_id_map; // A copy for reset
   std::queue<nodeInfo*> _Q;
@@ -131,76 +132,126 @@ private:
     return &m_id_map[coord2index(s)];
   }
 
+  int2 idx2dxdy(int w, int idx)
+  {
+    int2 output;
+    int hw = w/2;
+    if (idx >=0 && idx <= hw)
+    {
+        output.x = hw;
+        output.y = idx;
+    }
+    else if (idx >= hw+1 && idx <= hw + w -1)
+    {
+        output.x = 2*hw - idx;
+        output.y = hw;
+    }
+    else if (idx>=hw+w && idx<=hw+2*w-2)
+    {
+        output.x = hw-w+1;
+        output.y = 2*hw+w-1-idx;
+    }
+    else if (idx>=hw+2*w-1 && idx<=hw+3*w-3)
+    {
+        output.x = idx-3*w+3;
+        output.y = hw-w+1;
+    }
+    else if (idx>=hw+3*w-2 && idx <=2*hw+3*w-4)
+    {
+        output.x = hw;
+        output.y = idx -4*w +4;
+    }
+    return output;
+  }
+
   float grid2theta(int grid) const
   {
     grid = positive_modulo(grid,THETA_GRID_SIZE);
-    return 2.0f*static_cast<float>(M_PI)/static_cast<float>(THETA_GRID_SIZE)*static_cast<float>(grid);
+    return m_theta_grid[grid];
   }
 
   int theta2grid(float theta) const
   {
-    int grid = floor(theta/(2.0f*static_cast<float>(M_PI)/static_cast<float>(THETA_GRID_SIZE)) + 0.5);
-    return positive_modulo(grid,THETA_GRID_SIZE);
-  }
-
-  int float2grid(float p) const
-  {
-    return floorf( p / getGridStep() + 0.5f);
-  }
-
-  int theta2grid_raw(float theta) const
-  {
-    return floor(theta/(2.0f*static_cast<float>(M_PI)/static_cast<float>(THETA_GRID_SIZE)) + 0.5);
-  }
-
-  shift_child get_shift_child(float theta, float w, float v, float dt)
-  {
-    shift_child child;
-    float dx,dy,dxp,dyp;
-    float ct = cosf(theta);
-    float st = sinf(theta);
-    if (fabsf(w) < 1e-3)
+    float diff_min = 1e6;
+    int diff_min_id = 0;
+    float diff;
+    for (int i = 0; i<THETA_GRID_SIZE; i++)
     {
-      dxp = v*dt;
-      dyp = 0;
+      diff = fabsf(in_pi(theta-m_theta_grid[i]));
+
+      if (diff < diff_min)
+      {
+          diff_min = diff;
+          diff_min_id = i;
+      }
     }
-    else
+    return diff_min_id;
+  }
+
+  int2 find_shortest_int_nb(int w, const int2 &dxdy) const
+  {
+    int2 xy = dxdy;
+    int hw = w/2;
+
+    for (int b = hw; b>=1; b--)
     {
-      float R = v/w;
-      dxp = R*sinf(w*dt);
-      dyp = R*(1-cosf(w*dt));
+      if(dxdy.x % b==0 && dxdy.y % b==0)
+      {
+        xy.x = dxdy.x/b;
+        xy.y = dxdy.y/b;
+        break;
+      }
     }
-
-    dx = ct*dxp - st*dyp;
-    dy = st*dxp + ct*dyp;
-    child.shift.x = float2grid(dx);
-    child.shift.y = float2grid(dy);
-    child.shift.z = theta2grid_raw(w*dt);
-
-    child.shift_pose.x = dx;
-    child.shift_pose.y = dy;
-    child.shift_pose.z = w*dt;
-
-    child.cost = 0.2f*fabsf(dt);
-    if (v < 0)
-      child.cost += 0.4f;
-
-    child.action = make_float3(w,v,dt);
-
-    return child;
+    return xy;
   }
 
-  void add_motion_rotation(std::vector<float3> &mps, float w, float t)
+  void add_trans_rotation(int i, std::vector<Transition>& trans_vec)
   {
-    mps.push_back(make_float3(w,0,t));
-    mps.push_back(make_float3(-w,0,t));
+    float omega = 0.3f;
+    float theta = m_theta_grid[i];
+    Transition trans;
+
+    // + rotation
+    float theta_plus = m_theta_grid[positive_modulo(i+1,THETA_GRID_SIZE)];
+    trans.shift_children = CUDA_GEO::coord(0,0,1);
+    trans.action = make_float3(omega, 0, fabsf(in_pi(theta_plus - theta)/omega));
+    trans.cost = trans.action.z;
+    trans_vec.push_back(trans);
+
+    // - rotation
+    float theta_minu = m_theta_grid[positive_modulo(i-1,THETA_GRID_SIZE)];
+    trans.shift_children = CUDA_GEO::coord(0,0,-1);
+    trans.action = make_float3(-omega, 0, fabsf(in_pi(theta_minu - theta)/omega));
+    trans.cost = trans.action.z;
+    trans_vec.push_back(trans);
   }
 
-  void add_motion_straight_move(std::vector<float3> &mps, float v, float t)
+  void add_trans_straight_move(int i, std::vector<Transition>& trans_vec)
   {
-    mps.push_back(make_float3(0,v,t));
-    mps.push_back(make_float3(0,-v,t));
+    Transition trans;
+    float vel = 0.5f;
+    float dist;
+
+    // forward
+    int2 dxdy_forward = idx2dxdy(NB_SQ_W,i);
+    int2 xy_forward = find_shortest_int_nb(NB_SQ_W,dxdy_forward);
+    dist = getGridStep()*sqrtf(dot(xy_forward,xy_forward));
+    trans.shift_children = CUDA_GEO::coord(xy_forward.x,xy_forward.y,0);
+    trans.action = make_float3(0, vel, dist/vel);
+    trans.cost = trans.action.z;
+    trans_vec.push_back(trans);
+
+    // backward
+    int2 dxdy_backward = idx2dxdy(NB_SQ_W,positive_modulo(i+2*NB_SQ_W-2,THETA_GRID_SIZE));
+    int2 xy_backward = find_shortest_int_nb(NB_SQ_W,dxdy_backward);
+    dist = getGridStep()*sqrtf(dot(xy_backward,xy_backward));
+    trans.shift_children = CUDA_GEO::coord(xy_backward.x,xy_backward.y,0);
+    trans.action = make_float3(0, -vel, dist/vel);
+    trans.cost = trans.action.z;
+    trans_vec.push_back(trans);
   }
+
+
 
   float hybrid_obsCostAt(const CUDA_GEO::coord &s, float default_value) const
   {
@@ -281,7 +332,7 @@ private:
     return sqrtf((c1.x-c2.x)*(c1.x-c2.x) + (c1.y-c2.y)*(c1.y-c2.y))*getGridStep();
   }
 
-  float in_pi(float in)
+  float in_pi(float in) const
   {
     return in - floor((in + M_PI) / (2 * M_PI)) * 2 * M_PI;
   }
