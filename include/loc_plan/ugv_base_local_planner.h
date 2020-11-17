@@ -18,6 +18,7 @@
 #include <cpc_motion_planning/ugv/swarm/ugv_swarm.h>
 #include <deque>
 #include "tf/tf.h"
+#include <cpc_motion_planning/path.h>
 
 #define PRED_STATE
 #define SHOW_PC
@@ -53,6 +54,37 @@ public:
 public:
   UGVLocalMotionPlanner();
   virtual ~UGVLocalMotionPlanner();
+
+  void calculate_bounding_centres(const UGV::UGVModel::State &s, float2 &c_r, float2 &c_f) const
+  {
+    float2 uni_dir = make_float2(cosf(s.theta),sinf(s.theta));
+    c_f = s.p + 0.25f*uni_dir;
+    c_r = s.p - 0.25f*uni_dir;
+  }
+
+  float get_min_dist_from_host_edt(const UGV::UGVModel::State &s) const
+  {
+    float2 c_f,c_r;
+    calculate_bounding_centres(s, c_r, c_f);
+    return min(m_edt_map->getEDT(c_r),m_edt_map->getEDT(c_f));
+  }
+
+  bool check_collision_from_host_edt(const cpc_motion_planning::path_action &pa)
+  {
+    UGV::UGVModel::State s;
+    bool collision = false;
+    for (size_t i=0; i<pa.x.size(); i++)
+    {
+      s.p = make_float2(pa.x[i],pa.y[i]);
+      s.theta = pa.theta[i];
+      if (get_min_dist_from_host_edt(s) <0.41f)
+      {
+        collision = true;
+        break;
+      }
+    }
+    return collision;
+  }
 
 protected:
   void map_call_back(const cpc_aux_mapping::grid_map::ConstPtr &msg);
