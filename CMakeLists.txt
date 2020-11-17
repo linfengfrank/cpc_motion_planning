@@ -72,6 +72,7 @@ endif()
    ref_data.msg
    line_target.msg
    plan_request.msg
+   smooth_plan_request.msg
  )
 
 ## Generate services in the 'srv' folder
@@ -204,6 +205,7 @@ cuda_add_executable(ref_traj_node
     src/loc_plan/ref_traj_planner_node.cpp
     src/loc_plan/ugv_reftraj_local_planner.cpp
     src/loc_plan/ugv_base_local_planner.cpp
+    src/recover_plan/ugv_recover_planner.cpp
     src/kernel/pso_kernels.cu)
 
 target_link_libraries(ref_traj_node

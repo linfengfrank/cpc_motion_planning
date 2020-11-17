@@ -3,9 +3,9 @@
 <include file="$(find cpc_reference_publisher)/launch/ref_pub.launch"/>
 <node pkg="cpc_motion_planning" type="ref_traj_node" name="ref_traj_node" output="screen">
 <remap from="/raw_odom" to ="/odom"/>
-<remap from="/slam_odom" to ="/groundtrue_odom"/>
+<remap from="/slam_odom" to ="/UgvOdomTopic"/>
 </node>
 
-<node pkg="cpc_motion_planning" type="astar_mid_planning_node" name="astar_mid_planning_node" output="screen">
+<node pkg="cpc_motion_planning" type="hybrid_astar_mid_planning_node" name="hybrid_astar_mid_planning_node" output="screen">
 </node>
 </launch>

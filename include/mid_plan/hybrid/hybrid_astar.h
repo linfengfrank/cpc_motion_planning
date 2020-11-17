@@ -398,6 +398,9 @@ private:
       output.x.push_back(path[i].pose.x);
       output.y.push_back(path[i].pose.y);
       output.theta.push_back(path[i].pose.z);
+      output.w.push_back(path[i].action.x);
+      output.v.push_back(path[i].action.y);
+      output.dt.push_back(path[i].action.z);
     }
     return output;
   }

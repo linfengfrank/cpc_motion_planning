@@ -15,6 +15,7 @@
 #include <nav_msgs/Odometry.h>
 #include <tf/tf.h>
 #include <cpc_motion_planning/plan_request.h>
+#include <cpc_motion_planning/smooth_plan_request.h>
 #include <cpc_motion_planning/collision_check.h>
 #define SHOWPC
 //#define DEBUG_COST
@@ -102,6 +103,68 @@ void glb_plan(const cpc_motion_planning::plan_request::ConstPtr &msg)
             << " ms" << std::endl;
 }
 
+//---
+void smooth_glb_plan(const cpc_motion_planning::smooth_plan_request::ConstPtr &msg)
+{
+  if (!received_map)
+    return;
+
+  auto start_time = std::chrono::steady_clock::now();
+
+#ifdef DEBUG_COST
+  static bool done = false;
+  if (done) return;
+  done = true;
+#endif
+
+  float3 start_pose = make_float3(msg->start_x,msg->start_y,msg->start_theta);
+  CUDA_GEO::pos goal_pos(msg->goal_x,msg->goal_y,0);
+  CUDA_GEO::coord goal_coord = ha_map->pos2coord(goal_pos);
+  goal_coord.z = 0;
+
+  std::vector<HybridAstar::path_info> path = ha_map->plan(start_pose,goal_coord);
+  cpc_motion_planning::path path_cell = ha_map->split_path(path);
+  path_cell.request_ctt = msg->request_ctt;
+  path_pub->publish(path_cell);
+
+
+#ifdef SHOWPC
+  for (size_t i=0;i<path_cell.actions.size();i++)
+  {
+    cpc_motion_planning::path_action pa = path_cell.actions[i];
+    for (size_t j=0; j<pa.x.size(); j++)
+    {
+      pcl::PointXYZRGB clrP;
+      clrP.x = pa.x[j];
+      clrP.y = pa.y[j];
+      clrP.z = pa.theta[j];
+      clrP.r = 250*(i%3==0);
+      clrP.g = 250*(i%3==1);
+      clrP.b = 250*(i%3==2);
+
+      if (pa.type == 1)
+      {
+        clrP.r = 250;
+        clrP.g = 250;
+        clrP.b = 250;
+      }
+      pclOut->points.push_back (clrP);
+    }
+  }
+
+  pcl_conversions::toPCL(ros::Time::now(), pclOut->header.stamp);
+  path_vis_pub->publish (pclOut);
+  pclOut->clear();
+#endif
+
+
+
+  auto end_time = std::chrono::steady_clock::now();
+  std::cout << "Recover planning time: "
+            << std::chrono::duration_cast<std::chrono::milliseconds>(end_time - start_time).count()
+            << " ms" << std::endl;
+}
+
 bool collision_check(cpc_motion_planning::collision_check::Request &req,
                      cpc_motion_planning::collision_check::Response &res)
 {
@@ -129,6 +192,7 @@ int main(int argc, char **argv)
   ros::NodeHandle nh;
   ros::Subscriber map_sub = nh.subscribe("/edt_map", 1, &mapCallback);
   ros::Subscriber mid_plan_sub = nh.subscribe("/plan_request", 1, &glb_plan);
+  ros::Subscriber mid_smooth_plan_sub = nh.subscribe("/smooth_plan_request", 1, &smooth_glb_plan);
   ros::ServiceServer service = nh.advertiseService("/collision_check", collision_check);
 
   *path_vis_pub = nh.advertise<PointCloud> ("/path_vis", 1);

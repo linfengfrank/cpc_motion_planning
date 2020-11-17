@@ -1,6 +1,9 @@
 float32[] x
 float32[] y
 float32[] theta
+float32[] w
+float32[] v
+float32[] dt
 uint8 TYPE_NOTMOVING=0
 uint8 TYPE_ROTATE=1
 uint8 TYPE_FORWARD=2
