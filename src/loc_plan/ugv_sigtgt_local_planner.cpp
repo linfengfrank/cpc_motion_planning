@@ -213,9 +213,9 @@ void UGVSigTgtMotionPlanner::do_normal()
     {
       m_status = UGV::STUCK;
       m_stuck_submode = STUCK_SUB_MODE::RECOVER;
-      m_braking_start_cycle = m_plan_cycle;
+      m_stuck_start_cycle = m_plan_cycle;
       m_plan_request_cycle = m_plan_cycle;
-      m_full_stuck_ctt = m_plan_cycle;
+      m_full_start_cycle = m_plan_cycle;
 
       // Prepare and send the request message
       cpc_motion_planning::plan_request rq_msg;
@@ -265,7 +265,7 @@ void UGVSigTgtMotionPlanner::do_stuck()
 void UGVSigTgtMotionPlanner::do_recover()
 {
   // overall time out
-  if (m_plan_cycle - m_braking_start_cycle >= 50)
+  if (m_plan_cycle - m_stuck_start_cycle >= 50)
   {
     m_status = UGV::NORMAL;
   }
@@ -284,7 +284,7 @@ void UGVSigTgtMotionPlanner::do_recover()
     // the response is empty, go to the full stuck sub mode
     full_stop_trajectory(m_traj,m_pso_planner->m_model.get_ini_state());
     m_stuck_submode = STUCK_SUB_MODE::FULL_STUCK;
-    m_full_stuck_ctt = m_plan_cycle;
+    m_full_start_cycle = m_plan_cycle;
     return;
   }
 
@@ -292,6 +292,15 @@ void UGVSigTgtMotionPlanner::do_recover()
   bool finished = m_recover_planner.calculate_trajectory(m_pso_planner->m_model.get_ini_state(),
                                                          m_edt_map,
                                                          m_traj);
+
+  if (m_recover_planner.should_braking())
+  {
+    m_braking_start_cycle = m_plan_cycle;
+    m_status = UGV::BRAKING;
+    cycle_process_based_on_status();
+    return;
+  }
+
   if(finished)
   {
     m_status = UGV::NORMAL;
@@ -314,7 +323,7 @@ void UGVSigTgtMotionPlanner::do_recover()
     else
     {
       m_stuck_submode = STUCK_SUB_MODE::FULL_STUCK;
-      m_full_stuck_ctt = m_plan_cycle;
+      m_full_start_cycle = m_plan_cycle;
     }
   }
 }
@@ -328,7 +337,7 @@ void UGVSigTgtMotionPlanner::do_full_stuck()
   calculate_trajectory<SIMPLE_UGV>(m_pso_planner, m_traj);
 
   //Goto: Normal
-  if (m_plan_cycle - m_full_stuck_ctt >= 10)
+  if (m_plan_cycle - m_full_start_cycle >= 10)
   {
     m_status = UGV::NORMAL;
     m_pso_planner->m_eva.m_stuck = false;
@@ -348,10 +357,12 @@ void UGVSigTgtMotionPlanner::do_braking()
   //Planning
   full_stop_trajectory(m_traj,m_pso_planner->m_model.get_ini_state());
 
-  //Goto: Normal
+  //Goto: stuck - full stuck
   if (m_plan_cycle - m_braking_start_cycle >= 10)
   {
-     m_status = UGV::NORMAL;
+     m_status = UGV::STUCK;
+     m_stuck_submode = STUCK_SUB_MODE::FULL_STUCK;
+     m_full_start_cycle = m_plan_cycle;
   }
 
 }

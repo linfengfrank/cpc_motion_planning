@@ -65,13 +65,15 @@ private:
   std::vector<UGV::UGVModel::State> m_traj;
   bool cycle_initialized;
   int m_braking_start_cycle;
+  int m_stuck_start_cycle;
+  int m_full_start_cycle;
   int m_plan_request_cycle;
   NF1MapDT *m_nf1_map;
   cpc_motion_planning::path m_stuck_recover_path;
   UGVRecMotionPlanner m_recover_planner;
   ros::ServiceClient m_collision_check_client;
   STUCK_SUB_MODE m_stuck_submode;
-  int m_full_stuck_ctt;
+
 };
 
 #endif // UGV_MOTION_PLANNER_H

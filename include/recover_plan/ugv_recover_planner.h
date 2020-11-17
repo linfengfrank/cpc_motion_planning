@@ -19,6 +19,11 @@ public:
     return collision_checking_path;
   }
 
+  bool should_braking()
+  {
+    return m_pso_planner->result.collision;
+  }
+
 private:
   UGV::UGVModel::State calculate_tgt_state(const cpc_motion_planning::path_action &pa);
   UGV::UGVModel::State find_carrot(const cpc_motion_planning::path_action &pa, size_t &line_idx_a, size_t &line_idx_b);
@@ -80,6 +85,7 @@ private:
       collision_checking_path.theta.push_back(pa.theta[i]);
     }
   }
+
 private:
   PSO::Planner<RECOVER_UGV> *m_pso_planner;
   cpc_motion_planning::path m_path;
