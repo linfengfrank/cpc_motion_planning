@@ -5,7 +5,7 @@
 #include <cpc_motion_planning/dynamic_programming.cuh>
 #include <cuda_geometry/cuda_edtmap.cuh>
 #include <cuda_geometry/cuda_nf1map.cuh>
-#define NB_SQ_W 5
+#define NB_SQ_W 7
 #define THETA_GRID_SIZE (4*NB_SQ_W-4)
 namespace UGV
 {

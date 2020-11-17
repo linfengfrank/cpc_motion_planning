@@ -376,15 +376,17 @@ private:
     float v = action.y;
     float dt = action.z;
 
-    if (fabsf(w*dt) > 0.01f)
-        return 1;
-
-
     if (v*dt > 0.01f)
         return 2;
 
     if (v*dt < -0.01f)
         return 3;
+
+    if (fabsf(w*dt) > 0.01f)
+        return 1;
+
+
+
 
     return 0;
   }

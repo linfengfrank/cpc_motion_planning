@@ -1,7 +1,5 @@
 int32 request_ctt
 path_action current_ref_path
-int32 path_action_id
-int32 path_seg_id
 float32 start_x
 float32 start_y
 float32 start_theta

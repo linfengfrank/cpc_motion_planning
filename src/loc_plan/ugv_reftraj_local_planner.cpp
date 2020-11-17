@@ -129,6 +129,7 @@ void UGVRefTrajMotionPlanner::request_path()
 
   cpc_motion_planning::smooth_plan_request rq_msg;
   rq_msg.request_ctt = m_plan_cycle;
+  rq_msg.current_ref_path = construct_path_action(m_traj);
   rq_msg.start_x = m_current_pose.p.x;
   rq_msg.start_y = m_current_pose.p.y;
   rq_msg.start_theta = m_current_pose.theta;

@@ -42,6 +42,36 @@ void mapCallback(const cpc_aux_mapping::grid_map::ConstPtr& msg)
   }
 }
 //---
+void showPath(const cpc_motion_planning::path &path_cell)
+{
+  for (size_t i=0;i<path_cell.actions.size();i++)
+  {
+    cpc_motion_planning::path_action pa = path_cell.actions[i];
+    for (size_t j=0; j<pa.x.size(); j++)
+    {
+      pcl::PointXYZRGB clrP;
+      clrP.x = pa.x[j];
+      clrP.y = pa.y[j];
+      clrP.z = pa.theta[j];
+      clrP.r = 250*(i%3==0);
+      clrP.g = 250*(i%3==1);
+      clrP.b = 250*(i%3==2);
+
+      if (pa.type == 1)
+      {
+        clrP.r = 250;
+        clrP.g = 250;
+        clrP.b = 250;
+      }
+      pclOut->points.push_back (clrP);
+    }
+  }
+
+  pcl_conversions::toPCL(ros::Time::now(), pclOut->header.stamp);
+  path_vis_pub->publish (pclOut);
+  pclOut->clear();
+}
+//---
 void glb_plan(const cpc_motion_planning::plan_request::ConstPtr &msg)
 {
   if (!received_map)
@@ -67,32 +97,7 @@ void glb_plan(const cpc_motion_planning::plan_request::ConstPtr &msg)
 
 
 #ifdef SHOWPC
-  for (size_t i=0;i<path_cell.actions.size();i++)
-  {
-    cpc_motion_planning::path_action pa = path_cell.actions[i];
-    for (size_t j=0; j<pa.x.size(); j++)
-    {
-      pcl::PointXYZRGB clrP;
-      clrP.x = pa.x[j];
-      clrP.y = pa.y[j];
-      clrP.z = pa.theta[j];
-      clrP.r = 250*(i%3==0);
-      clrP.g = 250*(i%3==1);
-      clrP.b = 250*(i%3==2);
-
-      if (pa.type == 1)
-      {
-        clrP.r = 250;
-        clrP.g = 250;
-        clrP.b = 250;
-      }
-      pclOut->points.push_back (clrP);
-    }
-  }
-
-  pcl_conversions::toPCL(ros::Time::now(), pclOut->header.stamp);
-  path_vis_pub->publish (pclOut);
-  pclOut->clear();
+  showPath(path_cell);
 #endif
 
 
@@ -118,43 +123,48 @@ void smooth_glb_plan(const cpc_motion_planning::smooth_plan_request::ConstPtr &m
 #endif
 
   float3 start_pose = make_float3(msg->start_x,msg->start_y,msg->start_theta);
+  std::vector<HybridAstar::path_info> pre_path;
+  HybridAstar::path_info pre_pi;
+  size_t i_max = min(msg->current_ref_path.x.size(),20);
+  for(size_t i = 0; i<i_max; i++)
+  {
+    float3 pose = make_float3(msg->current_ref_path.x[i],
+                              msg->current_ref_path.y[i],
+                              msg->current_ref_path.theta[i]);
+    if (ha_map->hybrid_isfree(pose))
+    {
+      start_pose=pose;
+      pre_pi.pose = pose;
+      pre_pi.action = make_float3(msg->current_ref_path.w[i],
+                                  msg->current_ref_path.v[i],
+                                  msg->current_ref_path.dt[i]);
+      pre_path.push_back(pre_pi);
+    }
+    else
+    {
+      break;
+    }
+  }
+
+
+
   CUDA_GEO::pos goal_pos(msg->goal_x,msg->goal_y,0);
   CUDA_GEO::coord goal_coord = ha_map->pos2coord(goal_pos);
   goal_coord.z = 0;
 
   std::vector<HybridAstar::path_info> path = ha_map->plan(start_pose,goal_coord);
-  cpc_motion_planning::path path_cell = ha_map->split_path(path);
+
+  for (size_t i=0; i<path.size(); i++)
+  {
+    pre_path.push_back(path[i]);
+  }
+  cpc_motion_planning::path path_cell = ha_map->split_path(pre_path);
   path_cell.request_ctt = msg->request_ctt;
   path_pub->publish(path_cell);
 
 
 #ifdef SHOWPC
-  for (size_t i=0;i<path_cell.actions.size();i++)
-  {
-    cpc_motion_planning::path_action pa = path_cell.actions[i];
-    for (size_t j=0; j<pa.x.size(); j++)
-    {
-      pcl::PointXYZRGB clrP;
-      clrP.x = pa.x[j];
-      clrP.y = pa.y[j];
-      clrP.z = pa.theta[j];
-      clrP.r = 250*(i%3==0);
-      clrP.g = 250*(i%3==1);
-      clrP.b = 250*(i%3==2);
-
-      if (pa.type == 1)
-      {
-        clrP.r = 250;
-        clrP.g = 250;
-        clrP.b = 250;
-      }
-      pclOut->points.push_back (clrP);
-    }
-  }
-
-  pcl_conversions::toPCL(ros::Time::now(), pclOut->header.stamp);
-  path_vis_pub->publish (pclOut);
-  pclOut->clear();
+  showPath(path_cell);
 #endif
 
 

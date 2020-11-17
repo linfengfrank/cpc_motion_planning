@@ -30,6 +30,20 @@ private:
   void hybrid_path_call_back(const cpc_motion_planning::path::ConstPtr &msg);
   void request_path();
   bool get_collision();
+  cpc_motion_planning::path_action construct_path_action(const std::vector<UGV::UGVModel::State> &traj)
+  {
+    cpc_motion_planning::path_action output;
+    for (size_t i = 0; i<traj.size(); i++)
+    {
+      output.x.push_back(traj[i].p.x);
+      output.y.push_back(traj[i].p.y);
+      output.theta.push_back(traj[i].theta);
+      output.w.push_back(traj[i].w);
+      output.v.push_back(traj[i].v);
+      output.dt.push_back(0.05f);
+    }
+    return output;
+  }
 
 private:
   ros::Subscriber m_goal_sub;
