@@ -45,7 +45,7 @@ UGVSigTgtMotionPlanner::UGVSigTgtMotionPlanner():
   m_plan_cycle = 0;
   m_ref_start_idx = 0;
 
-  m_edt_map->m_create_host_cpy = true;
+  m_create_host_edt = true;
 }
 
 UGVSigTgtMotionPlanner::~UGVSigTgtMotionPlanner()
