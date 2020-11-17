@@ -244,8 +244,8 @@ void UGVRefTrajMotionPlanner::do_braking()
   //Goto: stuck - full stuck
   if (m_plan_cycle - m_braking_start_cycle >= 10)
   {
-     m_status = UGV::STUCK;
-     m_full_start_cycle = m_plan_cycle;
+     m_status = UGV::NORMAL;
+//     m_full_start_cycle = m_plan_cycle;
   }
 
 }
