@@ -131,7 +131,7 @@ void smooth_glb_plan(const cpc_motion_planning::smooth_plan_request::ConstPtr &m
     float3 pose = make_float3(msg->current_ref_path.x[i],
                               msg->current_ref_path.y[i],
                               msg->current_ref_path.theta[i]);
-    if (ha_map->hybrid_isfree(pose))
+    if (ha_map->hybrid_isfree(pose, 0.5f))
     {
       start_pose=pose;
       pre_pi.pose = pose;
@@ -184,7 +184,7 @@ bool collision_check(cpc_motion_planning::collision_check::Request &req,
     float3 pose = make_float3(req.collision_checking_path.x[i],
                               req.collision_checking_path.y[i],
                               req.collision_checking_path.theta[i]);
-    if (!ha_map->hybrid_isfree(pose))
+    if (!ha_map->hybrid_isfree(pose,0.4f))
     {
       res.collision = true;
       break;

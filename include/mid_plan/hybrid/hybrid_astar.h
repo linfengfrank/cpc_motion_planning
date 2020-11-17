@@ -104,9 +104,9 @@ public:
     }
   }
   //---
-  bool hybrid_isfree(const float3& pose) const
+  bool hybrid_isfree(const float3& pose, float r) const
   {
-    return hybrid_isfree(float32coord(pose));
+    return hybrid_isfree(float32coord(pose), r);
   }
 private:
   std::vector<Transition> m_theta_based_trans[THETA_GRID_SIZE];
@@ -253,21 +253,21 @@ private:
 
 
 
-  float hybrid_obsCostAt(const CUDA_GEO::coord &s, float default_value) const
+  float hybrid_obsCostAt(const CUDA_GEO::coord &s, float r) const
   {
     float cost = 0;
     float dist = getMinDist(s);
-    cost += expf(-9.5f*dist)*150;
-    if (dist < 0.41f)
+    cost += expf(-5.5f*dist)*10;
+    if (dist < r+0.01f)
       cost += 1000;
     return cost;
   }
 
-  bool hybrid_isfree(const CUDA_GEO::coord &s) const
+  bool hybrid_isfree(const CUDA_GEO::coord &s, float r) const
   {
     float dist = getMinDist(s);
 
-    if (dist < 0.41f)
+    if (dist < r+0.01f)
       return false;
     else
       return true;

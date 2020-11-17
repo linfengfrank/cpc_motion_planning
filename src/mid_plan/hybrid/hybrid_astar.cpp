@@ -59,7 +59,7 @@ std::vector<HybridAstar::path_info> HybridAstar::plan(const float3 &start_pose, 
     ni=_PQ.pop();
     ni->inClosed = true;
 
-    if(hybrid_isfree(ni->c))
+    if(hybrid_isfree(ni->c, 0.5f))
       reached_free_zone = true;
 
     if (min_h > ni->h)
@@ -77,8 +77,8 @@ std::vector<HybridAstar::path_info> HybridAstar::plan(const float3 &start_pose, 
 
       if (p && !p->inClosed)
       {
-        float new_g = tr.cost + ni->g + hybrid_obsCostAt(pc,0);
-        if (p->g > new_g && !(!hybrid_isfree(pc) && reached_free_zone))
+        float new_g = tr.cost + ni->g + hybrid_obsCostAt(pc,0.5f);
+        if (p->g > new_g && !(!hybrid_isfree(pc, 0.5f) && reached_free_zone))
         {
           p->g = new_g;
           p->pose = coord2float3(p->c);

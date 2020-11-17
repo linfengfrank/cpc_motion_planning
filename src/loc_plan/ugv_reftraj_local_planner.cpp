@@ -214,7 +214,7 @@ void UGVRefTrajMotionPlanner::do_normal()
     return;
   }
 
-  if(m_plan_cycle-m_plan_request_cycle>=50)
+  if(m_plan_cycle-m_plan_request_cycle>=100)
   {
     std::cout<<"request_from_timer"<<std::endl;
     request_path();

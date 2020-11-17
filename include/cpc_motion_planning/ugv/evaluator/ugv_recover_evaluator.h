@@ -146,7 +146,7 @@ public:
 
       float line_dist = pnt2line_dist(line_a,line_b,s.p);
       cost += 0.2f*line_dist;
-      if (line_dist > 0.3f)
+      if (line_dist > 0.2f)
         cost += 4.0f;
 
       break;
@@ -167,7 +167,7 @@ public:
 
       float line_dist = pnt2line_dist(line_a,line_b,s.p);
       cost += 0.2f*line_dist;
-      if (line_dist > 0.3f)
+      if (line_dist > 0.2f)
         cost += 4.0f;
 
       break;

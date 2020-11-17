@@ -72,7 +72,6 @@ UGV::UGVModel::State UGVRecMotionPlanner::calculate_tgt_state(const cpc_motion_p
   switch (pa.type)
   {
   case 0: // should not happen
-    ROS_ERROR("case 0 action appeared");
     collision_checking_path = pa;
     break;
     //---
@@ -172,7 +171,6 @@ bool UGVRecMotionPlanner::check_action_finish(const cpc_motion_planning::path_ac
   switch (pa.type)
   {
   case 0: // should not happen
-    ROS_ERROR("case 0 action appeared");
     return  false;
     //---
   case 1: // turning
