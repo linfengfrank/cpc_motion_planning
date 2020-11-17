@@ -44,6 +44,8 @@ UGVSigTgtMotionPlanner::UGVSigTgtMotionPlanner():
   m_ref_msg.rows = 5;
   m_plan_cycle = 0;
   m_ref_start_idx = 0;
+
+  m_edt_map->m_create_host_cpy = true;
 }
 
 UGVSigTgtMotionPlanner::~UGVSigTgtMotionPlanner()
@@ -310,13 +312,8 @@ void UGVSigTgtMotionPlanner::do_recover()
   // if still stuck
   if(is_stuck(m_traj,m_goal.s) || is_stuck_lowpass(m_pso_planner->m_model.get_ini_state()))
   {
-    // check wheter the current recover path is stucked
-    cpc_motion_planning::collision_check srv;
-    srv.request.collision_checking_path = m_recover_planner.get_collision_checking_path();
-    m_collision_check_client.call(srv);
-
-    // if yes, just go back to the normal mode
-    if (srv.response.collision == true)
+    // if the ref path has collision, just go back to the normal mode
+    if (check_collision_from_host_edt(m_recover_planner.get_collision_checking_path()))
     {
       m_status = UGV::NORMAL;
     }
