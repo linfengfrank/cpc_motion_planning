@@ -240,6 +240,7 @@ protected:
   bool m_slam_odo_received;
 
   EDTMap *m_edt_map;
+  bool m_create_host_edt;
 #ifdef SHOW_PC
   ros::Publisher m_traj_pub;
   PointCloud::Ptr m_traj_pnt_cld;
