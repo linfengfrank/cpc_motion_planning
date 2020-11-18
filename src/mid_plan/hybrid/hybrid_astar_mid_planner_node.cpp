@@ -125,7 +125,7 @@ void smooth_glb_plan(const cpc_motion_planning::smooth_plan_request::ConstPtr &m
   float3 start_pose = make_float3(msg->start_x,msg->start_y,msg->start_theta);
   std::vector<HybridAstar::path_info> pre_path;
   HybridAstar::path_info pre_pi;
-  size_t i_max = min(msg->current_ref_path.x.size(),20);
+  size_t i_max = min(msg->current_ref_path.x.size(),40);
   for(size_t i = 0; i<i_max; i++)
   {
     float3 pose = make_float3(msg->current_ref_path.x[i],

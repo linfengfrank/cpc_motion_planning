@@ -36,6 +36,8 @@ UGVRefTrajMotionPlanner::UGVRefTrajMotionPlanner():
   m_ref_msg.rows = 5;
   m_plan_cycle = 0;
   m_ref_start_idx = 0;
+
+  m_create_host_edt = true;
 }
 
 UGVRefTrajMotionPlanner::~UGVRefTrajMotionPlanner()
@@ -200,7 +202,7 @@ void UGVRefTrajMotionPlanner::do_normal()
     return;
   }
 
-  if(get_collision())
+  if (check_collision_from_host_edt(m_planner.get_collision_checking_path()))
   {
     std::cout<<"request_from_collision"<<std::endl;
     request_path();
