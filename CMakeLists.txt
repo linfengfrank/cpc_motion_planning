@@ -142,6 +142,8 @@ include_directories(
   ${catkin_INCLUDE_DIRS}
 )
 
+LINK_DIRECTORIES(../cpc_aux_mapping/lib)
+
 ## Declare a C++ library
 # add_library(${PROJECT_NAME}
 #   src/${PROJECT_NAME}/cpc_motion_planning.cpp
@@ -217,13 +219,22 @@ cuda_add_executable(nf1_mid_planning_node
     src/mid_plan/utils/dijkstra.cpp
     src/mid_plan/utils/a_star.cpp
     src/mid_plan/nf1based/nf1_mid_planner_node.cpp
-    src/mid_plan/nf1based/nf1_mid_planner.cpp)
+    src/mid_plan/nf1based/nf1_mid_planner.cpp
+    ../cpc_aux_mapping/src/kernel/edt_post_process.cu)
 
 target_link_libraries(nf1_mid_planning_node
     ${CUDA_curand_LIBRARY}
     ${CUDA_cublas_LIBRARY}
     ${CUDA_LIBRARIES}
     ${catkin_LIBRARIES})
+
+IF(${CMAKE_SYSTEM_PROCESSOR} MATCHES "aarch64")
+    target_link_libraries(nf1_mid_planning_node cutt_arm)
+    message("link with cutt_arm")
+ELSE(${CMAKE_SYSTEM_PROCESSOR} MATCHES "aarch64")
+    target_link_libraries(nf1_mid_planning_node cutt_x86)
+    message("link with cutt_x86")
+ENDIF(${CMAKE_SYSTEM_PROCESSOR} MATCHES "aarch64")
 
 cuda_add_executable(hybrid_nf1_mid_planning_node
     src/mid_plan/utils/grid_graph.cpp
