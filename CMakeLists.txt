@@ -166,8 +166,8 @@ target_link_libraries(dynamic_programming
     ${catkin_LIBRARIES})
 
 cuda_add_executable(${PROJECT_NAME}_node
-    src/loc_plan/nf1based/sigtgt_loc_planner_node.cpp
-    src/loc_plan/nf1based/ugv_sigtgt_local_planner.cpp
+    src/loc_plan/nf1based/nf1_local_planner.cpp
+    src/loc_plan/nf1based/nf1_local_planner_node.cpp
     src/loc_plan/ugv_base_local_planner.cpp
     src/recover_plan/ugv_recover_planner.cpp
     src/kernel/pso_kernels.cu)
@@ -216,7 +216,8 @@ cuda_add_executable(nf1_mid_planning_node
     src/mid_plan/utils/grid_graph.cpp
     src/mid_plan/utils/dijkstra.cpp
     src/mid_plan/utils/a_star.cpp
-    src/mid_plan/nf1based/nf1_mid_planner_node.cpp)
+    src/mid_plan/nf1based/nf1_mid_planner_node.cpp
+    src/mid_plan/nf1based/nf1_mid_planner.cpp)
 
 target_link_libraries(nf1_mid_planning_node
     ${CUDA_curand_LIBRARY}

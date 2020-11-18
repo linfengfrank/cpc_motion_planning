@@ -1,5 +1,5 @@
 #include <ros/ros.h>
-#include <loc_plan/nf1based/ugv_sigtgt_local_planner.h>
+#include <loc_plan/nf1based/nf1_local_planner.h>
 #include <chrono>
 
 float RandomFloat(float a, float b) {
@@ -15,7 +15,7 @@ int main(int argc, char *argv[])
 
 
 
-  UGVSigTgtMotionPlanner p;
+  NF1LocalPlanner p;
   ros::spin();
 
 

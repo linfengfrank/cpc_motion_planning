@@ -7,7 +7,7 @@
 #include <recover_plan/ugv_recover_planner.h>
 
 #define SIMPLE_UGV UGV::UGVModel,UGV::UGVDPControl,UGV::SingleTargetEvaluator,UGV::UGVSwarm<3>
-class UGVSigTgtMotionPlanner : public UGVLocalMotionPlanner
+class NF1LocalPlanner : public UGVLocalMotionPlanner
 {
   enum STUCK_SUB_MODE
   {
@@ -16,8 +16,8 @@ class UGVSigTgtMotionPlanner : public UGVLocalMotionPlanner
   };
 
 public:
-  UGVSigTgtMotionPlanner();
-  ~UGVSigTgtMotionPlanner();
+  NF1LocalPlanner();
+  ~NF1LocalPlanner();
 
 protected:
   virtual void do_start();

@@ -1,22 +1,22 @@
-#include "loc_plan/nf1based/ugv_sigtgt_local_planner.h"
+#include "loc_plan/nf1based/nf1_local_planner.h"
 #include "tf/tf.h"
 #include <chrono>
 #include <std_msgs/String.h>
 #include <cpc_motion_planning/plan_request.h>
 #include <cpc_motion_planning/collision_check.h>
 
-UGVSigTgtMotionPlanner::UGVSigTgtMotionPlanner():
+NF1LocalPlanner::NF1LocalPlanner():
   m_goal_received(false),
   m_mid_goal_received(false),
   cycle_initialized(false),
   m_braking_start_cycle(0),
   m_nf1_map(nullptr)
 {
-  m_goal_sub = m_nh.subscribe("/move_base_simple/goal",1,&UGVSigTgtMotionPlanner::goal_call_back, this);
-  m_mid_goal_sub = m_nh.subscribe("/mid_goal",1,&UGVSigTgtMotionPlanner::mid_goal_call_back, this);
-  m_nf1_sub = m_nh.subscribe("/mid_layer/goal",1,&UGVSigTgtMotionPlanner::nf1_call_back, this);
-  m_line_tgt_sub = m_nh.subscribe("/line_target",1,&UGVSigTgtMotionPlanner::line_target_call_back,this);
-  m_hybrid_path_sub = m_nh.subscribe("/hybrid_path",1,&UGVSigTgtMotionPlanner::hybrid_path_call_back,this);
+  m_goal_sub = m_nh.subscribe("/move_base_simple/goal",1,&NF1LocalPlanner::goal_call_back, this);
+  m_mid_goal_sub = m_nh.subscribe("/mid_goal",1,&NF1LocalPlanner::mid_goal_call_back, this);
+  m_nf1_sub = m_nh.subscribe("/nf1",1,&NF1LocalPlanner::nf1_call_back, this);
+  m_line_tgt_sub = m_nh.subscribe("/line_target",1,&NF1LocalPlanner::line_target_call_back,this);
+  m_hybrid_path_sub = m_nh.subscribe("/hybrid_path",1,&NF1LocalPlanner::hybrid_path_call_back,this);
 
   m_collision_check_client = m_nh.serviceClient<cpc_motion_planning::collision_check>("collision_check");
   m_ref_pub = m_nh.advertise<cpc_motion_planning::ref_data>("ref_traj",1);
@@ -24,7 +24,7 @@ UGVSigTgtMotionPlanner::UGVSigTgtMotionPlanner():
   m_tgt_reached_pub = m_nh.advertise<std_msgs::Int32>("target_reached",1);
   m_stuck_plan_request_pub = m_nh.advertise<cpc_motion_planning::plan_request>("plan_request",1);
 
-  m_planning_timer = m_nh.createTimer(ros::Duration(PSO::PSO_REPLAN_DT), &UGVSigTgtMotionPlanner::plan_call_back, this);
+  m_planning_timer = m_nh.createTimer(ros::Duration(PSO::PSO_REPLAN_DT), &NF1LocalPlanner::plan_call_back, this);
 
   m_pso_planner = new PSO::Planner<SIMPLE_UGV>(120,50,3);
   m_pso_planner->initialize();
@@ -48,13 +48,13 @@ UGVSigTgtMotionPlanner::UGVSigTgtMotionPlanner():
   m_create_host_edt = true;
 }
 
-UGVSigTgtMotionPlanner::~UGVSigTgtMotionPlanner()
+NF1LocalPlanner::~NF1LocalPlanner()
 {
   m_pso_planner->release();
   delete m_pso_planner;
 }
 
-void UGVSigTgtMotionPlanner::nf1_call_back(const cpc_aux_mapping::grid_map::ConstPtr &msg)
+void NF1LocalPlanner::nf1_call_back(const cpc_aux_mapping::grid_map::ConstPtr &msg)
 {
   m_goal_received = true;
   if (m_nf1_map == nullptr)
@@ -74,7 +74,7 @@ void UGVSigTgtMotionPlanner::nf1_call_back(const cpc_aux_mapping::grid_map::Cons
   m_pso_planner->m_eva.m_nf1_received = true;
 }
 
-void UGVSigTgtMotionPlanner::plan_call_back(const ros::TimerEvent&)
+void NF1LocalPlanner::plan_call_back(const ros::TimerEvent&)
 {
 
   ros::Time curr_t = ros::Time::now();
@@ -118,7 +118,7 @@ void UGVSigTgtMotionPlanner::plan_call_back(const ros::TimerEvent&)
   m_plan_cycle++;
 }
 
-void UGVSigTgtMotionPlanner::line_target_call_back(const cpc_motion_planning::line_target::ConstPtr &msg)
+void NF1LocalPlanner::line_target_call_back(const cpc_motion_planning::line_target::ConstPtr &msg)
 {
   m_goal_received = true;
   m_goal.s.p.x = msg->target_pose.pose.position.x;
@@ -140,7 +140,7 @@ void UGVSigTgtMotionPlanner::line_target_call_back(const cpc_motion_planning::li
   m_goal.reaching_radius = msg->reaching_radius;
 }
 
-void UGVSigTgtMotionPlanner::goal_call_back(const geometry_msgs::PoseStamped::ConstPtr &msg)
+void NF1LocalPlanner::goal_call_back(const geometry_msgs::PoseStamped::ConstPtr &msg)
 {
   m_goal_received = true;
   m_goal.s.p.x = msg->pose.position.x;
@@ -163,14 +163,14 @@ void UGVSigTgtMotionPlanner::goal_call_back(const geometry_msgs::PoseStamped::Co
   m_goal.reaching_radius = 1.0f;
 }
 
-void UGVSigTgtMotionPlanner::mid_goal_call_back(const geometry_msgs::PoseStamped::ConstPtr &msg)
+void NF1LocalPlanner::mid_goal_call_back(const geometry_msgs::PoseStamped::ConstPtr &msg)
 {
   m_mid_goal_received = true;
   m_mid_goal.x = msg->pose.position.x;
   m_mid_goal.y = msg->pose.position.y;
 }
 
-void UGVSigTgtMotionPlanner::hybrid_path_call_back(const cpc_motion_planning::path::ConstPtr &msg)
+void NF1LocalPlanner::hybrid_path_call_back(const cpc_motion_planning::path::ConstPtr &msg)
 {
   if (msg->request_ctt != m_plan_request_cycle)
     return;
@@ -178,7 +178,7 @@ void UGVSigTgtMotionPlanner::hybrid_path_call_back(const cpc_motion_planning::pa
   m_recover_planner.set_path_cell(m_stuck_recover_path);
 }
 //=====================================
-void UGVSigTgtMotionPlanner::do_start()
+void NF1LocalPlanner::do_start()
 {
   if (m_slam_odo_received && m_raw_odo_received && m_received_map && m_goal_received)
   {
@@ -191,7 +191,7 @@ void UGVSigTgtMotionPlanner::do_start()
   }
 }
 //=====================================
-void UGVSigTgtMotionPlanner::do_normal()
+void NF1LocalPlanner::do_normal()
 {
   cycle_init();
   std::cout<<"NORMAL"<<std::endl;
@@ -248,7 +248,7 @@ void UGVSigTgtMotionPlanner::do_normal()
   }
 }
 //=====================================
-void UGVSigTgtMotionPlanner::do_stuck()
+void NF1LocalPlanner::do_stuck()
 {
   cycle_init();
   switch (m_stuck_submode)
@@ -264,7 +264,7 @@ void UGVSigTgtMotionPlanner::do_stuck()
   }
 }
 //=====================================
-void UGVSigTgtMotionPlanner::do_recover()
+void NF1LocalPlanner::do_recover()
 {
   // overall time out
   if (m_plan_cycle - m_stuck_start_cycle >= 50)
@@ -325,7 +325,7 @@ void UGVSigTgtMotionPlanner::do_recover()
   }
 }
 //=====================================
-void UGVSigTgtMotionPlanner::do_full_stuck()
+void NF1LocalPlanner::do_full_stuck()
 {
   std::cout<<"FULL STUCK"<<std::endl;
   //Planning
@@ -341,12 +341,12 @@ void UGVSigTgtMotionPlanner::do_full_stuck()
   }
 }
 //=====================================
-void UGVSigTgtMotionPlanner::do_emergent()
+void NF1LocalPlanner::do_emergent()
 {
   cycle_init();
 }
 //=====================================
-void UGVSigTgtMotionPlanner::do_braking()
+void NF1LocalPlanner::do_braking()
 {
   cycle_init();
   std::cout<<"BRAKING"<<std::endl;
@@ -364,7 +364,7 @@ void UGVSigTgtMotionPlanner::do_braking()
 
 }
 //=====================================
-void UGVSigTgtMotionPlanner::do_pos_reached()
+void NF1LocalPlanner::do_pos_reached()
 {
   cycle_init();
   std::cout<<"POS_REACHED"<<std::endl;
@@ -386,7 +386,7 @@ void UGVSigTgtMotionPlanner::do_pos_reached()
   }
 }
 //=====================================
-void UGVSigTgtMotionPlanner::do_fully_reached()
+void NF1LocalPlanner::do_fully_reached()
 {
   cycle_init();
   std::cout<<"FULLY_REACHED"<<std::endl;
@@ -398,7 +398,7 @@ void UGVSigTgtMotionPlanner::do_fully_reached()
   m_status = UGV::DROPOFF;
 }
 //=====================================
-void UGVSigTgtMotionPlanner::do_dropoff()
+void NF1LocalPlanner::do_dropoff()
 {
   cycle_init();
   std::cout<<"DROPOFF"<<std::endl;
@@ -413,7 +413,7 @@ void UGVSigTgtMotionPlanner::do_dropoff()
   }
 }
 //=====================================
-void UGVSigTgtMotionPlanner::cycle_init()
+void NF1LocalPlanner::cycle_init()
 {
   if (cycle_initialized)
     return;
