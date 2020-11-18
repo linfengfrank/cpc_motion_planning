@@ -56,6 +56,8 @@ private:
   ros::Publisher m_pc_pub;
   ros::Publisher m_mid_goal_pub;
   ros::Publisher m_straight_line_vis_pub;
+  ros::Publisher m_glb_goal_pub;
+
   Dijkstra *m_d_map=nullptr;
   Astar *m_a_map=nullptr;
   ros::Timer m_glb_plan_timer;

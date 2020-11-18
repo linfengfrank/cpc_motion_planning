@@ -16,6 +16,7 @@ NF1MidPlanner::NF1MidPlanner():
   m_mid_goal_pub = m_nh.advertise<geometry_msgs::PoseStamped> ("/mid_goal", 1);
   m_nf1_pub = m_nh.advertise<cpc_aux_mapping::grid_map>("/nf1",1);
   m_straight_line_vis_pub = m_nh.advertise<visualization_msgs::Marker>("path_viz",1);
+  m_glb_goal_pub = m_nh.advertise<geometry_msgs::PoseStamped> ("/move_base_simple/goal", 1);
 
   m_pclOut = PointCloud::Ptr(new PointCloud);
   m_pclOut->header.frame_id = "/world";
@@ -113,6 +114,19 @@ void NF1MidPlanner::set_goal(CUDA_GEO::pos goal)
 {
   m_received_goal= true;
   m_goal = goal;
+
+  if(m_line_following_mode)
+  {
+    geometry_msgs::PoseStamped glb_goal;
+    glb_goal.header.frame_id="world";
+    glb_goal.pose.position.x = m_goal.x;
+    glb_goal.pose.position.y = m_goal.y;
+    glb_goal.pose.position.z = 0;
+    tf::Quaternion quat;
+    quat.setRPY( 0, 0, m_curr_pose.z );
+    tf::quaternionTFToMsg(quat, glb_goal.pose.orientation);
+    m_glb_goal_pub.publish(glb_goal);
+  }
 }
 
 void NF1MidPlanner::plan(const ros::TimerEvent&)
