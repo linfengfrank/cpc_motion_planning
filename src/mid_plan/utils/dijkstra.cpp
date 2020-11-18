@@ -1,4 +1,4 @@
-#include "mid_plan/dijkstra.h"
+#include "mid_plan/utils/dijkstra.h"
 #include <ros/console.h>
 
 Dijkstra::Dijkstra(int maxX, int maxY, int maxZ):

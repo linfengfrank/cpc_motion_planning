@@ -1,4 +1,4 @@
-#include "mid_plan/a_star.h"
+#include "mid_plan/utils/a_star.h"
 #include <ros/console.h>
 #include <stack>
 #include <chrono>

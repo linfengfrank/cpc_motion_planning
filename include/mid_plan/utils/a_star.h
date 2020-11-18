@@ -1,7 +1,7 @@
 #ifndef A_STAR_H
 #define A_STAR_H
 
-#include <mid_plan/grid_graph.h>
+#include <mid_plan/utils/grid_graph.h>
 class Astar : public GridGraph
 {
 public:

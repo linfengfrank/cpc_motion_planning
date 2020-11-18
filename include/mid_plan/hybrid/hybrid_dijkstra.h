@@ -1,7 +1,7 @@
 #ifndef DIJKSTRA_H
 #define DIJKSTRA_H
 
-#include <mid_plan/grid_graph.h>
+#include <mid_plan/utils/grid_graph.h>
 #include <queue>
 #include <cpc_motion_planning/ugv/evaluator/ugv_hybrid_evaluator.h>
 
