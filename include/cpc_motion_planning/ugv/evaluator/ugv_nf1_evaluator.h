@@ -1,5 +1,5 @@
-#ifndef UGV_SINGLE_TARGET_EVALUATOR_H
-#define UGV_SINGLE_TARGET_EVALUATOR_H
+#ifndef UGV_NF1_EVALUATOR_H
+#define UGV_NF1_EVALUATOR_H
 
 #include <cpc_motion_planning/ugv/model/ugv_model.h>
 #include <cpc_motion_planning/dynamic_programming.cuh>
@@ -9,7 +9,7 @@
 
 namespace UGV
 {
-class SingleTargetEvaluator
+class NF1Evaluator
 {
 public:
 
@@ -25,14 +25,14 @@ public:
     }
   };
 
-  SingleTargetEvaluator()
+  NF1Evaluator()
   {
     m_pure_turning = false;
     m_nf1_received = false;
     m_stuck = false;
   }
 
-  ~SingleTargetEvaluator()
+  ~NF1Evaluator()
   {
 
   }
@@ -189,4 +189,4 @@ public:
 };
 }
 
-#endif // UGV_SINGLE_TARGET_EVALUATOR_H
+#endif // UGV_NF1_EVALUATOR_H

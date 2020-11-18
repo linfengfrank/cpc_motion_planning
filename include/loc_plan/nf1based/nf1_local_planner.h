@@ -6,7 +6,7 @@
 #include <std_msgs/Int32.h>
 #include <recover_plan/ugv_recover_planner.h>
 
-#define SIMPLE_UGV UGV::UGVModel,UGV::UGVDPControl,UGV::SingleTargetEvaluator,UGV::UGVSwarm<3>
+#define SIMPLE_UGV UGV::UGVModel,UGV::UGVDPControl,UGV::NF1Evaluator,UGV::UGVSwarm<3>
 class NF1LocalPlanner : public UGVLocalMotionPlanner
 {
   enum STUCK_SUB_MODE
@@ -54,7 +54,7 @@ private:
 
   bool m_goal_received;
   PSO::Planner<SIMPLE_UGV> *m_pso_planner;
-  UGV::SingleTargetEvaluator::Target m_goal;
+  UGV::NF1Evaluator::Target m_goal;
   float2 m_mid_goal;
   bool m_mid_goal_received;
   float m_ref_v, m_ref_w, m_ref_theta;
