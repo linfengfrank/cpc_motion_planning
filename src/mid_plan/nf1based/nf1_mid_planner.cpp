@@ -283,7 +283,7 @@ std::vector<float2> NF1MidPlanner::get_local_path()
   {
     p.x = m_path[i].x;
     p.y = m_path[i].y;
-    if(m_d_map->isInside(p))
+    if(m_d_map->isInside(p)) //&& !is_curvature_too_big(m_path,m_closest_pnt_idx,i))
     {
       local_path.push_back(m_path[i]);
     }
