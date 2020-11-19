@@ -188,16 +188,16 @@ void NF1MidPlanner::load_straight_line_mission(const std_msgs::Int32::ConstPtr &
   m_line_following_mode = true;
   m_received_goal = true;
   std::ifstream corridor_file;
-  float data[3];
+  float data[2];
   std::vector<float2> wps;
-  corridor_file.open("/home/sp/nndp/Learning_part/tripple_integrator/pso/in.txt");
+  corridor_file.open("/home/sp/path.txt");
   std::cout<<"Read in data"<<std::endl;
   while(1)
   {
-    if (corridor_file>>data[0]>>data[1]>>data[2])
+    if (corridor_file>>data[0]>>data[1])
     {
       wps.push_back((make_float2(data[0],data[1])));
-      std::cout<<data[0]<<" "<<data[1]<<" "<<static_cast<int>(data[2])<<std::endl;
+      std::cout<<data[0]<<" "<<data[1]<<std::endl;
     }
     else
     {
@@ -276,10 +276,10 @@ std::vector<float2> NF1MidPlanner::get_local_path()
   }
 
 //std::cout<<m_closest_pnt_idx<<std::endl;
-
+  int end_idx = min(m_path.size(),m_closest_pnt_idx+80);
   std::vector<float2> local_path;
   CUDA_GEO::pos p;
-  for (int i = m_closest_pnt_idx; i< m_path.size(); i++)
+  for (int i = m_closest_pnt_idx; i< end_idx; i++)
   {
     p.x = m_path[i].x;
     p.y = m_path[i].y;
