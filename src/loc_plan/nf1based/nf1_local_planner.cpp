@@ -211,7 +211,7 @@ void NF1LocalPlanner::do_normal()
   else
   {
     //Goto: Stuck
-    if(is_stuck(m_traj,m_goal.s) || is_stuck_lowpass(m_pso_planner->m_model.get_ini_state()))
+    if(is_stuck(m_traj,m_goal.s) || is_stuck_lowpass(m_pso_planner->m_model.get_ini_state(), m_goal.s))
     {
       m_status = UGV::STUCK;
       m_stuck_submode = STUCK_SUB_MODE::FULL_STUCK;
@@ -310,7 +310,7 @@ void NF1LocalPlanner::do_recover()
   }
 
   // if still stuck
-  if(is_stuck(m_traj,m_goal.s) || is_stuck_lowpass(m_pso_planner->m_model.get_ini_state()))
+  if(is_stuck(m_traj,m_goal.s) || is_stuck_lowpass(m_pso_planner->m_model.get_ini_state(), m_goal.s))
   {
     // if the ref path has collision, just go back to the normal mode
     if (check_collision_from_host_edt(m_recover_planner.get_collision_checking_path()))

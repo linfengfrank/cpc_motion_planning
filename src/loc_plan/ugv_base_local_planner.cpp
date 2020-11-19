@@ -305,12 +305,12 @@ bool UGVLocalMotionPlanner::is_stuck_instant_horizon(const std::vector<UGV::UGVM
   return far_from_tgt && no_moving_intention;
 }
 
-bool UGVLocalMotionPlanner::is_stuck_lowpass(const UGV::UGVModel::State& s)
+bool UGVLocalMotionPlanner::is_stuck_lowpass(const UGV::UGVModel::State& s, const UGV::UGVModel::State &tgt_state)
 {
   m_lowpass_v = 0.8f*m_lowpass_v + 0.2f*s.v;
   m_lowpass_w = 0.8f*m_lowpass_w + 0.2f*s.w;
 
-  if (fabsf(m_lowpass_v) < 0.08f && fabsf(m_lowpass_w) < 0.08f)
+  if (fabsf(m_lowpass_v) < 0.08f && fabsf(m_lowpass_w) < 0.08f && !is_pos_reached(s,tgt_state))
     m_lowpass_stuck_pbty +=0.1f;
   else
     m_lowpass_stuck_pbty *=0.8f;

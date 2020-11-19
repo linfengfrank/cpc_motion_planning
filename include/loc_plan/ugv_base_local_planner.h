@@ -128,17 +128,17 @@ protected:
   bool is_pos_reached(const UGV::UGVModel::State &s, const UGV::UGVModel::State &tgt_state, float reaching_radius = 0.8f)
   {
     float2 p_diff = s.p - tgt_state.p;
-    if (sqrtf(dot(p_diff,p_diff))<0.8f && fabsf(s.v) < 0.5f)
+    if (sqrtf(dot(p_diff,p_diff))<reaching_radius && fabsf(s.v) < 0.5f)
       return true;
     else
       return false;
   }
 
-  bool is_heading_reached(const UGV::UGVModel::State &s, const UGV::UGVModel::State &tgt_state)
+  bool is_heading_reached(const UGV::UGVModel::State &s, const UGV::UGVModel::State &tgt_state, float reaching_angle_diff = 0.2f)
   {
     float yaw_diff = s.theta - tgt_state.theta;
     yaw_diff = yaw_diff - floorf((yaw_diff + M_PI) / (2 * M_PI)) * 2 * M_PI;
-    if(fabsf(yaw_diff) < 0.2f && fabsf(s.w)<0.2f)
+    if(fabsf(yaw_diff) < reaching_angle_diff && fabsf(s.w)<0.2f)
       return true;
     else
       return false;
@@ -219,7 +219,7 @@ protected:
   bool is_stuck(const std::vector<UGV::UGVModel::State> &traj, const UGV::UGVModel::State &tgt_state);
   bool is_stuck_instant(const std::vector<UGV::UGVModel::State> &traj, const UGV::UGVModel::State &tgt_state);
   bool is_stuck_instant_horizon(const std::vector<UGV::UGVModel::State> &traj, const UGV::UGVModel::State &tgt_state);
-  bool is_stuck_lowpass(const UGV::UGVModel::State& s);
+  bool is_stuck_lowpass(const UGV::UGVModel::State& s, const UGV::UGVModel::State &tgt_state);
   virtual void do_start() = 0;
   virtual void do_normal() = 0;
   virtual void do_stuck() = 0;
