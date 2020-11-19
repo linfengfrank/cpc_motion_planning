@@ -106,20 +106,11 @@ public:
     float nf_cost = 0;
     float2 head_pos = get_head_pos(s,head_dist);
     CUDA_GEO::coord head_c = m_nf1_map.pos2coord(make_float3(head_pos.x,head_pos.y,0));
-    CUDA_GEO::coord ctr_c = m_nf1_map.pos2coord(make_float3(s.p.x,s.p.y,0));
-
-    // calculate the gain factor k between the head's cost and the center's cost
-    float2 ctr_diff_to_goal = s.p-m_goal.s.p;
-    float ctr_dist_to_goal = sqrtf(dot(ctr_diff_to_goal,ctr_diff_to_goal));
-    float k;
-    if(ctr_dist_to_goal > fabsf(head_dist))
-      k = 1.0f;
-    else
-      k = ctr_dist_to_goal / fabsf(head_dist);
+//    CUDA_GEO::coord ctr_c = m_nf1_map.pos2coord(make_float3(s.p.x,s.p.y,0));
 
 #ifdef  __CUDA_ARCH__
     // Must use c.x c.y and 0 here! Because the NF1 map has only 1 layer.
-    nf_cost = k*(m_nf1_map.nf1_const_at(head_c.x,head_c.y,0)+5) + (1.0f - k) * m_nf1_map.nf1_const_at(ctr_c.x,ctr_c.y,0);
+    nf_cost = m_nf1_map.nf1_const_at(head_c.x,head_c.y,0);
 #endif
     return nf_cost;
   }
