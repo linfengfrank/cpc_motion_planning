@@ -101,6 +101,30 @@ public:
   }
 
   __host__ __device__
+  float calculate_nf1_cost(const UGVModel::State &s, float head_dist) const
+  {
+    float nf_cost = 0;
+    float2 head_pos = get_head_pos(s,head_dist);
+    CUDA_GEO::coord head_c = m_nf1_map.pos2coord(make_float3(head_pos.x,head_pos.y,0));
+    CUDA_GEO::coord ctr_c = m_nf1_map.pos2coord(make_float3(s.p.x,s.p.y,0));
+
+    // calculate the gain factor k between the head's cost and the center's cost
+    float2 ctr_diff_to_goal = s.p-m_goal.s.p;
+    float ctr_dist_to_goal = sqrtf(dot(ctr_diff_to_goal,ctr_diff_to_goal));
+    float k;
+    if(ctr_dist_to_goal > fabsf(head_dist))
+      k = 1.0f;
+    else
+      k = ctr_dist_to_goal / fabsf(head_dist);
+
+#ifdef  __CUDA_ARCH__
+    // Must use c.x c.y and 0 here! Because the NF1 map has only 1 layer.
+    nf_cost = k*(m_nf1_map.nf1_const_at(head_c.x,head_c.y,0)+5) + (1.0f - k) * m_nf1_map.nf1_const_at(ctr_c.x,ctr_c.y,0);
+#endif
+    return nf_cost;
+  }
+
+  __host__ __device__
   float process_cost(const UGVModel::State &s, const EDTMap &map, const float &time, bool &collision) const
   {
     float cost = 0;
@@ -129,14 +153,8 @@ public:
       else
       {
         //either stuck or normal mode
-        float2 head_pos = get_head_pos(s,0.3f);
-        CUDA_GEO::coord head_c = m_nf1_map.pos2coord(make_float3(head_pos.x,head_pos.y,0));
         CUDA_GEO::coord c = m_nf1_map.pos2coord(make_float3(s.p.x,s.p.y,0));
-        float nf_cost = 0;
-#ifdef  __CUDA_ARCH__
-        // Must use c.x c.y and 0 here! Because the NF1 map has only 1 layer.
-        nf_cost = m_nf1_map.nf1_const_at(head_c.x,head_c.y,0);
-#endif
+        float nf_cost = calculate_nf1_cost(s, 0.3f);
         if (m_stuck)
         {
           //stuck mode, encourage random move to get out of stuck
@@ -169,12 +187,7 @@ public:
 
     if(!m_pure_turning && m_nf1_received && !m_stuck)
     {
-      float2 head_pos = get_head_pos(s,0.3f);
-      CUDA_GEO::coord head_c = m_nf1_map.pos2coord(make_float3(head_pos.x,head_pos.y,0));
-#ifdef  __CUDA_ARCH__
-      // Must use c.x c.y and 0 here! Because the NF1 map has only 1 layer.
-      cost += 20.0f*m_nf1_map.nf1_const_at(head_c.x,head_c.y,0);
-#endif
+      cost += 20.0f * calculate_nf1_cost(s,0.3f);
     }
 
     return  cost;
