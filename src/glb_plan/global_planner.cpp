@@ -7,6 +7,8 @@ GlobalPlanner::GlobalPlanner():
   m_glb_tgt_sub = m_nh.subscribe("/move_base_simple/goal", 1, &GlobalPlanner::goal_call_back, this);
   m_slam_odom_sub = m_nh.subscribe("/UgvOdomTopic", 1, &GlobalPlanner::slam_odo_call_back, this);
 
+  m_glb_path_pub = m_nh.advertise<cpc_motion_planning::path_action>("/global_path",1);
+
   m_map_loaded = load_c_map("/home/sp/cpc_ws/src/cpc_core_module/cpc_motion_planning/include/glb_plan/changhong_level_16.bmp");
   perform_edt();
 
@@ -31,6 +33,7 @@ void GlobalPlanner::goal_call_back(const geometry_msgs::PoseStamped::ConstPtr &m
   {
     m_glb_path = plan(m_goal,CUDA_GEO::pos(m_curr_pose.x,m_curr_pose.y,0));
     show_glb_path();
+    publish_glb_path();
   }
 }
 

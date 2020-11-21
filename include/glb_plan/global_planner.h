@@ -8,7 +8,7 @@
 #include <geometry_msgs/PoseStamped.h>
 #include <pcl_conversions/pcl_conversions.h>
 #include <pcl_ros/point_cloud.h>
-
+#include <cpc_motion_planning/path_action.h>
 class GlobalPlanner
 {
   typedef pcl::PointCloud<pcl::PointXYZRGB> PointCloud;
@@ -113,6 +113,18 @@ public:
     m_path_pcl->clear();
   }
 
+  void publish_glb_path()
+  {
+    cpc_motion_planning::path_action pa;
+    for (size_t i=0; i<m_glb_path.size();i++)
+    {
+      pa.x.push_back(m_glb_path[i].x);
+      pa.y.push_back(m_glb_path[i].y);
+      pa.theta.push_back(0);
+    }
+    m_glb_path_pub.publish(pa);
+  }
+
 public:
   std::vector<CUDA_GEO::pos> m_glb_path;
   ros::Timer m_show_map_timer;
@@ -120,6 +132,7 @@ public:
   ros::Publisher m_map_vis_pub;
   PointCloud::Ptr m_path_pcl;
   ros::Publisher m_path_vis_pub;
+  ros::Publisher m_glb_path_pub;
   bool m_map_loaded;
   bool m_odom_received;
   ros::NodeHandle m_nh;
