@@ -58,9 +58,9 @@ public:
   void prepare_map_pcl()
   {
     CUDA_GEO::pos pnt;
-    for (int x=0;x<m_width;x+=1)
+    for (int x=0;x<m_width;x+=4)
     {
-      for (int y=0;y<m_height;y+=1)
+      for (int y=0;y<m_height;y+=4)
       {
         int idx = toid(x,y);
         int d_c = m_h[idx];
@@ -90,8 +90,12 @@ public:
 
   void show_glb_map(const ros::TimerEvent&)
   {
-    pcl_conversions::toPCL(ros::Time::now(), m_map_pcl->header.stamp);
-    m_map_vis_pub.publish (m_map_pcl);
+    if (m_map_vis_pub.getNumSubscribers() > 0)
+    {
+      pcl_conversions::toPCL(ros::Time::now(), m_map_pcl->header.stamp);
+      m_map_vis_pub.publish (m_map_pcl);
+      m_show_map_timer.stop();
+    }
   }
 
   void show_glb_path()
