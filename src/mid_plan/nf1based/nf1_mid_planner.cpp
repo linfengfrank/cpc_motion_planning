@@ -8,15 +8,16 @@ NF1MidPlanner::NF1MidPlanner():
   m_line_following_mode(false)
 {
   m_map_sub = m_nh.subscribe("/edt_map", 1, &NF1MidPlanner::map_call_back,this);
-  m_glb_tgt_sub = m_nh.subscribe("/move_base_simple/goal", 1, &NF1MidPlanner::goal_call_back, this);
+  m_glb_tgt_sub = m_nh.subscribe("/set_global_goal", 1, &NF1MidPlanner::goal_call_back, this);
   m_straight_line_mission_sub = m_nh.subscribe("/start_mission", 1, &NF1MidPlanner::load_straight_line_mission, this);
   m_slam_odom_sub = m_nh.subscribe("/slam_odom", 1, &NF1MidPlanner::slam_odo_call_back, this);
+  m_glb_path_sub = m_nh.subscribe("/global_path",1, &NF1MidPlanner::glb_path_call_back, this);
 
   m_pc_pub = m_nh.advertise<PointCloud> ("/nf1_vis", 1);
   m_mid_goal_pub = m_nh.advertise<geometry_msgs::PoseStamped> ("/mid_goal", 1);
   m_nf1_pub = m_nh.advertise<cpc_aux_mapping::grid_map>("/nf1",1);
   m_straight_line_vis_pub = m_nh.advertise<visualization_msgs::Marker>("path_viz",1);
-  m_glb_goal_pub = m_nh.advertise<geometry_msgs::PoseStamped> ("/move_base_simple/goal", 1);
+  m_glb_goal_pub = m_nh.advertise<geometry_msgs::PoseStamped> ("/path_global_goal", 1);
 
   m_pclOut = PointCloud::Ptr(new PointCloud);
   m_pclOut->header.frame_id = "/world";
@@ -34,6 +35,21 @@ NF1MidPlanner::~NF1MidPlanner()
     for (int i=0;i<2;i++)
       cuttDestroy(m_rot_plan[i]);
   }
+}
+
+void NF1MidPlanner::glb_path_call_back(const cpc_motion_planning::path_action::ConstPtr &msg)
+{
+  // Read in the data files
+  m_line_following_mode = true;
+  m_received_goal = true;
+
+  m_path.clear();
+  for (size_t i=0; i<msg->x.size();i++)
+  {
+    m_path.push_back(make_float2(msg->x[i],msg->y[i]));
+  }
+  publish_path_global_goal();
+  m_closest_pnt_idx = -1;
 }
 
 void NF1MidPlanner::setup_map_msg(cpc_aux_mapping::grid_map &msg, GridGraph* map, bool resize)
@@ -114,19 +130,6 @@ void NF1MidPlanner::set_goal(CUDA_GEO::pos goal)
 {
   m_received_goal= true;
   m_goal = goal;
-
-  if(m_line_following_mode)
-  {
-    geometry_msgs::PoseStamped glb_goal;
-    glb_goal.header.frame_id="world";
-    glb_goal.pose.position.x = m_goal.x;
-    glb_goal.pose.position.y = m_goal.y;
-    glb_goal.pose.position.z = 0;
-    tf::Quaternion quat;
-    quat.setRPY( 0, 0, m_curr_pose.z );
-    tf::quaternionTFToMsg(quat, glb_goal.pose.orientation);
-    m_glb_goal_pub.publish(glb_goal);
-  }
 }
 
 void NF1MidPlanner::plan(const ros::TimerEvent&)
@@ -216,6 +219,7 @@ void NF1MidPlanner::load_straight_line_mission(const std_msgs::Int32::ConstPtr &
   {
     m_path = cascade_vector(m_path,make_straight_path(wps[i],wps[i+1]));
   }
+  publish_path_global_goal();
 
   m_closest_pnt_idx = -1;
 }

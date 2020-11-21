@@ -12,8 +12,8 @@ NF1LocalPlanner::NF1LocalPlanner():
   m_braking_start_cycle(0),
   m_nf1_map(nullptr)
 {
-  m_goal_sub = m_nh.subscribe("/move_base_simple/goal",1,&NF1LocalPlanner::goal_call_back, this);
-  m_mid_goal_sub = m_nh.subscribe("/mid_goal",1,&NF1LocalPlanner::mid_goal_call_back, this);
+  m_goal_sub = m_nh.subscribe("/set_global_goal",1,&NF1LocalPlanner::goal_call_back, this);
+  m_mid_goal_sub = m_nh.subscribe("/set_middle_goal",1,&NF1LocalPlanner::mid_goal_call_back, this);
   m_nf1_sub = m_nh.subscribe("/nf1",1,&NF1LocalPlanner::nf1_call_back, this);
   m_line_tgt_sub = m_nh.subscribe("/line_target",1,&NF1LocalPlanner::line_target_call_back,this);
   m_hybrid_path_sub = m_nh.subscribe("/hybrid_path",1,&NF1LocalPlanner::hybrid_path_call_back,this);

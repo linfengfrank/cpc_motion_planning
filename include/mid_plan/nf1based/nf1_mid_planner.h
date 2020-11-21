@@ -20,6 +20,8 @@
 #include <std_msgs/Int32.h>
 #include <visualization_msgs/Marker.h>
 #include <nav_msgs/Odometry.h>
+#include <cpc_motion_planning/path_action.h>
+#include <tf/tf.h>
 #define SHOWPC
 
 class NF1MidPlanner
@@ -35,6 +37,7 @@ private:
   void copy_map_to_msg(cpc_aux_mapping::grid_map &msg, GridGraph* map);
   void map_call_back(const cpc_aux_mapping::grid_map::ConstPtr& msg);
   void goal_call_back(const geometry_msgs::PoseStamped::ConstPtr &msg);
+  void glb_path_call_back(const cpc_motion_planning::path_action::ConstPtr &msg);
   void slam_odo_call_back(const nav_msgs::Odometry::ConstPtr &msg);
   void set_goal(CUDA_GEO::pos goal);
   void plan(const ros::TimerEvent&);
@@ -51,6 +54,7 @@ private:
   ros::Subscriber m_glb_tgt_sub;
   ros::Subscriber m_straight_line_mission_sub;
   ros::Subscriber m_slam_odom_sub;
+  ros::Subscriber m_glb_path_sub;
 
   ros::Publisher m_nf1_pub;
   ros::Publisher m_pc_pub;
@@ -77,6 +81,21 @@ private:
 
   // helper functions
 private:
+  void publish_path_global_goal()
+  {
+    if(m_path.size()>0)
+    {
+      geometry_msgs::PoseStamped glb_goal_msg;
+      glb_goal_msg.header.frame_id="world";
+      glb_goal_msg.pose.position.x = m_path.back().x;
+      glb_goal_msg.pose.position.y = m_path.back().y;
+      glb_goal_msg.pose.position.z = 0;
+      tf::Quaternion quat;
+      quat.setRPY( 0, 0, m_curr_pose.z );
+      tf::quaternionTFToMsg(quat, glb_goal_msg.pose.orientation);
+      m_glb_goal_pub.publish(glb_goal_msg);
+    }
+  }
   void publish_mid_goal(CUDA_GEO::coord mid_goal)
   {
     geometry_msgs::PoseStamped mid_goal_pose;

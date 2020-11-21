@@ -1,15 +1,18 @@
 <?xml version="1.0"?>
 <launch>
 <include file="$(find cpc_reference_publisher)/launch/ref_pub.launch"/>
-<node pkg="cpc_motion_planning" type="cpc_motion_planning_node" name="cpc_motion_planning_node" output="screen">
+<node pkg="cpc_motion_planning" type="glb_planning_node" name="glb_planning_node" output="screen">
 <remap from="/set_global_goal" to ="/move_base_simple/goal"/>
+<remap from="/slam_odom" to ="/UgvOdomTopic"/>
+</node>
+<node pkg="cpc_motion_planning" type="cpc_motion_planning_node" name="cpc_motion_planning_node" output="screen">
+<remap from="/set_global_goal" to ="/path_global_goal"/>
 <remap from="/set_middle_goal" to ="/mid_goal"/>
 <remap from="/raw_odom" to ="/odom"/>
 <remap from="/slam_odom" to ="/UgvOdomTopic"/>
 </node>
 <node pkg="cpc_motion_planning" type="nf1_mid_planning_node" name="nf1_mid_planning_node" output="screen">
 <remap from="/slam_odom" to ="/UgvOdomTopic"/>
-<remap from="/set_global_goal" to ="/move_base_simple/goal"/>
 </node>
 <!--<node pkg="cpc_motion_planning" type="hybrid_astar_mid_planning_node" name="hybrid_astar_mid_planning_node" output="screen">
 </node>-->
