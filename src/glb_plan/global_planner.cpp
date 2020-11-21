@@ -1,8 +1,58 @@
 #include "glb_plan/global_planner.h"
-
-GlobalPlanner::GlobalPlanner()
+#include "tf/tf.h"
+GlobalPlanner::GlobalPlanner():
+  m_map_loaded(false),
+  m_odom_received(false)
 {
+  m_glb_tgt_sub = m_nh.subscribe("/move_base_simple/goal", 1, &GlobalPlanner::goal_call_back, this);
+  m_slam_odom_sub = m_nh.subscribe("/UgvOdomTopic", 1, &GlobalPlanner::slam_odo_call_back, this);
 
+  m_map_loaded = load_c_map("/home/sp/cpc_ws/src/cpc_core_module/cpc_motion_planning/include/glb_plan/changhong_level_16.bmp");
+  perform_edt();
+
+  m_map_pcl = PointCloud::Ptr(new PointCloud);
+  m_map_pcl->header.frame_id = "/world";
+  m_map_vis_pub = m_nh.advertise<PointCloud> ("/glb_map_vis", 1);
+  prepare_map_pcl();
+
+
+  m_path_pcl = PointCloud::Ptr(new PointCloud);
+  m_path_pcl->header.frame_id = "/world";
+  m_path_vis_pub = m_nh.advertise<PointCloud> ("/glb_path_vis", 1);
+
+  m_show_map_timer = m_nh.createTimer(ros::Duration(2.0), &GlobalPlanner::show_glb_map, this);
+
+}
+
+void GlobalPlanner::goal_call_back(const geometry_msgs::PoseStamped::ConstPtr &msg)
+{
+  set_goal(CUDA_GEO::pos(msg->pose.position.x, msg->pose.position.y, msg->pose.position.z));
+  if (m_map_loaded && m_odom_received)
+  {
+    m_glb_path = plan(m_goal,CUDA_GEO::pos(m_curr_pose.x,m_curr_pose.y,0));
+    show_glb_path();
+  }
+}
+
+void GlobalPlanner::set_goal(CUDA_GEO::pos goal)
+{
+  m_goal = goal;
+}
+
+void GlobalPlanner::slam_odo_call_back(const nav_msgs::Odometry::ConstPtr &msg)
+{
+  m_odom_received = true;
+  m_curr_pose.x = msg->pose.pose.position.x;
+  m_curr_pose.y = msg->pose.pose.position.y;
+
+  double phi,theta,psi;
+  tf::Quaternion q(msg->pose.pose.orientation.x,
+                   msg->pose.pose.orientation.y,
+                   msg->pose.pose.orientation.z,
+                   msg->pose.pose.orientation.w);
+  tf::Matrix3x3 m(q);
+  m.getRPY(phi, theta, psi);
+  m_curr_pose.z = psi;
 }
 
 bool GlobalPlanner::load_c_map(std::string filename)

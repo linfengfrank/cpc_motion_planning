@@ -3,9 +3,15 @@
 #include "glb_plan/map.h"
 #include "mid_plan/utils/a_star.h"
 #include <string>
+#include <ros/ros.h>
+#include <nav_msgs/Odometry.h>
+#include <geometry_msgs/PoseStamped.h>
+#include <pcl_conversions/pcl_conversions.h>
+#include <pcl_ros/point_cloud.h>
 
 class GlobalPlanner
 {
+  typedef pcl::PointCloud<pcl::PointXYZRGB> PointCloud;
 public:
   GlobalPlanner();
   bool load_c_map(std::string filename);
@@ -13,6 +19,10 @@ public:
   std::vector<CUDA_GEO::pos> plan(const CUDA_GEO::pos &goal, const CUDA_GEO::pos &start);
 
 public:
+  void goal_call_back(const geometry_msgs::PoseStamped::ConstPtr &msg);
+  void slam_odo_call_back(const nav_msgs::Odometry::ConstPtr &msg);
+  void set_goal(CUDA_GEO::pos goal);
+
   void phase1(int x);
   void phase2(int y);
   int toid(int x, int y)
@@ -45,9 +55,78 @@ public:
     }
   }
 
+  void prepare_map_pcl()
+  {
+    CUDA_GEO::pos pnt;
+    for (int x=0;x<m_width;x+=1)
+    {
+      for (int y=0;y<m_height;y+=1)
+      {
+        int idx = toid(x,y);
+        int d_c = m_h[idx];
+        if (d_c > 255) d_c = 255;
+        int d = 255 - static_cast<int>(d_c);
+        CUDA_GEO::pos pnt = m_a_map->coord2pos(CUDA_GEO::coord(x,y,0));
+        pcl::PointXYZRGB clrP;
+        clrP.x = pnt.x;
+        clrP.y = pnt.y;
+        clrP.z = 0;
 
+        if ( d < 128)
+        {
+          clrP.b = 255-2*static_cast<unsigned char>(d);
+          clrP.g = 2*static_cast<unsigned char>(d);
+        }
+        else
+        {
+          clrP.g = 255 - 2*(static_cast<unsigned char>(d) - 128);
+          clrP.r = 2*(static_cast<unsigned char>(d)-128);
+        }
+        clrP.a = 255;
+        m_map_pcl->points.push_back (clrP);
+      }
+    }
+  }
+
+  void show_glb_map(const ros::TimerEvent&)
+  {
+    pcl_conversions::toPCL(ros::Time::now(), m_map_pcl->header.stamp);
+    m_map_vis_pub.publish (m_map_pcl);
+  }
+
+  void show_glb_path()
+  {
+    for (size_t i=0; i<m_glb_path.size();i++)
+    {
+      pcl::PointXYZRGB clrP;
+      clrP.x = m_glb_path[i].x;
+      clrP.y = m_glb_path[i].y;
+      clrP.z = 0;
+      clrP.r = 255;
+      clrP.g = 255;
+      clrP.b = 255;
+      clrP.a = 255;
+      m_path_pcl->points.push_back (clrP);
+    }
+    pcl_conversions::toPCL(ros::Time::now(), m_path_pcl->header.stamp);
+    m_path_vis_pub.publish (m_path_pcl);
+    m_path_pcl->clear();
+  }
 
 public:
+  std::vector<CUDA_GEO::pos> m_glb_path;
+  ros::Timer m_show_map_timer;
+  PointCloud::Ptr m_map_pcl;
+  ros::Publisher m_map_vis_pub;
+  PointCloud::Ptr m_path_pcl;
+  ros::Publisher m_path_vis_pub;
+  bool m_map_loaded;
+  bool m_odom_received;
+  ros::NodeHandle m_nh;
+  ros::Subscriber m_slam_odom_sub;
+  ros::Subscriber m_glb_tgt_sub;
+  float3 m_curr_pose;
+  CUDA_GEO::pos m_goal;
   CUDA_GEO::pos m_origin;
   float m_step_width;
   int m_width;
