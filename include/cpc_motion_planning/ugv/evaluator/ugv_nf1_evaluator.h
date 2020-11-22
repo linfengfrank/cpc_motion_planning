@@ -27,6 +27,7 @@ public:
 
   NF1Evaluator()
   {
+    is_forward = true;
     m_pure_turning = false;
     m_nf1_received = false;
     m_stuck = false;
@@ -104,7 +105,12 @@ public:
   float calculate_nf1_cost(const UGVModel::State &s, float head_dist) const
   {
     float nf_cost = 0;
-    float2 head_pos = get_head_pos(s,head_dist);
+    float2 head_pos;
+    if (is_forward)
+      head_pos = get_head_pos(s,head_dist);
+    else
+      head_pos = get_head_pos(s,-head_dist);
+
     CUDA_GEO::coord head_c = m_nf1_map.pos2coord(make_float3(head_pos.x,head_pos.y,0));
 //    CUDA_GEO::coord ctr_c = m_nf1_map.pos2coord(make_float3(s.p.x,s.p.y,0));
 
@@ -156,7 +162,12 @@ public:
         {
           //normal mode
           cost += 1.0f*nf_cost + 1.0f*sqrtf(0.005f*s.v*s.v + 0.005f*s.w*s.w);
-          float yaw_diff = s.theta - getDesiredHeading(c);//bilinear_theta(s.p, m_nf1_map);//getDesiredHeading(c);
+          float yaw_diff;
+          if (is_forward)
+            yaw_diff = s.theta - getDesiredHeading(c);//bilinear_theta(s.p, m_nf1_map);//getDesiredHeading(c);
+          else
+            yaw_diff = s.theta + M_PI - getDesiredHeading(c);
+
           yaw_diff = yaw_diff - floorf((yaw_diff + M_PI) / (2 * M_PI)) * 2 * M_PI;
           cost += yaw_diff*yaw_diff*s.v*s.v;
         }
@@ -185,6 +196,7 @@ public:
   }
 
   Target m_goal;
+  bool is_forward;
   bool m_pure_turning;
   bool m_stuck;
   NF1MapDT m_nf1_map;
