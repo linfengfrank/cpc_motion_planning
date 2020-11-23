@@ -58,6 +58,11 @@ public:
   int calcTgtHeightCoord(float tgt_height);
   std::vector<CUDA_GEO::coord> rayCast(const CUDA_GEO::coord &p0Index, const CUDA_GEO::coord &p1Index, float limit_radius = -1);
 
+  float getEdtValue(const CUDA_GEO::coord &c)
+  {
+    return _val_map[coord2index(c)].d;
+  }
+
 public:
   virtual ~GridGraph();
 

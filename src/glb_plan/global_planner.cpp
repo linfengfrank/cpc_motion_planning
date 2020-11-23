@@ -24,6 +24,7 @@ GlobalPlanner::GlobalPlanner():
 
   m_show_map_timer = m_nh.createTimer(ros::Duration(2.0), &GlobalPlanner::show_glb_map, this);
 
+  m_ps = new PathSmoother(m_a_map);
 }
 
 void GlobalPlanner::goal_call_back(const geometry_msgs::PoseStamped::ConstPtr &msg)
@@ -32,6 +33,9 @@ void GlobalPlanner::goal_call_back(const geometry_msgs::PoseStamped::ConstPtr &m
   if (m_map_loaded && m_odom_received)
   {
     m_glb_path = plan(m_goal,CUDA_GEO::pos(m_curr_pose.x,m_curr_pose.y,0));
+    m_ps->set_path(m_glb_path);
+    m_ps->smooth_path();
+    m_glb_path = m_ps->get_path();
     show_glb_path();
     publish_glb_path();
   }

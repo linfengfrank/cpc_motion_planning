@@ -9,6 +9,7 @@
 #include <pcl_conversions/pcl_conversions.h>
 #include <pcl_ros/point_cloud.h>
 #include <cpc_motion_planning/path_action.h>
+#include <glb_plan/path_smoother.h>
 class GlobalPlanner
 {
   typedef pcl::PointCloud<pcl::PointXYZRGB> PointCloud;
@@ -149,6 +150,7 @@ public:
   int m_width;
   int m_height;
   CMap m_c_map;
+  PathSmoother *m_ps;
   Astar *m_a_map;
   int *m_c;
   int *m_g;

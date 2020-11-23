@@ -74,7 +74,7 @@ std::vector<CUDA_GEO::coord> Astar::AStar2D(const CUDA_GEO::coord &goal, const C
         {
 
           float new_g = sqrtf(static_cast<float>(ix*ix+iy*iy))*getGridStep() +
-              ni->g + obsCostAt(child_coord,0,occupied,true);
+              ni->g + 0*obsCostAt(child_coord,0,occupied,true);
           if (p->g > new_g && !(occupied && reached_free_zone))
           {
             p->ptr2parent = ni;
