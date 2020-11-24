@@ -13,6 +13,22 @@ void PathSmoother::smooth_path()
     autoResize();
     apply_eb();
   }
+
+  std::vector<float2> pb; //path buffer
+  pb = m_path;
+  m_path.clear();
+  m_path.push_back(pb.front());
+  for(size_t i=1; i < pb.size(); i++)
+  {
+    float2 current_head = m_path.back();
+    float d = dist(pb[i],current_head);
+    int N = ceil(d/m_gh->getGridStep());
+    float2 delta = (pb[i] - current_head)/N;
+    for (int j=1;j<=N;j++)
+    {
+       m_path.push_back(current_head + j*delta);
+    }
+  }
 }
 
 void PathSmoother::apply_eb()
