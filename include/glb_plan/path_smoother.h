@@ -25,13 +25,13 @@ public:
     return output;
   }
 
+  void smooth_path();
+
 private:
   GridGraph* m_gh;
   std::vector<float2> m_path;
 
 private:
-
-  void smooth_path();
   void apply_eb();
   void autoResize();
 
