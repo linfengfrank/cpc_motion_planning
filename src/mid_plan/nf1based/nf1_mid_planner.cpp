@@ -22,6 +22,8 @@ NF1MidPlanner::NF1MidPlanner():
   m_pclOut = PointCloud::Ptr(new PointCloud);
   m_pclOut->header.frame_id = "/world";
   m_glb_plan_timer = m_nh.createTimer(ros::Duration(0.333), &NF1MidPlanner::plan, this);
+
+  m_nf1_map_msg.drive_type = cpc_aux_mapping::grid_map::TYPE_NOTMOVING;
 }
 
 NF1MidPlanner::~NF1MidPlanner()
@@ -50,6 +52,18 @@ void NF1MidPlanner::glb_path_call_back(const cpc_motion_planning::path_action::C
   }
   publish_path_global_goal();
   m_closest_pnt_idx = -1;
+
+  std::vector<float2> local_path = get_curvature_bounded_path(get_local_path());
+  if (local_path.size() > 0 && m_received_odom)
+  {
+    float2 diff = local_path.back() - make_float2(m_curr_pose.x, m_curr_pose.y);
+    float angle_diff = fabsf(in_pi(atan2f(diff.y, diff.x) - m_curr_pose.z));
+
+    if (angle_diff < M_PI/2.0)
+      m_nf1_map_msg.drive_type = cpc_aux_mapping::grid_map::TYPE_FORWARD;
+    else
+      m_nf1_map_msg.drive_type = cpc_aux_mapping::grid_map::TYPE_BACKWARD;
+  }
 }
 
 void NF1MidPlanner::setup_map_msg(cpc_aux_mapping::grid_map &msg, GridGraph* map, bool resize)

@@ -72,6 +72,11 @@ void NF1LocalPlanner::nf1_call_back(const cpc_aux_mapping::grid_map::ConstPtr &m
   CUDA_MEMCPY_H2D(m_nf1_map->m_nf1_map,msg->payload8.data(),static_cast<size_t>(m_nf1_map->m_byte_size));
   m_pso_planner->m_eva.m_nf1_map = *m_nf1_map;
   m_pso_planner->m_eva.m_nf1_received = true;
+
+  if (msg->drive_type == cpc_aux_mapping::grid_map::TYPE_FORWARD)
+    m_pso_planner->m_eva.is_forward = true;
+  else if (msg->drive_type == cpc_aux_mapping::grid_map::TYPE_BACKWARD)
+    m_pso_planner->m_eva.is_forward = false;
 }
 
 void NF1LocalPlanner::plan_call_back(const ros::TimerEvent&)

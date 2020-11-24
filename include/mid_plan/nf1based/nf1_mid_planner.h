@@ -264,6 +264,30 @@ private:
     else
       return false;
   }
+
+  std::vector<float2> get_curvature_bounded_path(const std::vector<float2> &path)
+  {
+    std::vector<float2> output;
+    for (size_t i = 0; i< path.size(); i++)
+    {
+      if(!is_curvature_too_big(path,0,i))
+      {
+        output.push_back(path[i]);
+      }
+      else
+      {
+        break;
+      }
+    }
+    return output;
+  }
+
+  float in_pi(float in)
+  {
+    return in - floor((in + M_PI) / (2 * M_PI)) * 2 * M_PI;
+  }
+
+
 };
 
 #endif // NF1_MID_PLANNER_H
