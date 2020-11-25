@@ -240,7 +240,7 @@ cuda_add_executable(glb_planning_node
     src/mid_plan/utils/grid_graph.cpp
     src/mid_plan/utils/a_star.cpp
     src/glb_plan/path_smoother.cpp
-    src/glb_plan/map.cpp
+    ../cpc_aux_mapping/src/map.cpp
     src/glb_plan/glb_map_node.cpp
     src/glb_plan/global_planner.cpp)
 

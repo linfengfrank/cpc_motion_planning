@@ -1,6 +1,6 @@
 #ifndef GLOBAL_PLANNER_H
 #define GLOBAL_PLANNER_H
-#include "glb_plan/map.h"
+#include "edt/map.h"
 #include "mid_plan/utils/a_star.h"
 #include <string>
 #include <ros/ros.h>
