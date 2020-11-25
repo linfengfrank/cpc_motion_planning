@@ -233,12 +233,13 @@ void Dijkstra::dijkstra3D(CUDA_GEO::coord glb_tgt)
   }
 }
 
-void Dijkstra::bfs2D(CUDA_GEO::coord glb_tgt)
+CUDA_GEO::coord Dijkstra::find_available_target_with_line(CUDA_GEO::coord start, CUDA_GEO::coord goal, EDTMap* line_map, bool reached_free_zone)
 {
   memcpy(_id_map,_init_id_map,sizeof(nodeInfo)*static_cast<size_t>(_w*_h*_d));
+  float min_h = std::numeric_limits<float>::infinity();
   //Get the local Dijkstra target
-  CUDA_GEO::coord mc = glb_tgt;
-  CUDA_GEO::coord pc;
+  CUDA_GEO::coord mc = start;
+  CUDA_GEO::coord pc, closest_coord;
   nodeInfo* m;
   // insert the root
   m=getNode(mc);
@@ -247,7 +248,9 @@ void Dijkstra::bfs2D(CUDA_GEO::coord glb_tgt)
   if (m)
   {
     m->g = 0 + obsCostAt(mc,0,occupied);
+    closest_coord = m->c;
     _Q.push(m);
+    min_h = dist(m->c,goal);
   }
   while (_Q.size()>0)
   {
@@ -255,6 +258,20 @@ void Dijkstra::bfs2D(CUDA_GEO::coord glb_tgt)
     _Q.pop();
     m->inClosed = true;
     mc = m->c;
+
+    obsCostAt(mc,0,occupied);
+    if (!occupied)
+      reached_free_zone = true;
+
+    float d2goal = dist(mc,goal);
+    CUDA_GEO::pos m_pos = coord2pos(mc);
+    float d2line = line_map->getEDT(make_float2(m_pos.x,m_pos.y));
+    if (min_h > d2goal&& d2line < line_map->m_grid_step)
+    {
+      min_h = d2goal;
+      closest_coord = mc;
+    }
+
 
     // get all neighbours
     for (int ix=-1;ix<=1;ix++)
@@ -274,54 +291,16 @@ void Dijkstra::bfs2D(CUDA_GEO::coord glb_tgt)
           obsCostAt(pc,0,occupied);
           p->inClosed = true;
           p->g = 1*getGridStep() + m->g;
-          if (!occupied)
+          if (!(occupied && reached_free_zone))
           {
             _Q.push(p);
           }
-          else
-          {
-            p->h = 0; // Here h is the distance to obstacle boundary
-            _OQ.insert(p,p->h);
-          }
         }
       }
     }
   }
 
-  //---------------------
-  while (_OQ.size()>0)
-  {
-    m=_OQ.pop();
-    m->inClosed = true;
-    mc = m->c;
-
-    // get all neighbours
-    for (int ix=-1;ix<=1;ix++)
-    {
-      for (int iy=-1;iy<=1;iy++)
-      {
-        if ((ix==0 && iy ==0) || ix*iy != 0)
-          continue;
-
-        pc.x = mc.x + ix;
-        pc.y = mc.y + iy;
-        pc.z = mc.z;
-        nodeInfo* p = getNode(pc);
-
-        if (p && !p->inClosed)
-        {
-          float d_dir = sqrtf(static_cast<float>(ix*ix+iy*iy));
-          float new_h = d_dir*getGridStep() + m->h;
-          if (p->h > new_h)
-          {
-            p->h = new_h; // Here h is the distance to obstacle boundary
-            p->g = d_dir*getGridStep() + m->g;
-            _OQ.insert(p,p->h);
-          }
-        }
-      }
-    }
-  }
+  return closest_coord;
 }
 
 

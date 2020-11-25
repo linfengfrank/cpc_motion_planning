@@ -153,20 +153,24 @@ void NF1MidPlanner::plan(const ros::TimerEvent&)
 
   auto start_time = std::chrono::steady_clock::now();
 
-  if(m_line_following_mode)
-  {
-    prepare_line_map(get_local_path());
-  }
-  // set the target and the goal
+  CUDA_GEO::coord tgt;
   CUDA_GEO::coord start(m_d_map->getMaxX()/2,m_d_map->getMaxY()/2,0);
   CUDA_GEO::coord glb_tgt = m_d_map->pos2coord(m_goal);
   glb_tgt.z = 0;
   glb_tgt = m_d_map->rayCast(start,glb_tgt).back();
-
-  // find the target and construct nf1
-  float length = 0.0f;
-  std::vector<CUDA_GEO::coord> path = m_a_map->AStar2D(glb_tgt,start,false,length);
-  m_d_map->dijkstra2D_with_line_map(path[0],m_line_map);
+  if(m_line_following_mode)
+  {
+    prepare_line_map(get_local_path());
+    tgt = m_d_map->find_available_target_with_line(start,glb_tgt,m_line_map,false);
+  }
+  else
+  {
+    // find the target
+    float length = 0.0f;
+    std::vector<CUDA_GEO::coord> path = m_a_map->AStar2D(glb_tgt,start,false,length);
+    tgt = path[0];
+  }
+  m_d_map->dijkstra2D_with_line_map(tgt,m_line_map);
 
   auto end_time = std::chrono::steady_clock::now();
       std::cout << "Middle planning time: "
@@ -177,7 +181,7 @@ void NF1MidPlanner::plan(const ros::TimerEvent&)
   setup_map_msg(m_nf1_map_msg,m_d_map,false);
   copy_map_to_msg(m_nf1_map_msg,m_d_map);
   m_nf1_pub.publish(m_nf1_map_msg);
-  publish_mid_goal(path[0]);
+  publish_mid_goal(tgt);
 
   //show the nf1 map
 #ifdef SHOWPC
