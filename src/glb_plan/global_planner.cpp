@@ -9,7 +9,7 @@ GlobalPlanner::GlobalPlanner():
 
   m_glb_path_pub = m_nh.advertise<cpc_motion_planning::path_action>("/global_path",1);
 
-  m_map_loaded = load_c_map("/home/sp/cpc_ws/src/cpc_core_module/cpc_motion_planning/include/glb_plan/changhong_level_16.bmp");
+  m_map_loaded = load_c_map();
   perform_edt();
 
   m_map_pcl = PointCloud::Ptr(new PointCloud);
@@ -73,9 +73,9 @@ void GlobalPlanner::slam_odo_call_back(const nav_msgs::Odometry::ConstPtr &msg)
   m_curr_pose.z = psi;
 }
 
-bool GlobalPlanner::load_c_map(std::string filename)
+bool GlobalPlanner::load_c_map()
 {
-  bool ok = m_c_map.Load(filename.c_str());
+  bool ok = m_c_map.Load();
 
   m_origin = CUDA_GEO::pos(-30,-30,0);
   m_step_width = 0.05f;

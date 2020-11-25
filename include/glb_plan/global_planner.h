@@ -16,7 +16,7 @@ class GlobalPlanner
 public:
   GlobalPlanner();
   ~GlobalPlanner();
-  bool load_c_map(std::string filename);
+  bool load_c_map();
   void perform_edt();
   std::vector<CUDA_GEO::pos> plan(const CUDA_GEO::pos &goal, const CUDA_GEO::pos &start);
 
