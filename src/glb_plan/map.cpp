@@ -44,7 +44,7 @@ BOOL CMap::Load(const char *filename) {
     m_width = infoheader.width;
     m_height = infoheader.height;
 
-    patch = ALIGN-m_width%ALIGN;
+    patch = (ALIGN-m_width%ALIGN)%ALIGN;
 
     m_data = (BYTE *)malloc(m_width*m_height);
 
@@ -130,3 +130,45 @@ void CMap::Pos2Pt(POSITION *pos, POINT *pt) {
 	pt->y = (int)(y_rot+0.5) + m_y0;
 }
 
+void CMap::Crop(CROP_AREA &crop, CROP_MAP &map) {
+    int nx, ny;
+    double dx, dy;
+    dx = dy = crop.dx;
+
+    nx = (int)(crop.rx/dx);
+    ny = (int)(crop.ry/dy);
+
+    BYTE *data = (BYTE *)malloc(nx*ny);
+
+    double x,y;
+    BYTE grey;
+
+    for (int i=0; i<nx; i++) {
+        for (int j=0; j<ny; j++) {
+            x = crop.x0 + i*dx;
+            y = crop.y0 + j*dy;
+
+            grey = Grey(x, y);
+
+            data[j*nx+i] = grey;
+        }
+    }
+
+    map.data = data;
+    map.nx = nx;
+    map.ny = ny;
+}
+
+void CMap::Crop(CUDA_GEO::pos origin, int x_size, int y_size, float grid_step, unsigned char *occu_data)
+{
+  double x,y;
+  for (int i=0; i<x_size; i++)
+  {
+    for (int j=0; j<y_size; j++)
+    {
+      x = origin.x + i*grid_step;
+      y = origin.y + j*grid_step;
+      occu_data[j*x_size+i] = Grey(x, y);
+    }
+  }
+}

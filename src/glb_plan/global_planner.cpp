@@ -27,6 +27,17 @@ GlobalPlanner::GlobalPlanner():
   m_ps = new PathSmoother(m_a_map);
 }
 
+GlobalPlanner::~GlobalPlanner()
+{
+  delete m_ps;
+  delete m_a_map;
+  delete [] m_c;
+  delete [] m_g;
+  delete [] m_h;
+  delete [] m_s;
+  delete [] m_t;
+}
+
 void GlobalPlanner::goal_call_back(const geometry_msgs::PoseStamped::ConstPtr &msg)
 {
   set_goal(CUDA_GEO::pos(msg->pose.position.x, msg->pose.position.y, msg->pose.position.z));
@@ -74,7 +85,7 @@ bool GlobalPlanner::load_c_map(std::string filename)
   m_a_map = new Astar(m_width,m_height,1);
   m_a_map->setMapSpecs(m_origin,m_step_width);
 
-  m_c = new int[m_width*m_height];
+  m_c = new unsigned char[m_width*m_height];
   m_g = new int[m_width*m_height];
   m_h = new int[m_width*m_height];
   m_s = new int[m_width*m_height];

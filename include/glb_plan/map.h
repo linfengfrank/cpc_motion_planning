@@ -1,7 +1,8 @@
 #ifndef CMAP_H
 #define CMAP_H
 
-#include "def.h"
+#include "glb_plan/def.h"
+#include "cuda_geometry/cuda_geometry.cuh"
 
 #pragma pack(1)
 struct BMP_HEADER {
@@ -41,6 +42,22 @@ struct POSITION {
 	double y;
 };
 
+struct VEC2D {
+    double x;
+    double y;
+};
+
+struct CROP_AREA {
+    double x0, y0;
+    double rx, ry;      //range of x, range of y
+    double dx;          //dx=dy
+};
+
+struct CROP_MAP {
+    BYTE *data;
+    int nx, ny;             //numbers of elements along x and y axis
+};
+
 class CMap
 {
 public:
@@ -63,7 +80,6 @@ public:
 
     int Width() { return m_width; }
     int Height() { return m_height; }
-    double Scale() {return m_scale; }
 
     BYTE Grey(int x, int y);
 
@@ -71,7 +87,8 @@ public:
 
 	void Pos2Pt(POSITION *pos, POINT *pt);		//map: pos->pt
 	void Pt2Pos(POINT *pt, POSITION *pos);		//map: pt->pos
-
+  void Crop(CROP_AREA &crop, CROP_MAP &map);
+  void Crop(CUDA_GEO::pos origin, int x_size, int y_size, float grid_step, unsigned char* occu_data);
 };
 
 #endif // CMAP_H

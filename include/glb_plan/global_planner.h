@@ -15,6 +15,7 @@ class GlobalPlanner
   typedef pcl::PointCloud<pcl::PointXYZRGB> PointCloud;
 public:
   GlobalPlanner();
+  ~GlobalPlanner();
   bool load_c_map(std::string filename);
   void perform_edt();
   std::vector<CUDA_GEO::pos> plan(const CUDA_GEO::pos &goal, const CUDA_GEO::pos &start);
@@ -43,17 +44,7 @@ public:
 
   void build_axis_aligned_map()
   {
-    CUDA_GEO::coord c;
-    CUDA_GEO::pos p;
-    POINT pnt;
-    for(c.x=0; c.x<m_width; c.x++)
-    {
-      for (c.y=0; c.y<m_height; c.y++)
-      {
-        p = m_a_map->coord2pos(c);
-        m_c[toid(c.x,c.y)] = m_c_map.Grey(p.x,p.y);
-      }
-    }
+    m_c_map.Crop(m_origin,m_width,m_height,m_step_width,m_c);
   }
 
   void prepare_map_pcl()
@@ -152,7 +143,7 @@ public:
   CMap m_c_map;
   PathSmoother *m_ps;
   Astar *m_a_map;
-  int *m_c;
+  unsigned char *m_c;
   int *m_g;
   int *m_h;
   int *m_s;
