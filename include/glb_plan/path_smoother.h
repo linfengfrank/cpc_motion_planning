@@ -55,10 +55,21 @@ private:
     return grad;
   }
 
+  float edt2cost(float edt)
+  {
+//    return 80*expf(-0.5f*edt);
+    if (edt < 1.0f)
+      return  0.5f*(edt-1.5f)*(edt-1.5f);
+    else if (edt < 1.5f)
+      return  0.05f*(edt-1.5f)*(edt-1.5f);
+    else
+      return  0;
+  }
+
   float2 get_gradient(const CUDA_GEO::coord &ctr, const CUDA_GEO::coord &oth)
   {
-    float cost_ctr = 80*expf(-0.5f*m_gh->getGridStep()*m_gh->getEdtValue(ctr));
-    float cost_oth = 80*expf(-0.5f*m_gh->getGridStep()*m_gh->getEdtValue(oth));
+    float cost_ctr = edt2cost(m_gh->getGridStep()*m_gh->getEdtValue(ctr));
+    float cost_oth = edt2cost(m_gh->getGridStep()*m_gh->getEdtValue(oth));
     CUDA_GEO::coord diff = oth - ctr;
     float2 delta = make_float2(diff.x,diff.y);
     return (cost_ctr - cost_oth)*delta;

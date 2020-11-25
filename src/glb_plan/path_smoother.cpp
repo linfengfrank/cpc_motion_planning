@@ -40,7 +40,7 @@ void PathSmoother::apply_eb()
   {
     float2 f1 = get_force(pb[i],pb[i-1]);
     float2 f2 = get_force(pb[i],pb[i+1]);
-    float2 f3 = 0.01f*get_gradient(pb[i]);
+    float2 f3 = get_gradient(pb[i]);
 
     float2 f_total = 0.5f*(f1 + f2 + f3);
 
