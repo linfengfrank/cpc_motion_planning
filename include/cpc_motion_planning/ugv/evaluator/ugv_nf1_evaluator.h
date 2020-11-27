@@ -16,10 +16,10 @@ public:
   struct Target
   {
     UGVModel::State s;
-    int id;
-    bool do_turning;
+    int path_id;
+    int act_id;
     float reaching_radius;
-    Target():id(0),do_turning(false),reaching_radius(1.0f)
+    Target():path_id(0),act_id(0),reaching_radius(1.0f)
     {
 
     }

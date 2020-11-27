@@ -1,10 +1,10 @@
 #ifndef UGV_MOTION_PLANNER_H
 #define UGV_MOTION_PLANNER_H
 #include <loc_plan/ugv_base_local_planner.h>
-#include <cpc_motion_planning/line_target.h>
 #include <cpc_motion_planning/path.h>
 #include <std_msgs/Int32.h>
 #include <recover_plan/ugv_recover_planner.h>
+#include <cpc_aux_mapping/nf1_task.h>
 
 #define SIMPLE_UGV UGV::UGVModel,UGV::UGVDPControl,UGV::NF1Evaluator,UGV::UGVSwarm<3>
 class NF1LocalPlanner : public UGVLocalMotionPlanner
@@ -35,16 +35,14 @@ private:
   void plan_call_back(const ros::TimerEvent&);
   void goal_call_back(const geometry_msgs::PoseStamped::ConstPtr &msg);
   void mid_goal_call_back(const geometry_msgs::PoseStamped::ConstPtr &msg);
-  void nf1_call_back(const cpc_aux_mapping::grid_map::ConstPtr &msg);
+  void nf1_call_back(const cpc_aux_mapping::nf1_task::ConstPtr &msg);
   void cycle_init();
-  void line_target_call_back(const cpc_motion_planning::line_target::ConstPtr &msg);
   void hybrid_path_call_back(const cpc_motion_planning::path::ConstPtr &msg);
 
 private:
   ros::Subscriber m_goal_sub;
   ros::Subscriber m_mid_goal_sub;
   ros::Subscriber m_nf1_sub;
-  ros::Subscriber m_line_tgt_sub;
   ros::Subscriber m_hybrid_path_sub;
   ros::Timer m_planning_timer;
   ros::Publisher m_ref_pub;

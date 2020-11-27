@@ -16,15 +16,12 @@ NF1MidPlanner::NF1MidPlanner():
 
   m_pc_pub = m_nh.advertise<PointCloud> ("/nf1_vis", 1);
   m_mid_goal_pub = m_nh.advertise<geometry_msgs::PoseStamped> ("/mid_goal", 1);
-  m_nf1_pub = m_nh.advertise<cpc_aux_mapping::grid_map>("/nf1",1);
+  m_nf1_pub = m_nh.advertise<cpc_aux_mapping::nf1_task>("/nf1",1);
   m_straight_line_vis_pub = m_nh.advertise<visualization_msgs::Marker>("path_viz",1);
-  m_glb_goal_pub = m_nh.advertise<geometry_msgs::PoseStamped> ("/path_global_goal", 1);
 
   m_pclOut = PointCloud::Ptr(new PointCloud);
   m_pclOut->header.frame_id = "/world";
   m_glb_plan_timer = m_nh.createTimer(ros::Duration(0.333), &NF1MidPlanner::plan, this);
-
-  m_nf1_map_msg.drive_type = cpc_aux_mapping::grid_map::TYPE_NOTMOVING;
 }
 
 NF1MidPlanner::~NF1MidPlanner()
@@ -55,13 +52,21 @@ void NF1MidPlanner::set_curr_act_path()
 {
   m_curr_act_path.clear();
   cpc_motion_planning::path_action &pa = m_path.actions[m_curr_act_id];
-  for (size_t i=0; i<pa.x.size(); i++)
+
+  if (pa.x.size() > 0)
   {
-    m_curr_act_path.push_back(make_float2(pa.x[i],pa.y[i]));
+    for (size_t i=0; i<pa.x.size(); i++)
+    {
+      m_curr_act_path.push_back(make_float2(pa.x[i],pa.y[i]));
+    }
+    float3 act_path_goal = make_float3(m_curr_act_path.back().x, m_curr_act_path.back().y, 0);
+    set_nf1_task_info(pa.type, m_path.request_ctt, m_curr_act_id, act_path_goal);
+    m_closest_pnt_idx = -1;
   }
-  publish_path_global_goal();
-  m_closest_pnt_idx = -1;
-  m_nf1_map_msg.drive_type = pa.type;
+  else
+  {
+    // TODO: jump to the next act here
+  }
 }
 
 void NF1MidPlanner::setup_map_msg(cpc_aux_mapping::grid_map &msg, GridGraph* map, bool resize)
@@ -108,7 +113,7 @@ void NF1MidPlanner::map_call_back(const cpc_aux_mapping::grid_map::ConstPtr& msg
   if (m_d_map == nullptr)
   {
     m_d_map = new Dijkstra(msg->x_size,msg->y_size,msg->z_size);
-    setup_map_msg(m_nf1_map_msg,m_d_map,true);
+    setup_map_msg(m_nf1_msg.nf1,m_d_map,true);
     m_a_map = new Astar(msg->x_size,msg->y_size,msg->z_size);
 
     //--- for line map init---
@@ -176,9 +181,9 @@ void NF1MidPlanner::plan(const ros::TimerEvent&)
                 << " ms" << std::endl;
 
   // publish the nf1 and mid_goal
-  setup_map_msg(m_nf1_map_msg,m_d_map,false);
-  copy_map_to_msg(m_nf1_map_msg,m_d_map);
-  m_nf1_pub.publish(m_nf1_map_msg);
+  setup_map_msg(m_nf1_msg.nf1,m_d_map,false);
+  copy_map_to_msg(m_nf1_msg.nf1,m_d_map);
+  m_nf1_pub.publish(m_nf1_msg);
   publish_mid_goal(tgt);
 
   //show the nf1 map
@@ -204,8 +209,6 @@ void NF1MidPlanner::prepare_line_map(const std::vector<float2> &path)
 void NF1MidPlanner::load_straight_line_mission(const std_msgs::Int32::ConstPtr &msg)
 {
   // Read in the data files
-  m_line_following_mode = true;
-  m_received_goal = true;
   std::ifstream corridor_file;
   float data[2];
   std::vector<float2> wps;
@@ -228,16 +231,17 @@ void NF1MidPlanner::load_straight_line_mission(const std_msgs::Int32::ConstPtr &
   if(wps.size()>1)
   {
     show_path(wps);
+    m_curr_act_path.clear();
+    for (size_t i=0; i<wps.size()-1;i++)
+    {
+      m_curr_act_path = cascade_vector(m_curr_act_path,make_straight_path(wps[i],wps[i+1]));
+    }
+    float3 act_path_goal = make_float3(m_curr_act_path.back().x, m_curr_act_path.back().y, 0);
+    set_nf1_task_info(cpc_aux_mapping::nf1_task::TYPE_FORWARD,0,0,act_path_goal);
+    m_closest_pnt_idx = -1;
+    m_line_following_mode = true;
+    m_received_goal = true;
   }
-
-  m_curr_act_path.clear();
-  for (size_t i=0; i<wps.size()-1;i++)
-  {
-    m_curr_act_path = cascade_vector(m_curr_act_path,make_straight_path(wps[i],wps[i+1]));
-  }
-  publish_path_global_goal();
-
-  m_closest_pnt_idx = -1;
 }
 
 void NF1MidPlanner::slam_odo_call_back(const nav_msgs::Odometry::ConstPtr &msg)

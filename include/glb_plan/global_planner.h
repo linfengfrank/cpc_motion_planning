@@ -112,6 +112,7 @@ public:
   void publish_glb_path()
   {
     cpc_motion_planning::path glb_path;
+    glb_path.request_ctt = m_glb_path_id++;
 
     //--- set the path action
     cpc_motion_planning::path_action pa;
@@ -198,6 +199,7 @@ public:
     return in - floor((in + M_PI) / (2 * M_PI)) * 2 * M_PI;
   }
 public:
+  int m_glb_path_id;
   std::vector<CUDA_GEO::pos> m_glb_path;
   ros::Timer m_show_map_timer;
   PointCloud::Ptr m_map_pcl;

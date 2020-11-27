@@ -15,7 +15,6 @@ NF1LocalPlanner::NF1LocalPlanner():
   m_goal_sub = m_nh.subscribe("/set_global_goal",1,&NF1LocalPlanner::goal_call_back, this);
   m_mid_goal_sub = m_nh.subscribe("/set_middle_goal",1,&NF1LocalPlanner::mid_goal_call_back, this);
   m_nf1_sub = m_nh.subscribe("/nf1",1,&NF1LocalPlanner::nf1_call_back, this);
-  m_line_tgt_sub = m_nh.subscribe("/line_target",1,&NF1LocalPlanner::line_target_call_back,this);
   m_hybrid_path_sub = m_nh.subscribe("/hybrid_path",1,&NF1LocalPlanner::hybrid_path_call_back,this);
 
   m_collision_check_client = m_nh.serviceClient<cpc_motion_planning::collision_check>("collision_check");
@@ -54,29 +53,36 @@ NF1LocalPlanner::~NF1LocalPlanner()
   delete m_pso_planner;
 }
 
-void NF1LocalPlanner::nf1_call_back(const cpc_aux_mapping::grid_map::ConstPtr &msg)
+void NF1LocalPlanner::nf1_call_back(const cpc_aux_mapping::nf1_task::ConstPtr &msg)
 {
   m_goal_received = true;
   if (m_nf1_map == nullptr)
   {
-    CUDA_GEO::pos origin(msg->x_origin,msg->y_origin,msg->z_origin);
-    int3 m_nf1_map_size = make_int3(msg->x_size,msg->y_size,msg->z_size);
-    m_nf1_map = new NF1MapDT(origin,msg->width,m_nf1_map_size);
+    CUDA_GEO::pos origin(msg->nf1.x_origin,msg->nf1.y_origin,msg->nf1.z_origin);
+    int3 m_nf1_map_size = make_int3(msg->nf1.x_size,msg->nf1.y_size,msg->nf1.z_size);
+    m_nf1_map = new NF1MapDT(origin,msg->nf1.width,m_nf1_map_size);
     m_nf1_map->setup_device();
   }
   else
   {
-    m_nf1_map->m_origin = CUDA_GEO::pos(msg->x_origin,msg->y_origin,msg->z_origin);
-    m_nf1_map->m_grid_step = msg->width;
+    m_nf1_map->m_origin = CUDA_GEO::pos(msg->nf1.x_origin,msg->nf1.y_origin,msg->nf1.z_origin);
+    m_nf1_map->m_grid_step = msg->nf1.width;
   }
-  CUDA_MEMCPY_H2D(m_nf1_map->m_nf1_map,msg->payload8.data(),static_cast<size_t>(m_nf1_map->m_byte_size));
+  CUDA_MEMCPY_H2D(m_nf1_map->m_nf1_map,msg->nf1.payload8.data(),static_cast<size_t>(m_nf1_map->m_byte_size));
   m_pso_planner->m_eva.m_nf1_map = *m_nf1_map;
   m_pso_planner->m_eva.m_nf1_received = true;
 
-  if (msg->drive_type == cpc_aux_mapping::grid_map::TYPE_FORWARD)
+  if (msg->drive_type == cpc_aux_mapping::nf1_task::TYPE_FORWARD)
     m_pso_planner->m_eva.is_forward = true;
-  else if (msg->drive_type == cpc_aux_mapping::grid_map::TYPE_BACKWARD)
+  else if (msg->drive_type == cpc_aux_mapping::nf1_task::TYPE_BACKWARD)
     m_pso_planner->m_eva.is_forward = false;
+
+  m_goal.s.p.x = msg->goal_x;
+  m_goal.s.p.y = msg->goal_y;
+  m_goal.s.theta = msg->goal_theta;
+  m_goal.path_id = msg->path_id;
+  m_goal.act_id = msg->act_id;
+  m_goal.reaching_radius = 0.5f;
 }
 
 void NF1LocalPlanner::plan_call_back(const ros::TimerEvent&)
@@ -123,28 +129,6 @@ void NF1LocalPlanner::plan_call_back(const ros::TimerEvent&)
   m_plan_cycle++;
 }
 
-void NF1LocalPlanner::line_target_call_back(const cpc_motion_planning::line_target::ConstPtr &msg)
-{
-  m_goal_received = true;
-  m_goal.s.p.x = msg->target_pose.pose.position.x;
-  m_goal.s.p.y = msg->target_pose.pose.position.y;
-
-  double phi,theta,psi;
-
-  tf::Quaternion q( msg->target_pose.pose.orientation.x,
-                    msg->target_pose.pose.orientation.y,
-                    msg->target_pose.pose.orientation.z,
-                    msg->target_pose.pose.orientation.w);
-  tf::Matrix3x3 m(q);
-  m.getRPY(phi, theta, psi);
-
-  m_goal.s.theta = psi;
-  m_goal.id++;
-
-  m_goal.do_turning = msg->do_turning;
-  m_goal.reaching_radius = msg->reaching_radius;
-}
-
 void NF1LocalPlanner::goal_call_back(const geometry_msgs::PoseStamped::ConstPtr &msg)
 {
   m_goal_received = true;
@@ -162,9 +146,7 @@ void NF1LocalPlanner::goal_call_back(const geometry_msgs::PoseStamped::ConstPtr 
 
 
   m_goal.s.theta = psi;
-  m_goal.id++;
-
-  m_goal.do_turning = true;
+  m_goal.act_id++;
   m_goal.reaching_radius = 1.0f;
 }
 
@@ -239,16 +221,11 @@ void NF1LocalPlanner::do_normal()
     //Goto: Pos_reached
     if(is_pos_reached(m_pso_planner->m_model.get_ini_state(),m_goal.s,m_goal.reaching_radius))
     {
-      if(m_goal.do_turning)
-      {
-        m_status = UGV::POS_REACHED;
-      }
-      else
-      {
-        std_msgs::Int32 reach_msg;
-        reach_msg.data = m_goal.id;
-        m_tgt_reached_pub.publish(reach_msg);
-      }
+//        m_status = UGV::POS_REACHED;
+
+//        std_msgs::Int32 reach_msg;
+//        reach_msg.data = m_goal.act_id;
+//        m_tgt_reached_pub.publish(reach_msg);
     }
   }
 }
@@ -374,18 +351,20 @@ void NF1LocalPlanner::do_pos_reached()
   cycle_init();
   std::cout<<"POS_REACHED"<<std::endl;
 
+  full_stop_trajectory(m_traj,m_pso_planner->m_model.get_ini_state());
+
   // Planning
-  m_pso_planner->m_eva.m_pure_turning = true;
-  calculate_trajectory<SIMPLE_UGV>(m_pso_planner, m_traj);
-  if(is_heading_reached(m_pso_planner->m_model.get_ini_state(),m_goal.s))
-  {
-    std_msgs::Int32 reach_msg;
-    reach_msg.data = m_goal.id;
-    m_tgt_reached_pub.publish(reach_msg);
-  }
+//  m_pso_planner->m_eva.m_pure_turning = true;
+//  calculate_trajectory<SIMPLE_UGV>(m_pso_planner, m_traj);
+//  if(is_heading_reached(m_pso_planner->m_model.get_ini_state(),m_goal.s))
+//  {
+//    std_msgs::Int32 reach_msg;
+//    reach_msg.data = m_goal.act_id;
+//    m_tgt_reached_pub.publish(reach_msg);
+//  }
 
   //Goto: Normal (New target)
-  if (m_goal.id != m_pso_planner->m_eva.m_goal.id)
+  if (m_goal.act_id != m_pso_planner->m_eva.m_goal.act_id || m_goal.path_id != m_pso_planner->m_eva.m_goal.path_id)
   {
     m_status = UGV::NORMAL;
   }
@@ -412,7 +391,7 @@ void NF1LocalPlanner::do_dropoff()
   full_stop_trajectory(m_traj,m_pso_planner->m_model.get_ini_state());
 
   //Goto: Normal (New target)
-  if (m_goal.id != m_pso_planner->m_eva.m_goal.id)
+  if (m_goal.act_id != m_pso_planner->m_eva.m_goal.act_id || m_goal.path_id != m_pso_planner->m_eva.m_goal.path_id)
   {
     m_status = UGV::NORMAL;
   }

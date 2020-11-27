@@ -1,6 +1,7 @@
 #include "glb_plan/global_planner.h"
 #include "tf/tf.h"
 GlobalPlanner::GlobalPlanner():
+  m_glb_path_id(0),
   m_map_loaded(false),
   m_odom_received(false)
 {

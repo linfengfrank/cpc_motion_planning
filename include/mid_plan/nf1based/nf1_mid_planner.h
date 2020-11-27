@@ -22,6 +22,7 @@
 #include <nav_msgs/Odometry.h>
 #include <cpc_motion_planning/path.h>
 #include <tf/tf.h>
+#include <cpc_aux_mapping/nf1_task.h>
 #define SHOWPC
 
 class NF1MidPlanner
@@ -61,12 +62,11 @@ private:
   ros::Publisher m_pc_pub;
   ros::Publisher m_mid_goal_pub;
   ros::Publisher m_straight_line_vis_pub;
-  ros::Publisher m_glb_goal_pub;
 
   Dijkstra *m_d_map=nullptr;
   Astar *m_a_map=nullptr;
   ros::Timer m_glb_plan_timer;
-  cpc_aux_mapping::grid_map m_nf1_map_msg;
+  cpc_aux_mapping::nf1_task m_nf1_msg;
   bool m_received_map;
   bool m_received_goal;
   bool m_line_following_mode;
@@ -84,21 +84,16 @@ private:
 
   // helper functions
 private:
-  void publish_path_global_goal()
+  void set_nf1_task_info(unsigned char type, int path_id, int act_id, float3 goal)
   {
-    if(m_curr_act_path.size()>0)
-    {
-      geometry_msgs::PoseStamped glb_goal_msg;
-      glb_goal_msg.header.frame_id="world";
-      glb_goal_msg.pose.position.x = m_curr_act_path.back().x;
-      glb_goal_msg.pose.position.y = m_curr_act_path.back().y;
-      glb_goal_msg.pose.position.z = 0;
-      tf::Quaternion quat;
-      quat.setRPY( 0, 0, m_curr_pose.z );
-      tf::quaternionTFToMsg(quat, glb_goal_msg.pose.orientation);
-      m_glb_goal_pub.publish(glb_goal_msg);
-    }
+    m_nf1_msg.drive_type = type;
+    m_nf1_msg.act_id = act_id;
+    m_nf1_msg.path_id = path_id;
+    m_nf1_msg.goal_x = goal.x;
+    m_nf1_msg.goal_y = goal.y;
+    m_nf1_msg.goal_theta = goal.z;
   }
+
   void publish_mid_goal(CUDA_GEO::coord mid_goal)
   {
     geometry_msgs::PoseStamped mid_goal_pose;
