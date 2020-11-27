@@ -157,12 +157,14 @@ void NF1MidPlanner::map_call_back(const cpc_aux_mapping::grid_map::ConstPtr& msg
 
 void NF1MidPlanner::goal_call_back(const geometry_msgs::PoseStamped::ConstPtr &msg)
 {
+  m_received_goal= true;
   set_goal(CUDA_GEO::pos(msg->pose.position.x, msg->pose.position.y, msg->pose.position.z));
+  float3 act_path_goal = make_float3(m_goal.x, m_goal.y, 0);
+  set_nf1_task_info(cpc_aux_mapping::nf1_task::TYPE_FORWARD, 0, m_curr_act_id++, act_path_goal);
 }
 
 void NF1MidPlanner::set_goal(CUDA_GEO::pos goal)
 {
-  m_received_goal= true;
   m_goal = goal;
 }
 
