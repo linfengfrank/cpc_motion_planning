@@ -7,11 +7,11 @@
 
 NF1LocalPlanner::NF1LocalPlanner():
   m_goal_received(false),
+  m_task_is_new(false),
   cycle_initialized(false),
   m_braking_start_cycle(0),
   m_nf1_map(nullptr)
 {
-  m_goal_sub = m_nh.subscribe("/set_global_goal",1,&NF1LocalPlanner::goal_call_back, this);
   m_nf1_sub = m_nh.subscribe("/nf1",1,&NF1LocalPlanner::nf1_call_back, this);
   m_hybrid_path_sub = m_nh.subscribe("/hybrid_path",1,&NF1LocalPlanner::hybrid_path_call_back,this);
 
@@ -51,6 +51,7 @@ NF1LocalPlanner::~NF1LocalPlanner()
 void NF1LocalPlanner::nf1_call_back(const cpc_aux_mapping::nf1_task::ConstPtr &msg)
 {
   m_goal_received = true;
+  // setup the map
   if (m_nf1_map == nullptr)
   {
     CUDA_GEO::pos origin(msg->nf1.x_origin,msg->nf1.y_origin,msg->nf1.z_origin);
@@ -67,17 +68,37 @@ void NF1LocalPlanner::nf1_call_back(const cpc_aux_mapping::nf1_task::ConstPtr &m
   m_pso_planner->m_eva.m_nf1_map = *m_nf1_map;
   m_pso_planner->m_eva.m_nf1_received = true;
 
+  // setup the drive type
   if (msg->drive_type == cpc_aux_mapping::nf1_task::TYPE_FORWARD)
+  {
+    m_pso_planner->m_eva.m_pure_turning = false;
     m_pso_planner->m_eva.is_forward = true;
+  }
   else if (msg->drive_type == cpc_aux_mapping::nf1_task::TYPE_BACKWARD)
+  {
+    m_pso_planner->m_eva.m_pure_turning = false;
     m_pso_planner->m_eva.is_forward = false;
+  }
+  else if (msg->drive_type == cpc_aux_mapping::nf1_task::TYPE_ROTATE)
+  {
+    m_pso_planner->m_eva.m_pure_turning = true;
+    m_pso_planner->m_eva.is_forward = true;
+  }
 
+  // setup the goal
   m_goal.s.p.x = msg->goal_x;
   m_goal.s.p.y = msg->goal_y;
   m_goal.s.theta = msg->goal_theta;
   m_goal.path_id = msg->path_id;
   m_goal.act_id = msg->act_id;
   m_goal.reaching_radius = 0.5f;
+
+  if (!check_tgt_is_same(m_goal, m_pso_planner->m_eva.m_goal))
+  {
+    m_task_is_new = true;
+  }
+
+  m_pso_planner->m_eva.setTarget(m_goal);
 }
 
 void NF1LocalPlanner::plan_call_back(const ros::TimerEvent&)
@@ -124,27 +145,6 @@ void NF1LocalPlanner::plan_call_back(const ros::TimerEvent&)
   m_plan_cycle++;
 }
 
-void NF1LocalPlanner::goal_call_back(const geometry_msgs::PoseStamped::ConstPtr &msg)
-{
-  m_goal_received = true;
-  m_goal.s.p.x = msg->pose.position.x;
-  m_goal.s.p.y = msg->pose.position.y;
-
-  double phi,theta,psi;
-
-  tf::Quaternion q( msg->pose.orientation.x,
-                    msg->pose.orientation.y,
-                    msg->pose.orientation.z,
-                    msg->pose.orientation.w);
-  tf::Matrix3x3 m(q);
-  m.getRPY(phi, theta, psi);
-
-
-  m_goal.s.theta = psi;
-  m_goal.act_id++;
-  m_goal.reaching_radius = 1.0f;
-}
-
 void NF1LocalPlanner::hybrid_path_call_back(const cpc_motion_planning::path::ConstPtr &msg)
 {
   if (msg->request_ctt != m_plan_request_cycle)
@@ -172,8 +172,7 @@ void NF1LocalPlanner::do_normal()
   std::cout<<"NORMAL"<<std::endl;
 
   //Planning
-  m_pso_planner->m_eva.m_pure_turning = false;
-  m_pso_planner->m_eva.setTarget(m_goal);
+  m_task_is_new = false;
   calculate_trajectory<SIMPLE_UGV>(m_pso_planner, m_traj);
 
   //Goto: Braking
@@ -209,7 +208,7 @@ void NF1LocalPlanner::do_normal()
     //Goto: Pos_reached
     if(is_pos_reached(m_pso_planner->m_model.get_ini_state(),m_goal.s,m_goal.reaching_radius))
     {
-//        m_status = UGV::POS_REACHED;
+        m_status = UGV::POS_REACHED;
 
 //        std_msgs::Int32 reach_msg;
 //        reach_msg.data = m_goal.act_id;
@@ -300,7 +299,6 @@ void NF1LocalPlanner::do_full_stuck()
   std::cout<<"FULL STUCK"<<std::endl;
   //Planning
   m_pso_planner->m_eva.m_stuck = true;
-  m_pso_planner->m_eva.setTarget(m_goal);
   calculate_trajectory<SIMPLE_UGV>(m_pso_planner, m_traj);
 
   //Goto: Normal
@@ -341,18 +339,8 @@ void NF1LocalPlanner::do_pos_reached()
 
   full_stop_trajectory(m_traj,m_pso_planner->m_model.get_ini_state());
 
-  // Planning
-//  m_pso_planner->m_eva.m_pure_turning = true;
-//  calculate_trajectory<SIMPLE_UGV>(m_pso_planner, m_traj);
-//  if(is_heading_reached(m_pso_planner->m_model.get_ini_state(),m_goal.s))
-//  {
-//    std_msgs::Int32 reach_msg;
-//    reach_msg.data = m_goal.act_id;
-//    m_tgt_reached_pub.publish(reach_msg);
-//  }
-
   //Goto: Normal (New target)
-  if (m_goal.act_id != m_pso_planner->m_eva.m_goal.act_id || m_goal.path_id != m_pso_planner->m_eva.m_goal.path_id)
+  if (m_task_is_new)
   {
     m_status = UGV::NORMAL;
   }
@@ -379,7 +367,7 @@ void NF1LocalPlanner::do_dropoff()
   full_stop_trajectory(m_traj,m_pso_planner->m_model.get_ini_state());
 
   //Goto: Normal (New target)
-  if (m_goal.act_id != m_pso_planner->m_eva.m_goal.act_id || m_goal.path_id != m_pso_planner->m_eva.m_goal.path_id)
+  if (m_task_is_new)
   {
     m_status = UGV::NORMAL;
   }
