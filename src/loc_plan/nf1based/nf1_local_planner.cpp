@@ -7,13 +7,11 @@
 
 NF1LocalPlanner::NF1LocalPlanner():
   m_goal_received(false),
-  m_mid_goal_received(false),
   cycle_initialized(false),
   m_braking_start_cycle(0),
   m_nf1_map(nullptr)
 {
   m_goal_sub = m_nh.subscribe("/set_global_goal",1,&NF1LocalPlanner::goal_call_back, this);
-  m_mid_goal_sub = m_nh.subscribe("/set_middle_goal",1,&NF1LocalPlanner::mid_goal_call_back, this);
   m_nf1_sub = m_nh.subscribe("/nf1",1,&NF1LocalPlanner::nf1_call_back, this);
   m_hybrid_path_sub = m_nh.subscribe("/hybrid_path",1,&NF1LocalPlanner::hybrid_path_call_back,this);
 
@@ -27,9 +25,6 @@ NF1LocalPlanner::NF1LocalPlanner():
 
   m_pso_planner = new PSO::Planner<SIMPLE_UGV>(120,50,3);
   m_pso_planner->initialize();
-
-
-  m_mid_goal=make_float2(0,0);
 
   m_ref_v = 0.0f;
   m_ref_w = 0.0f;
@@ -148,13 +143,6 @@ void NF1LocalPlanner::goal_call_back(const geometry_msgs::PoseStamped::ConstPtr 
   m_goal.s.theta = psi;
   m_goal.act_id++;
   m_goal.reaching_radius = 1.0f;
-}
-
-void NF1LocalPlanner::mid_goal_call_back(const geometry_msgs::PoseStamped::ConstPtr &msg)
-{
-  m_mid_goal_received = true;
-  m_mid_goal.x = msg->pose.position.x;
-  m_mid_goal.y = msg->pose.position.y;
 }
 
 void NF1LocalPlanner::hybrid_path_call_back(const cpc_motion_planning::path::ConstPtr &msg)

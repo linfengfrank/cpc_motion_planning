@@ -34,14 +34,12 @@ private:
 private:
   void plan_call_back(const ros::TimerEvent&);
   void goal_call_back(const geometry_msgs::PoseStamped::ConstPtr &msg);
-  void mid_goal_call_back(const geometry_msgs::PoseStamped::ConstPtr &msg);
   void nf1_call_back(const cpc_aux_mapping::nf1_task::ConstPtr &msg);
   void cycle_init();
   void hybrid_path_call_back(const cpc_motion_planning::path::ConstPtr &msg);
 
 private:
   ros::Subscriber m_goal_sub;
-  ros::Subscriber m_mid_goal_sub;
   ros::Subscriber m_nf1_sub;
   ros::Subscriber m_hybrid_path_sub;
   ros::Timer m_planning_timer;
@@ -53,8 +51,6 @@ private:
   bool m_goal_received;
   PSO::Planner<SIMPLE_UGV> *m_pso_planner;
   UGV::NF1Evaluator::Target m_goal;
-  float2 m_mid_goal;
-  bool m_mid_goal_received;
   float m_ref_v, m_ref_w, m_ref_theta;
   cpc_motion_planning::ref_data m_ref_msg;
   int m_v_err_reset_ctt, m_w_err_reset_ctt, m_tht_err_reset_ctt;
