@@ -200,8 +200,12 @@ void NF1MidPlanner::plan(const ros::TimerEvent&)
                 << " ms" << std::endl;
 
   // publish the nf1 and mid_goal
+  CUDA_GEO::pos carrot = m_d_map->coord2pos(tgt);
   setup_map_msg(m_nf1_msg.nf1,m_d_map,false);
   copy_map_to_msg(m_nf1_msg.nf1,m_d_map);
+  m_nf1_msg.carrot_x = carrot.x;
+  m_nf1_msg.carrot_y = carrot.y;
+  m_nf1_msg.carrot_theta = 0;
   m_nf1_pub.publish(m_nf1_msg);
   publish_mid_goal(tgt);
 

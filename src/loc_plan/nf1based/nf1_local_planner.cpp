@@ -86,13 +86,17 @@ void NF1LocalPlanner::nf1_call_back(const cpc_aux_mapping::nf1_task::ConstPtr &m
     m_pso_planner->m_eva.is_forward = true;
   }
 
-  // setup the goal
+  // setup the goal and carrot
   m_goal.s.p.x = msg->goal_x;
   m_goal.s.p.y = msg->goal_y;
   m_goal.s.theta = msg->goal_theta;
   m_goal.path_id = msg->path_id;
   m_goal.act_id = msg->act_id;
   m_goal.reaching_radius = 0.5f;
+
+  m_carrot.p.x = msg->carrot_x;
+  m_carrot.p.y = msg->carrot_y;
+  m_carrot.theta = msg->carrot_theta;
 
   if (!check_tgt_is_same(m_goal, m_pso_planner->m_eva.m_goal))
   {
@@ -186,7 +190,7 @@ void NF1LocalPlanner::do_normal()
   else
   {
     //Goto: Stuck
-    if(is_stuck(m_traj,m_goal.s) || is_stuck_lowpass(m_pso_planner->m_model.get_ini_state(), m_goal.s))
+    if(is_stuck(m_traj,m_carrot) || is_stuck_lowpass(m_pso_planner->m_model.get_ini_state(),m_carrot))
     {
       m_status = UGV::STUCK;
       m_stuck_submode = STUCK_SUB_MODE::FULL_STUCK;

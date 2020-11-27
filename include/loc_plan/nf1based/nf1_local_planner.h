@@ -57,6 +57,7 @@ private:
   bool m_task_is_new;
   PSO::Planner<SIMPLE_UGV> *m_pso_planner;
   UGV::NF1Evaluator::Target m_goal;
+  UGV::UGVModel::State m_carrot;
   float m_ref_v, m_ref_w, m_ref_theta;
   cpc_motion_planning::ref_data m_ref_msg;
   int m_v_err_reset_ctt, m_w_err_reset_ctt, m_tht_err_reset_ctt;
