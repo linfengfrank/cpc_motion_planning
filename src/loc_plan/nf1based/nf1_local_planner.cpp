@@ -4,6 +4,7 @@
 #include <std_msgs/String.h>
 #include <cpc_motion_planning/plan_request.h>
 #include <cpc_motion_planning/collision_check.h>
+#include <std_msgs/Int32MultiArray.h>
 
 NF1LocalPlanner::NF1LocalPlanner():
   m_goal_received(false),
@@ -18,7 +19,7 @@ NF1LocalPlanner::NF1LocalPlanner():
   m_collision_check_client = m_nh.serviceClient<cpc_motion_planning::collision_check>("collision_check");
   m_ref_pub = m_nh.advertise<cpc_motion_planning::ref_data>("ref_traj",1);
   m_status_pub = m_nh.advertise<std_msgs::String>("ref_status_string",1);
-  m_tgt_reached_pub = m_nh.advertise<std_msgs::Int32>("target_reached",1);
+  m_tgt_reached_pub = m_nh.advertise<std_msgs::Int32MultiArray>("target_reached",1);
   m_stuck_plan_request_pub = m_nh.advertise<cpc_motion_planning::plan_request>("plan_request",1);
 
   m_planning_timer = m_nh.createTimer(ros::Duration(PSO::PSO_REPLAN_DT), &NF1LocalPlanner::plan_call_back, this);
@@ -209,10 +210,10 @@ void NF1LocalPlanner::do_normal()
     if(is_pos_reached(m_pso_planner->m_model.get_ini_state(),m_goal.s,m_goal.reaching_radius))
     {
         m_status = UGV::POS_REACHED;
-
-//        std_msgs::Int32 reach_msg;
-//        reach_msg.data = m_goal.act_id;
-//        m_tgt_reached_pub.publish(reach_msg);
+        std_msgs::Int32MultiArray reach_msg;
+        reach_msg.data.push_back(m_goal.path_id);
+        reach_msg.data.push_back(m_goal.act_id);
+        m_tgt_reached_pub.publish(reach_msg);
     }
   }
 }

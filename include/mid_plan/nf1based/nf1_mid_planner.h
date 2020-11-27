@@ -23,6 +23,7 @@
 #include <cpc_motion_planning/path.h>
 #include <tf/tf.h>
 #include <cpc_aux_mapping/nf1_task.h>
+#include <std_msgs/Int32MultiArray.h>
 #define SHOWPC
 
 class NF1MidPlanner
@@ -40,6 +41,7 @@ private:
   void goal_call_back(const geometry_msgs::PoseStamped::ConstPtr &msg);
   void glb_path_call_back(const cpc_motion_planning::path::ConstPtr &msg);
   void slam_odo_call_back(const nav_msgs::Odometry::ConstPtr &msg);
+  void goal_reached_call_back(const std_msgs::Int32MultiArray::ConstPtr &msg);
   void set_goal(CUDA_GEO::pos goal);
   void plan(const ros::TimerEvent&);
   void prepare_line_map(const std::vector<float2> &path);
@@ -57,6 +59,7 @@ private:
   ros::Subscriber m_straight_line_mission_sub;
   ros::Subscriber m_slam_odom_sub;
   ros::Subscriber m_glb_path_sub;
+  ros::Subscriber m_goal_reach_sub;
 
   ros::Publisher m_nf1_pub;
   ros::Publisher m_pc_pub;

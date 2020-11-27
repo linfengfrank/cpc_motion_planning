@@ -13,6 +13,8 @@ NF1MidPlanner::NF1MidPlanner():
   m_straight_line_mission_sub = m_nh.subscribe("/start_mission", 1, &NF1MidPlanner::load_straight_line_mission, this);
   m_slam_odom_sub = m_nh.subscribe("/slam_odom", 1, &NF1MidPlanner::slam_odo_call_back, this);
   m_glb_path_sub = m_nh.subscribe("/global_path",1, &NF1MidPlanner::glb_path_call_back, this);
+  m_goal_reach_sub = m_nh.subscribe("/target_reached",1, &NF1MidPlanner::goal_reached_call_back, this);
+
 
   m_pc_pub = m_nh.advertise<PointCloud> ("/nf1_vis", 1);
   m_mid_goal_pub = m_nh.advertise<geometry_msgs::PoseStamped> ("/mid_goal", 1);
@@ -37,6 +39,18 @@ NF1MidPlanner::~NF1MidPlanner()
   }
 }
 
+void NF1MidPlanner::goal_reached_call_back(const std_msgs::Int32MultiArray::ConstPtr &msg)
+{
+  int path_id = msg->data[0];
+  int act_id = msg->data[1];
+  if (path_id == m_path.request_ctt && act_id == m_curr_act_id
+      && m_curr_act_id+1 < m_path.actions.size())
+  {
+      m_curr_act_id++;
+      set_curr_act_path();
+  }
+}
+
 void NF1MidPlanner::glb_path_call_back(const cpc_motion_planning::path::ConstPtr &msg)
 {
   // Read in the data files
@@ -44,17 +58,15 @@ void NF1MidPlanner::glb_path_call_back(const cpc_motion_planning::path::ConstPtr
   m_received_goal = true;
   m_path = *msg;
   m_curr_act_id = 0;
-
   set_curr_act_path();
 }
 
 void NF1MidPlanner::set_curr_act_path()
 {
-  m_curr_act_path.clear();
   cpc_motion_planning::path_action &pa = m_path.actions[m_curr_act_id];
-
   if (pa.x.size() > 0)
   {
+    m_curr_act_path.clear();
     for (size_t i=0; i<pa.x.size(); i++)
     {
       m_curr_act_path.push_back(make_float2(pa.x[i],pa.y[i]));
@@ -65,7 +77,12 @@ void NF1MidPlanner::set_curr_act_path()
   }
   else
   {
-    // TODO: jump to the next act here
+    // jump to the next act
+    if (m_curr_act_id+1 < m_path.actions.size())
+    {
+        m_curr_act_id++;
+        set_curr_act_path();
+    }
   }
 }
 
