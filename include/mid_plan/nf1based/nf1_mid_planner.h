@@ -20,7 +20,7 @@
 #include <std_msgs/Int32.h>
 #include <visualization_msgs/Marker.h>
 #include <nav_msgs/Odometry.h>
-#include <cpc_motion_planning/path_action.h>
+#include <cpc_motion_planning/path.h>
 #include <tf/tf.h>
 #define SHOWPC
 
@@ -37,7 +37,7 @@ private:
   void copy_map_to_msg(cpc_aux_mapping::grid_map &msg, GridGraph* map);
   void map_call_back(const cpc_aux_mapping::grid_map::ConstPtr& msg);
   void goal_call_back(const geometry_msgs::PoseStamped::ConstPtr &msg);
-  void glb_path_call_back(const cpc_motion_planning::path_action::ConstPtr &msg);
+  void glb_path_call_back(const cpc_motion_planning::path::ConstPtr &msg);
   void slam_odo_call_back(const nav_msgs::Odometry::ConstPtr &msg);
   void set_goal(CUDA_GEO::pos goal);
   void plan(const ros::TimerEvent&);
@@ -45,6 +45,7 @@ private:
 
   void load_straight_line_mission(const std_msgs::Int32::ConstPtr &msg);
   std::vector<float2> get_local_path();
+  void set_curr_act_path();
 
 private:
   ros::NodeHandle m_nh;
@@ -74,7 +75,9 @@ private:
   EDTMap* m_line_map=nullptr;
   cuttHandle m_rot_plan[2];
 
-  std::vector<float2> m_path;
+  std::vector<float2> m_curr_act_path;
+  int m_curr_act_id;
+  cpc_motion_planning::path m_path;
   float3 m_curr_pose;
 
   int m_closest_pnt_idx;
@@ -83,12 +86,12 @@ private:
 private:
   void publish_path_global_goal()
   {
-    if(m_path.size()>0)
+    if(m_curr_act_path.size()>0)
     {
       geometry_msgs::PoseStamped glb_goal_msg;
       glb_goal_msg.header.frame_id="world";
-      glb_goal_msg.pose.position.x = m_path.back().x;
-      glb_goal_msg.pose.position.y = m_path.back().y;
+      glb_goal_msg.pose.position.x = m_curr_act_path.back().x;
+      glb_goal_msg.pose.position.y = m_curr_act_path.back().y;
       glb_goal_msg.pose.position.z = 0;
       tf::Quaternion quat;
       quat.setRPY( 0, 0, m_curr_pose.z );
@@ -227,67 +230,6 @@ private:
     AB.insert( AB.end(), B.begin(), B.end() );
     return AB;
   }
-
-  inline float pnt2line_dist(const float2 & c1, const float2 & c2, const float2 & c0)
-  {
-    float2 a = c1-c0;
-    float2 b = c2-c1;
-
-    float a_square = dot(a,a);
-    float b_square = dot(b,b);
-    float a_dot_b = a.x*b.x + a.y*b.y;
-
-    if (b_square < 1e-3)
-      return sqrtf(static_cast<float>(a_square));
-
-    return sqrtf(static_cast<float>(a_square*b_square - a_dot_b*a_dot_b)/static_cast<float>(b_square));
-  }
-
-  bool is_curvature_too_big(const std::vector<float2> &path, size_t start, size_t end)
-  {
-    float2 start_point = path[start];
-    float2 end_point = path[end];
-    float2 test_point;
-    float max_deviation = 0;
-    float deviation;
-    for (size_t i = start; i<=end; i++)
-    {
-      test_point = path[i];
-      deviation = pnt2line_dist(start_point, end_point, test_point);
-
-      if (deviation > max_deviation)
-        max_deviation = deviation;
-    }
-
-    if (max_deviation > 0.15f)
-      return true;
-    else
-      return false;
-  }
-
-  std::vector<float2> get_curvature_bounded_path(const std::vector<float2> &path)
-  {
-    std::vector<float2> output;
-    for (size_t i = 0; i< path.size(); i++)
-    {
-      if(!is_curvature_too_big(path,0,i))
-      {
-        output.push_back(path[i]);
-      }
-      else
-      {
-        break;
-      }
-    }
-    return output;
-  }
-
-  float in_pi(float in)
-  {
-    return in - floor((in + M_PI) / (2 * M_PI)) * 2 * M_PI;
-  }
-
-
 };
 
 #endif // NF1_MID_PLANNER_H

@@ -8,7 +8,7 @@
 #include <geometry_msgs/PoseStamped.h>
 #include <pcl_conversions/pcl_conversions.h>
 #include <pcl_ros/point_cloud.h>
-#include <cpc_motion_planning/path_action.h>
+#include <cpc_motion_planning/path.h>
 #include <glb_plan/path_smoother.h>
 class GlobalPlanner
 {
@@ -111,6 +111,9 @@ public:
 
   void publish_glb_path()
   {
+    cpc_motion_planning::path glb_path;
+
+    //--- set the path action
     cpc_motion_planning::path_action pa;
     for (size_t i=0; i<m_glb_path.size();i++)
     {
@@ -118,9 +121,82 @@ public:
       pa.y.push_back(m_glb_path[i].y);
       pa.theta.push_back(0);
     }
-    m_glb_path_pub.publish(pa);
+    //--- set the drive direction---
+    std::vector<float2> bc_path = get_curvature_bounded_path(m_glb_path);
+    if (bc_path.size() > 0 && m_odom_received)
+    {
+      float2 diff = bc_path.back() - make_float2(m_curr_pose.x, m_curr_pose.y);
+      float angle_diff = fabsf(in_pi(atan2f(diff.y, diff.x) - m_curr_pose.z));
+
+      if (angle_diff < M_PI/2.0)
+        pa.type = cpc_motion_planning::path_action::TYPE_FORWARD;
+      else
+        pa.type = cpc_motion_planning::path_action::TYPE_BACKWARD;
+
+      // publish the global map only when the drive direction can be set
+      glb_path.actions.push_back(pa);
+      m_glb_path_pub.publish(glb_path);
+    }
   }
 
+  inline float pnt2line_dist(const float2 & c1, const float2 & c2, const float2 & c0)
+  {
+    float2 a = c1-c0;
+    float2 b = c2-c1;
+
+    float a_square = dot(a,a);
+    float b_square = dot(b,b);
+    float a_dot_b = a.x*b.x + a.y*b.y;
+
+    if (b_square < 1e-3)
+      return sqrtf(static_cast<float>(a_square));
+
+    return sqrtf(static_cast<float>(a_square*b_square - a_dot_b*a_dot_b)/static_cast<float>(b_square));
+  }
+
+  bool is_curvature_too_big(const std::vector<CUDA_GEO::pos> &path, size_t start, size_t end)
+  {
+    float2 start_point = make_float2(path[start].x, path[start].y);
+    float2 end_point = make_float2(path[end].x, path[end].y);
+    float2 test_point;
+    float max_deviation = 0;
+    float deviation;
+    for (size_t i = start; i<=end; i++)
+    {
+      test_point = make_float2(path[i].x, path[i].y);
+      deviation = pnt2line_dist(start_point, end_point, test_point);
+
+      if (deviation > max_deviation)
+        max_deviation = deviation;
+    }
+
+    if (max_deviation > 0.15f)
+      return true;
+    else
+      return false;
+  }
+
+  std::vector<float2> get_curvature_bounded_path(const std::vector<CUDA_GEO::pos> &path)
+  {
+    std::vector<float2> output;
+    for (size_t i = 0; i< path.size(); i++)
+    {
+      if(!is_curvature_too_big(path,0,i))
+      {
+        output.push_back(make_float2(path[i].x,path[i].y));
+      }
+      else
+      {
+        break;
+      }
+    }
+    return output;
+  }
+
+  float in_pi(float in)
+  {
+    return in - floor((in + M_PI) / (2 * M_PI)) * 2 * M_PI;
+  }
 public:
   std::vector<CUDA_GEO::pos> m_glb_path;
   ros::Timer m_show_map_timer;

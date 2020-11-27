@@ -5,7 +5,8 @@
 NF1MidPlanner::NF1MidPlanner():
   m_received_map(false),
   m_received_goal(false),
-  m_line_following_mode(false)
+  m_line_following_mode(false),
+  m_curr_act_id(-1)
 {
   m_map_sub = m_nh.subscribe("/edt_map", 1, &NF1MidPlanner::map_call_back,this);
   m_glb_tgt_sub = m_nh.subscribe("/set_global_goal", 1, &NF1MidPlanner::goal_call_back, this);
@@ -39,31 +40,28 @@ NF1MidPlanner::~NF1MidPlanner()
   }
 }
 
-void NF1MidPlanner::glb_path_call_back(const cpc_motion_planning::path_action::ConstPtr &msg)
+void NF1MidPlanner::glb_path_call_back(const cpc_motion_planning::path::ConstPtr &msg)
 {
   // Read in the data files
   m_line_following_mode = true;
   m_received_goal = true;
+  m_path = *msg;
+  m_curr_act_id = 0;
 
-  m_path.clear();
-  for (size_t i=0; i<msg->x.size();i++)
+  set_curr_act_path();
+}
+
+void NF1MidPlanner::set_curr_act_path()
+{
+  m_curr_act_path.clear();
+  cpc_motion_planning::path_action &pa = m_path.actions[m_curr_act_id];
+  for (size_t i=0; i<pa.x.size(); i++)
   {
-    m_path.push_back(make_float2(msg->x[i],msg->y[i]));
+    m_curr_act_path.push_back(make_float2(pa.x[i],pa.y[i]));
   }
   publish_path_global_goal();
   m_closest_pnt_idx = -1;
-
-  std::vector<float2> local_path = get_curvature_bounded_path(get_local_path());
-  if (local_path.size() > 0 && m_received_odom)
-  {
-    float2 diff = local_path.back() - make_float2(m_curr_pose.x, m_curr_pose.y);
-    float angle_diff = fabsf(in_pi(atan2f(diff.y, diff.x) - m_curr_pose.z));
-
-    if (angle_diff < M_PI/2.0)
-      m_nf1_map_msg.drive_type = cpc_aux_mapping::grid_map::TYPE_FORWARD;
-    else
-      m_nf1_map_msg.drive_type = cpc_aux_mapping::grid_map::TYPE_BACKWARD;
-  }
+  m_nf1_map_msg.drive_type = pa.type;
 }
 
 void NF1MidPlanner::setup_map_msg(cpc_aux_mapping::grid_map &msg, GridGraph* map, bool resize)
@@ -232,10 +230,10 @@ void NF1MidPlanner::load_straight_line_mission(const std_msgs::Int32::ConstPtr &
     show_path(wps);
   }
 
-  m_path.clear();
+  m_curr_act_path.clear();
   for (size_t i=0; i<wps.size()-1;i++)
   {
-    m_path = cascade_vector(m_path,make_straight_path(wps[i],wps[i+1]));
+    m_curr_act_path = cascade_vector(m_curr_act_path,make_straight_path(wps[i],wps[i+1]));
   }
   publish_path_global_goal();
 
@@ -267,9 +265,9 @@ std::vector<float2> NF1MidPlanner::get_local_path()
 
   if(m_closest_pnt_idx == -1)
   {
-    for (size_t i =0;i<m_path.size();i++)
+    for (size_t i =0;i<m_curr_act_path.size();i++)
     {
-      diff = m_curr_pos - m_path[i];
+      diff = m_curr_pos - m_curr_act_path[i];
       dist = dot(diff,diff);
 
       if (dist < min_dist)
@@ -282,11 +280,11 @@ std::vector<float2> NF1MidPlanner::get_local_path()
   else
   {
     int start_idx = max(0,m_closest_pnt_idx-80);
-    int end_idx = min(m_path.size(),m_closest_pnt_idx+80);
+    int end_idx = min(m_curr_act_path.size(),m_closest_pnt_idx+80);
 
     for (int i = start_idx;i<end_idx;i++)
     {
-      diff = m_curr_pos - m_path[i];
+      diff = m_curr_pos - m_curr_act_path[i];
       dist = dot(diff,diff);
 
       if (dist < min_dist)
@@ -298,16 +296,16 @@ std::vector<float2> NF1MidPlanner::get_local_path()
   }
 
 //std::cout<<m_closest_pnt_idx<<std::endl;
-  int end_idx = min(m_path.size(),m_closest_pnt_idx+80);
+  int end_idx = min(m_curr_act_path.size(),m_closest_pnt_idx+80);
   std::vector<float2> local_path;
   CUDA_GEO::pos p;
   for (int i = m_closest_pnt_idx; i< end_idx; i++)
   {
-    p.x = m_path[i].x;
-    p.y = m_path[i].y;
-    if(m_d_map->isInside(p)) //&& !is_curvature_too_big(m_path,m_closest_pnt_idx,i))
+    p.x = m_curr_act_path[i].x;
+    p.y = m_curr_act_path[i].y;
+    if(m_d_map->isInside(p)) //&& !is_curvature_too_big(m_curr_act_path,m_closest_pnt_idx,i))
     {
-      local_path.push_back(m_path[i]);
+      local_path.push_back(m_curr_act_path[i]);
     }
     else
     {
@@ -317,7 +315,7 @@ std::vector<float2> NF1MidPlanner::get_local_path()
 
   if (local_path.size()==0)
   {
-    set_goal(CUDA_GEO::pos(m_path[m_closest_pnt_idx].x,m_path[m_closest_pnt_idx].y,0));
+    set_goal(CUDA_GEO::pos(m_curr_act_path[m_closest_pnt_idx].x,m_curr_act_path[m_closest_pnt_idx].y,0));
   }
   else
   {

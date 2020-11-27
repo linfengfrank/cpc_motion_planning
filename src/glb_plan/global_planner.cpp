@@ -7,7 +7,7 @@ GlobalPlanner::GlobalPlanner():
   m_glb_tgt_sub = m_nh.subscribe("/set_global_goal", 1, &GlobalPlanner::goal_call_back, this);
   m_slam_odom_sub = m_nh.subscribe("/slam_odom", 1, &GlobalPlanner::slam_odo_call_back, this);
 
-  m_glb_path_pub = m_nh.advertise<cpc_motion_planning::path_action>("/global_path",1);
+  m_glb_path_pub = m_nh.advertise<cpc_motion_planning::path>("/global_path",1);
 
   m_map_loaded = load_c_map();
   perform_edt();
