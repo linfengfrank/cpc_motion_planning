@@ -228,6 +228,65 @@ private:
     AB.insert( AB.end(), B.begin(), B.end() );
     return AB;
   }
+
+  inline float pnt2line_dist(const float2 & c1, const float2 & c2, const float2 & c0)
+  {
+    float2 a = c1-c0;
+    float2 b = c2-c1;
+
+    float a_square = dot(a,a);
+    float b_square = dot(b,b);
+    float a_dot_b = a.x*b.x + a.y*b.y;
+
+    if (b_square < 1e-3)
+      return sqrtf(static_cast<float>(a_square));
+
+    return sqrtf(static_cast<float>(a_square*b_square - a_dot_b*a_dot_b)/static_cast<float>(b_square));
+  }
+
+  bool is_curvature_too_big(const std::vector<float2> &path, size_t start, size_t end)
+  {
+    float2 start_point = path[start];
+    float2 end_point = path[end];
+    float2 test_point;
+    float max_deviation = 0;
+    float deviation;
+    for (size_t i = start; i<=end; i++)
+    {
+      test_point = path[i];
+      deviation = pnt2line_dist(start_point, end_point, test_point);
+
+      if (deviation > max_deviation)
+        max_deviation = deviation;
+    }
+
+    if (max_deviation > 0.15f)
+      return true;
+    else
+      return false;
+  }
+
+  std::vector<float2> get_curvature_bounded_path(const std::vector<float2> &path)
+  {
+    std::vector<float2> output;
+    for (size_t i = 0; i< path.size(); i++)
+    {
+      if(!is_curvature_too_big(path,0,i))
+      {
+        output.push_back(path[i]);
+      }
+      else
+      {
+        break;
+      }
+    }
+    return output;
+  }
+
+  float in_pi(float in)
+  {
+    return in - floor((in + M_PI) / (2 * M_PI)) * 2 * M_PI;
+  }
 };
 
 #endif // NF1_MID_PLANNER_H
