@@ -323,7 +323,7 @@ std::vector<float2> NF1MidPlanner::get_local_path()
     }
   }
 
-//std::cout<<m_closest_pnt_idx<<std::endl;
+  // from the closest point to the path down the road
   int end_idx = min(m_curr_act_path.size(),m_closest_pnt_idx+80);
   std::vector<float2> local_path;
   CUDA_GEO::pos p;
@@ -336,7 +336,10 @@ std::vector<float2> NF1MidPlanner::get_local_path()
     else
       break;
   }
-  //---
+
+  // from the closest point to the path before
+  // this part is reserved so that it can be used to selected as local target
+  // so when the "down the road path" has no available target, we can choose a target from this part
   int start_idx = max(0,m_closest_pnt_idx-80);
   std::vector<float2> pre_path;
   for (int i = m_closest_pnt_idx-1; i>= start_idx; i--)
@@ -348,8 +351,9 @@ std::vector<float2> NF1MidPlanner::get_local_path()
     else
       break;
   }
-  //---
+  // reverse the pre_path part because it is added in a reverse manner
   std::reverse(pre_path.begin(),pre_path.end());
+  // cascade the pre_path and the local_path
   local_path = cascade_vector(pre_path,local_path);
 
   if (local_path.size()==0)
