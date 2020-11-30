@@ -233,13 +233,83 @@ void Dijkstra::dijkstra3D(CUDA_GEO::coord glb_tgt)
   }
 }
 
-CUDA_GEO::coord Dijkstra::find_available_target_with_line(CUDA_GEO::coord start, CUDA_GEO::coord goal, EDTMap* line_map, bool reached_free_zone)
+CUDA_GEO::coord Dijkstra::get_first_free_coord(CUDA_GEO::coord start)
+{
+  memcpy(_id_map,_init_id_map,sizeof(nodeInfo)*static_cast<size_t>(_w*_h*_d));
+  CUDA_GEO::coord mc = start;
+  CUDA_GEO::coord pc;
+  nodeInfo* m;
+  m = getNode(mc);
+
+  if (m)
+  {
+    m->inClosed = true;
+    _Q.push(m);
+  }
+
+  bool occupied;
+  bool found_free=false;
+  while (_Q.size()>0)
+  {
+    m=_Q.front();
+    _Q.pop();
+    mc = m->c;
+
+    obsCostAt(mc,0,occupied);
+    if (!occupied)
+    {
+      found_free = true;
+      break;
+    }
+
+    for (int ix=-1;ix<=1;ix++)
+    {
+      for (int iy=-1;iy<=1;iy++)
+      {
+        if ((ix==0 && iy ==0))
+          continue;
+
+        pc.x = mc.x + ix;
+        pc.y = mc.y + iy;
+        pc.z = mc.z;
+        nodeInfo* p = getNode(pc);
+
+        if (p && !p->inClosed)
+        {
+          m->inClosed = true;
+          _Q.push(p);
+        }
+      }
+    }
+  }
+
+  while(!_Q.empty()) _Q.pop();
+
+  if(found_free)
+    return mc;
+  else
+    return start;
+}
+
+void Dijkstra::update_selected_tgt(CUDA_GEO::coord& sel_tgt, float &min_h, const CUDA_GEO::coord &mc, const CUDA_GEO::coord &goal, EDTMap* line_map)
+{
+  float d2goal = dist(mc,goal);
+  CUDA_GEO::pos m_pos = coord2pos(mc);
+  float d2line = line_map->getEDT(make_float2(m_pos.x,m_pos.y));
+  if (min_h > d2goal && d2line < line_map->m_grid_step*2)
+  {
+    min_h = d2goal;
+    sel_tgt = mc;
+  }
+}
+
+CUDA_GEO::coord Dijkstra::find_available_target_with_line(CUDA_GEO::coord start, CUDA_GEO::coord goal, EDTMap* line_map)
 {
   memcpy(_id_map,_init_id_map,sizeof(nodeInfo)*static_cast<size_t>(_w*_h*_d));
   float min_h = std::numeric_limits<float>::infinity();
   //Get the local Dijkstra target
   CUDA_GEO::coord mc = start;
-  CUDA_GEO::coord pc, closest_coord;
+  CUDA_GEO::coord pc, selected_tgt;
   nodeInfo* m;
   // insert the root
   m=getNode(mc);
@@ -248,9 +318,8 @@ CUDA_GEO::coord Dijkstra::find_available_target_with_line(CUDA_GEO::coord start,
   if (m)
   {
     m->g = 0 + obsCostAt(mc,0,occupied);
-    closest_coord = m->c;
     _Q.push(m);
-    min_h = dist(m->c,goal);
+    update_selected_tgt(selected_tgt,min_h,m->c,goal,line_map);
   }
   while (_Q.size()>0)
   {
@@ -259,19 +328,7 @@ CUDA_GEO::coord Dijkstra::find_available_target_with_line(CUDA_GEO::coord start,
     m->inClosed = true;
     mc = m->c;
 
-    obsCostAt(mc,0,occupied);
-    if (!occupied)
-      reached_free_zone = true;
-
-    float d2goal = dist(mc,goal);
-    CUDA_GEO::pos m_pos = coord2pos(mc);
-    float d2line = line_map->getEDT(make_float2(m_pos.x,m_pos.y));
-    if (min_h > d2goal&& d2line < line_map->m_grid_step)
-    {
-      min_h = d2goal;
-      closest_coord = mc;
-    }
-
+    update_selected_tgt(selected_tgt,min_h,mc,goal,line_map);
 
     // get all neighbours
     for (int ix=-1;ix<=1;ix++)
@@ -291,7 +348,7 @@ CUDA_GEO::coord Dijkstra::find_available_target_with_line(CUDA_GEO::coord start,
           obsCostAt(pc,0,occupied);
           p->inClosed = true;
           p->g = 1*getGridStep() + m->g;
-          if (!(occupied && reached_free_zone))
+          if (!occupied)
           {
             _Q.push(p);
           }
@@ -300,7 +357,10 @@ CUDA_GEO::coord Dijkstra::find_available_target_with_line(CUDA_GEO::coord start,
     }
   }
 
-  return closest_coord;
+  if (std::isinf(min_h))
+    selected_tgt = start;
+
+  return selected_tgt;
 }
 
 

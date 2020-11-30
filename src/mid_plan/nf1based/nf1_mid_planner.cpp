@@ -183,7 +183,8 @@ void NF1MidPlanner::plan(const ros::TimerEvent&)
   if(m_line_following_mode)
   {
     prepare_line_map(get_local_path());
-    tgt = m_d_map->find_available_target_with_line(start,glb_tgt,m_line_map,false);
+    start = m_d_map->get_first_free_coord(start);
+    tgt = m_d_map->find_available_target_with_line(start,glb_tgt,m_line_map);
   }
   else
   {
@@ -331,14 +332,25 @@ std::vector<float2> NF1MidPlanner::get_local_path()
     p.x = m_curr_act_path[i].x;
     p.y = m_curr_act_path[i].y;
     if(m_d_map->isInside(p)) //&& !is_curvature_too_big(m_curr_act_path,m_closest_pnt_idx,i))
-    {
       local_path.push_back(m_curr_act_path[i]);
-    }
     else
-    {
       break;
-    }
   }
+  //---
+  int start_idx = max(0,m_closest_pnt_idx-80);
+  std::vector<float2> pre_path;
+  for (int i = m_closest_pnt_idx-1; i>= start_idx; i--)
+  {
+    p.x = m_curr_act_path[i].x;
+    p.y = m_curr_act_path[i].y;
+    if(m_d_map->isInside(p)) //&& !is_curvature_too_big(m_curr_act_path,m_closest_pnt_idx,i))
+      pre_path.push_back(m_curr_act_path[i]);
+    else
+      break;
+  }
+  //---
+  std::reverse(pre_path.begin(),pre_path.end());
+  local_path = cascade_vector(pre_path,local_path);
 
   if (local_path.size()==0)
   {
