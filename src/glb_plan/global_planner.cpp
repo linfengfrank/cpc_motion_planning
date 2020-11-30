@@ -9,7 +9,7 @@ GlobalPlanner::GlobalPlanner():
   m_slam_odom_sub = m_nh.subscribe("/slam_odom", 1, &GlobalPlanner::slam_odo_call_back, this);
 
   m_glb_path_pub = m_nh.advertise<cpc_motion_planning::path>("/global_path",1);
-
+  m_nh.param<std::string>("/cmap_filename",m_cmap_filename,"");
   m_map_loaded = load_c_map();
   perform_edt();
 
@@ -76,7 +76,7 @@ void GlobalPlanner::slam_odo_call_back(const nav_msgs::Odometry::ConstPtr &msg)
 
 bool GlobalPlanner::load_c_map()
 {
-  bool ok = m_c_map.Load();
+  bool ok = m_c_map.Load(m_cmap_filename.c_str());
 
   m_origin = CUDA_GEO::pos(-30,-30,0);
   m_step_width = 0.05f;

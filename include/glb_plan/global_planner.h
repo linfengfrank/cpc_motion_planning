@@ -218,6 +218,7 @@ public:
   float m_step_width;
   int m_width;
   int m_height;
+  std::string m_cmap_filename;
   CMap m_c_map;
   PathSmoother *m_ps;
   Astar *m_a_map;
