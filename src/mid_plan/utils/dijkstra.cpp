@@ -254,6 +254,7 @@ CUDA_GEO::coord Dijkstra::get_first_free_coord(CUDA_GEO::coord start)
     m=_Q.front();
     _Q.pop();
     mc = m->c;
+    m->inClosed = true;
 
     obsCostAt(mc,0,occupied);
     if (!occupied)
@@ -276,7 +277,7 @@ CUDA_GEO::coord Dijkstra::get_first_free_coord(CUDA_GEO::coord start)
 
         if (p && !p->inClosed)
         {
-          m->inClosed = true;
+          p->inClosed = true;
           _Q.push(p);
         }
       }
@@ -317,7 +318,6 @@ CUDA_GEO::coord Dijkstra::find_available_target_with_line(CUDA_GEO::coord start,
   bool occupied=false;
   if (m)
   {
-    m->g = 0 + obsCostAt(mc,0,occupied);
     _Q.push(m);
     update_selected_tgt(selected_tgt,min_h,m->c,goal,line_map);
   }
@@ -335,7 +335,7 @@ CUDA_GEO::coord Dijkstra::find_available_target_with_line(CUDA_GEO::coord start,
     {
       for (int iy=-1;iy<=1;iy++)
       {
-        if ((ix==0 && iy ==0) || ix*iy != 0)
+        if (ix==0 && iy ==0)
           continue;
 
         pc.x = mc.x + ix;
@@ -346,10 +346,9 @@ CUDA_GEO::coord Dijkstra::find_available_target_with_line(CUDA_GEO::coord start,
         if (p && !p->inClosed)
         {
           obsCostAt(pc,0,occupied);
-          p->inClosed = true;
-          p->g = 1*getGridStep() + m->g;
           if (!occupied)
           {
+            p->inClosed = true;
             _Q.push(p);
           }
         }
