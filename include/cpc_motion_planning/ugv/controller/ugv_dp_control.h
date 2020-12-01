@@ -43,37 +43,54 @@ public:
     float s_relative[4];
     s_relative[0] = s.s - site.x; // relative station
     s_relative[1] = s.v; // relative velocity
-    s_relative[2] = s.theta - site.y; // relative velocity
+    s_relative[2] = s.theta - site.y; // relative angle
     s_relative[3] = s.w; //relative angular speed
 
     UGVModel::Input u = CUDA_MAT::get_control_uniform_bin_4(s_relative, *S_A, ubc);
     return make_float3(u.acc,u.alpha,0.0f);
   }
 
+  __host__ __device__
+  float3 update_site_target(const UGVModel::State &s, const float3 &site)
+  {
+    float3 output = site;
+    output.x += s.s;
+    output.y += s.theta;
+    return output;
+  }
+
   template<class Model, class Evaluator, class Swarm>
   __host__ __device__
   float simulate_evaluate(const EDTMap &map, const Evaluator &eva, Model &m, const Swarm &sw, const typename Swarm::Trace &ttr, bool &collision)
   {
-    typename Model::State s_cmd = m.get_ini_state();
-    typename Model::State s_slip = s_cmd;
+    typename Model::State s = m.get_ini_state();
+
     float cost = 0;
     float dt = PSO::PSO_SIM_DT;
     collision = false;
+    int prev_i = -1;
+    float3 site_target;
     for (float t=0.0f; t<PSO::PSO_TOTAL_T; t+=dt)
     {
       int i = static_cast<int>(floor(t/sw.step_dt));
       if (i > sw.steps - 1)
         i = sw.steps - 1;
 
-      float3 u = dp_control(s_cmd, ttr[i]);
-      m.model_forward(s_cmd,u,dt);
-      m.model_forward_with_slip(s_slip,u,dt);
+      if (i!=prev_i || prev_i == -1)
+      {
+        //update the site target
+        site_target = update_site_target(s,ttr[i]);
+      }
+      prev_i = i;
+
+      float3 u = dp_control(s, site_target);
+      m.model_forward(s,u,dt);
 
       //cost += 0.1f*sqrtf(u.x*u.x + 0.5f*u.y*u.y + u.z*u.z);
-      cost += eva.process_cost(s_slip,map,t,collision);
+      cost += eva.process_cost(s,map,t,collision);
 
     }
-    cost += eva.final_cost(s_slip,map);
+    cost += eva.final_cost(s,map);
 
     return cost;
   }
@@ -84,14 +101,23 @@ public:
   {
     std::vector<typename Model::State> traj;
     typename Model::State s = m.get_ini_state();
-    float dt = PSO::PSO_CTRL_DT;;
+    float dt = PSO::PSO_CTRL_DT;
+    int prev_i = -1;
+    float3 site_target;
     for (float t=0.0f; t<PSO::PSO_TOTAL_T; t+=dt)
     {
       int i = static_cast<int>(floor(t/sw.step_dt));
       if (i > sw.steps - 1)
         i = sw.steps - 1;
 
-      float3 u = dp_control(s, ttr[i]);
+      if (i!=prev_i || prev_i == -1)
+      {
+        //update the site target
+        site_target = update_site_target(s,ttr[i]);
+      }
+      prev_i = i;
+
+      float3 u = dp_control(s, site_target);
       m.model_forward(s,u,dt);
       traj.push_back(s);
     }

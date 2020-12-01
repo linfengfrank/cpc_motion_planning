@@ -132,6 +132,7 @@ INST_group(UGV::UGVModel, UGV::UGVDPControl, UGV::NF1Evaluator, UGV::UGVSwarm<1>
 INST_group(UGV::UGVModel, UGV::UGVDPControl, UGV::NF1Evaluator, UGV::UGVSwarm<2>);
 INST_group(UGV::UGVModel, UGV::UGVDPControl, UGV::NF1Evaluator, UGV::UGVSwarm<3>);
 INST_group(UGV::UGVModel, UGV::UGVDPControl, UGV::NF1Evaluator, UGV::UGVSwarm<4>);
+INST_group(UGV::UGVModel, UGV::UGVDPControl, UGV::NF1Evaluator, UGV::UGVSwarm<8>);
 
 INST_initialize_particles(UGV::UGVModel, UGV::UGVJLTControl, UGV::NF1Evaluator, UGV::UGVSwarm<1>);
 INST_iterate_particles(UGV::UGVModel, UGV::UGVJLTControl, UGV::NF1Evaluator, UGV::UGVSwarm<1>);
