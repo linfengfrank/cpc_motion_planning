@@ -7,7 +7,7 @@ namespace PSO
 {
 //const int PSO_STEPS = 1; //planning steps
 //const float PSO_STEP_DT = 4.0f; //lasting time of each step
-const float PSO_TOTAL_T = 3.0f;
+const float PSO_TOTAL_T = 4.0f;
 const float PSO_SIM_DT = 0.1f;
 const float PSO_CTRL_DT = 0.05f;
 const int PSO_REPLAN_CYCLE = 4;
