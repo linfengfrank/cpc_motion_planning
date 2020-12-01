@@ -104,7 +104,7 @@ void Dijkstra::dijkstra2D_with_line_map(CUDA_GEO::coord glb_tgt, EDTMap* line_ma
 
             pc_pos = coord2pos(pc);
             line_dist = line_map->getEDT(make_float2(pc_pos.x,pc_pos.y));
-            new_g += 5.5f*line_dist*line_dist;
+            new_g += 1.5f*line_dist*line_dist;
 
             if (p->g > new_g)
             {
@@ -297,7 +297,7 @@ void Dijkstra::update_selected_tgt(CUDA_GEO::coord& sel_tgt, float &min_h, const
   float d2goal = dist(mc,goal);
   CUDA_GEO::pos m_pos = coord2pos(mc);
   float d2line = line_map->getEDT(make_float2(m_pos.x,m_pos.y));
-  if (min_h > d2goal && d2line < line_map->m_grid_step*2)
+  if (min_h > d2goal && d2line < line_map->m_grid_step*10)
   {
     min_h = d2goal;
     sel_tgt = mc;
