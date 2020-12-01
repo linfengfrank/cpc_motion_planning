@@ -5,6 +5,7 @@ UGVLocalMotionPlanner::UGVLocalMotionPlanner():
   m_raw_odo_received(false),
   m_slam_odo_received(false),
   m_edt_map(nullptr),
+  m_create_host_edt(false),
   m_status(UGV::START),
   m_stuck_pbty(0.0f),
   m_lowpass_stuck_pbty(0.0f),
@@ -36,6 +37,7 @@ void UGVLocalMotionPlanner::map_call_back(const cpc_aux_mapping::grid_map::Const
     CUDA_GEO::pos origin(msg->x_origin,msg->y_origin,msg->z_origin);
     int3 edt_map_size = make_int3(msg->x_size,msg->y_size,msg->z_size);
     m_edt_map = new EDTMap(origin,msg->width,edt_map_size);
+    m_edt_map->m_create_host_cpy = m_create_host_edt;
     m_edt_map->setup_device();
   }
   else
@@ -44,6 +46,8 @@ void UGVLocalMotionPlanner::map_call_back(const cpc_aux_mapping::grid_map::Const
     m_edt_map->m_grid_step = msg->width;
   }
   CUDA_MEMCPY_H2D(m_edt_map->m_sd_map,msg->payload8.data(),static_cast<size_t>(m_edt_map->m_byte_size));
+  if (m_create_host_edt)
+    memcpy(m_edt_map->m_hst_sd_map,msg->payload8.data(),static_cast<size_t>(m_edt_map->m_byte_size));
 }
 
 void UGVLocalMotionPlanner::raw_odo_call_back(const nav_msgs::Odometry::ConstPtr &msg)
@@ -301,12 +305,12 @@ bool UGVLocalMotionPlanner::is_stuck_instant_horizon(const std::vector<UGV::UGVM
   return far_from_tgt && no_moving_intention;
 }
 
-bool UGVLocalMotionPlanner::is_stuck_lowpass(const UGV::UGVModel::State& s)
+bool UGVLocalMotionPlanner::is_stuck_lowpass(const UGV::UGVModel::State& s, const UGV::UGVModel::State &tgt_state)
 {
   m_lowpass_v = 0.8f*m_lowpass_v + 0.2f*s.v;
   m_lowpass_w = 0.8f*m_lowpass_w + 0.2f*s.w;
 
-  if (fabsf(m_lowpass_v) < 0.08f && fabsf(m_lowpass_w) < 0.08f)
+  if (fabsf(m_lowpass_v) < 0.08f && fabsf(m_lowpass_w) < 0.08f && !is_pos_reached(s,tgt_state))
     m_lowpass_stuck_pbty +=0.1f;
   else
     m_lowpass_stuck_pbty *=0.8f;

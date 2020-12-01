@@ -1,5 +1,5 @@
-#ifndef UGV_SINGLE_TARGET_EVALUATOR_H
-#define UGV_SINGLE_TARGET_EVALUATOR_H
+#ifndef UGV_NF1_EVALUATOR_H
+#define UGV_NF1_EVALUATOR_H
 
 #include <cpc_motion_planning/ugv/model/ugv_model.h>
 #include <cpc_motion_planning/dynamic_programming.cuh>
@@ -9,30 +9,31 @@
 
 namespace UGV
 {
-class SingleTargetEvaluator
+class NF1Evaluator
 {
 public:
 
   struct Target
   {
     UGVModel::State s;
-    int id;
-    bool do_turning;
+    int path_id;
+    int act_id;
     float reaching_radius;
-    Target():id(0),do_turning(false),reaching_radius(1.0f)
+    Target():path_id(0),act_id(0),reaching_radius(1.0f)
     {
 
     }
   };
 
-  SingleTargetEvaluator()
+  NF1Evaluator()
   {
+    is_forward = true;
     m_pure_turning = false;
     m_nf1_received = false;
     m_stuck = false;
   }
 
-  ~SingleTargetEvaluator()
+  ~NF1Evaluator()
   {
 
   }
@@ -101,18 +102,37 @@ public:
   }
 
   __host__ __device__
+  float calculate_nf1_cost(const UGVModel::State &s, float head_dist) const
+  {
+    float nf_cost = 0;
+    float2 head_pos;
+    if (is_forward)
+      head_pos = get_head_pos(s,head_dist);
+    else
+      head_pos = get_head_pos(s,-head_dist);
+
+    CUDA_GEO::coord head_c = m_nf1_map.pos2coord(make_float3(head_pos.x,head_pos.y,0));
+//    CUDA_GEO::coord ctr_c = m_nf1_map.pos2coord(make_float3(s.p.x,s.p.y,0));
+
+#ifdef  __CUDA_ARCH__
+    // Must use c.x c.y and 0 here! Because the NF1 map has only 1 layer.
+    nf_cost = m_nf1_map.nf1_const_at(head_c.x,head_c.y,0);
+#endif
+    return nf_cost;
+  }
+
+  __host__ __device__
   float process_cost(const UGVModel::State &s, const EDTMap &map, const float &time, bool &collision) const
   {
     float cost = 0;
 
-    // Collision cost
     float rd = getMinDist(s,map);
-    cost += expf(-9.5f*rd)*100;
+    cost += expf(-9.5f*rd)*10;
 
-    if (rd < 0.51f)
-      cost += 1000;
+    if (rd < 0.451f)
+      cost += (1000 + expf(-4.5f*rd)*1000);
 
-    if (rd < 0.23f && time < 0.4f)
+    if (rd < 0.351f && time < 0.31f)
     {
       collision = true;
     }
@@ -130,14 +150,8 @@ public:
       else
       {
         //either stuck or normal mode
-        float2 head_pos = get_head_pos(s,0.3f);
-        CUDA_GEO::coord head_c = m_nf1_map.pos2coord(make_float3(head_pos.x,head_pos.y,0));
         CUDA_GEO::coord c = m_nf1_map.pos2coord(make_float3(s.p.x,s.p.y,0));
-        float nf_cost = 0;
-#ifdef  __CUDA_ARCH__
-        // Must use c.x c.y and 0 here! Because the NF1 map has only 1 layer.
-        nf_cost = m_nf1_map.nf1_const_at(head_c.x,head_c.y,0);
-#endif
+        float nf_cost = calculate_nf1_cost(s, 0.3f);
         if (m_stuck)
         {
           //stuck mode, encourage random move to get out of stuck
@@ -148,7 +162,12 @@ public:
         {
           //normal mode
           cost += 1.0f*nf_cost + 1.0f*sqrtf(0.005f*s.v*s.v + 0.005f*s.w*s.w);
-          float yaw_diff = s.theta - getDesiredHeading(c);//bilinear_theta(s.p, m_nf1_map);//getDesiredHeading(c);
+          float yaw_diff;
+          if (is_forward)
+            yaw_diff = s.theta - getDesiredHeading(c);//bilinear_theta(s.p, m_nf1_map);//getDesiredHeading(c);
+          else
+            yaw_diff = s.theta + M_PI - getDesiredHeading(c);
+
           yaw_diff = yaw_diff - floorf((yaw_diff + M_PI) / (2 * M_PI)) * 2 * M_PI;
           cost += yaw_diff*yaw_diff*s.v*s.v;
         }
@@ -170,18 +189,14 @@ public:
 
     if(!m_pure_turning && m_nf1_received && !m_stuck)
     {
-      float2 head_pos = get_head_pos(s,0.3f);
-      CUDA_GEO::coord head_c = m_nf1_map.pos2coord(make_float3(head_pos.x,head_pos.y,0));
-#ifdef  __CUDA_ARCH__
-      // Must use c.x c.y and 0 here! Because the NF1 map has only 1 layer.
-      cost += 20.0f*m_nf1_map.nf1_const_at(head_c.x,head_c.y,0);
-#endif
+      cost += 20.0f * calculate_nf1_cost(s,0.3f);
     }
 
     return  cost;
   }
 
   Target m_goal;
+  bool is_forward;
   bool m_pure_turning;
   bool m_stuck;
   NF1MapDT m_nf1_map;
@@ -189,4 +204,4 @@ public:
 };
 }
 
-#endif // UGV_SINGLE_TARGET_EVALUATOR_H
+#endif // UGV_NF1_EVALUATOR_H

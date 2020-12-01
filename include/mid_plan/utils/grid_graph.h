@@ -1,8 +1,8 @@
 #ifndef GRID_GRAPH
 #define GRID_GRAPH
 #include <cuda_geometry/cuda_edtmap.cuh>
-#include <mid_plan/map_base.h>
-#include <mid_plan/SortedSet.h>
+#include <mid_plan/utils/map_base.h>
+#include <mid_plan/utils/SortedSet.h>
 #include <cpc_aux_mapping/grid_map.h>
 
 #define MID_SAFE_DIST 0.51f
@@ -57,6 +57,11 @@ public:
 
   int calcTgtHeightCoord(float tgt_height);
   std::vector<CUDA_GEO::coord> rayCast(const CUDA_GEO::coord &p0Index, const CUDA_GEO::coord &p1Index, float limit_radius = -1);
+
+  float getEdtValue(const CUDA_GEO::coord &c)
+  {
+    return _val_map[coord2index(c)].d;
+  }
 
 public:
   virtual ~GridGraph();

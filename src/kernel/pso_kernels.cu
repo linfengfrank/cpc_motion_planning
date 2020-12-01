@@ -128,16 +128,16 @@ void copy_best_values(float *best_values, const Swarm &sw)
   INST_setup_random_states(S) \
   INST_copy_best_values(S)
 
-INST_group(UGV::UGVModel, UGV::UGVDPControl, UGV::SingleTargetEvaluator, UGV::UGVSwarm<1>);
-INST_group(UGV::UGVModel, UGV::UGVDPControl, UGV::SingleTargetEvaluator, UGV::UGVSwarm<2>);
-INST_group(UGV::UGVModel, UGV::UGVDPControl, UGV::SingleTargetEvaluator, UGV::UGVSwarm<3>);
-INST_group(UGV::UGVModel, UGV::UGVDPControl, UGV::SingleTargetEvaluator, UGV::UGVSwarm<4>);
+INST_group(UGV::UGVModel, UGV::UGVDPControl, UGV::NF1Evaluator, UGV::UGVSwarm<1>);
+INST_group(UGV::UGVModel, UGV::UGVDPControl, UGV::NF1Evaluator, UGV::UGVSwarm<2>);
+INST_group(UGV::UGVModel, UGV::UGVDPControl, UGV::NF1Evaluator, UGV::UGVSwarm<3>);
+INST_group(UGV::UGVModel, UGV::UGVDPControl, UGV::NF1Evaluator, UGV::UGVSwarm<4>);
 
-INST_initialize_particles(UGV::UGVModel, UGV::UGVJLTControl, UGV::SingleTargetEvaluator, UGV::UGVSwarm<1>);
-INST_iterate_particles(UGV::UGVModel, UGV::UGVJLTControl, UGV::SingleTargetEvaluator, UGV::UGVSwarm<1>);
+INST_initialize_particles(UGV::UGVModel, UGV::UGVJLTControl, UGV::NF1Evaluator, UGV::UGVSwarm<1>);
+INST_iterate_particles(UGV::UGVModel, UGV::UGVJLTControl, UGV::NF1Evaluator, UGV::UGVSwarm<1>);
 
-INST_initialize_particles(UGV::UGVModel, UGV::UGVJLTControl, UGV::SingleTargetEvaluator, UGV::UGVSwarm<2>);
-INST_iterate_particles(UGV::UGVModel, UGV::UGVJLTControl, UGV::SingleTargetEvaluator, UGV::UGVSwarm<2>);
+INST_initialize_particles(UGV::UGVModel, UGV::UGVJLTControl, UGV::NF1Evaluator, UGV::UGVSwarm<2>);
+INST_iterate_particles(UGV::UGVModel, UGV::UGVJLTControl, UGV::NF1Evaluator, UGV::UGVSwarm<2>);
 
 INST_initialize_particles(UGV::UGVModel, UGV::UGVDPControl, UGV::CorridorEvaluator, UGV::UGVSwarm<2>);
 INST_iterate_particles(UGV::UGVModel, UGV::UGVDPControl, UGV::CorridorEvaluator, UGV::UGVSwarm<2>);

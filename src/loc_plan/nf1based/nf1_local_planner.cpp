@@ -1,36 +1,31 @@
-#include "loc_plan/ugv_sigtgt_local_planner.h"
+#include "loc_plan/nf1based/nf1_local_planner.h"
 #include "tf/tf.h"
 #include <chrono>
 #include <std_msgs/String.h>
 #include <cpc_motion_planning/plan_request.h>
 #include <cpc_motion_planning/collision_check.h>
+#include <std_msgs/Int32MultiArray.h>
 
-UGVSigTgtMotionPlanner::UGVSigTgtMotionPlanner():
+NF1LocalPlanner::NF1LocalPlanner():
   m_goal_received(false),
-  m_mid_goal_received(false),
+  m_task_is_new(false),
   cycle_initialized(false),
   m_braking_start_cycle(0),
   m_nf1_map(nullptr)
 {
-  m_goal_sub = m_nh.subscribe("/move_base_simple/goal",1,&UGVSigTgtMotionPlanner::goal_call_back, this);
-  m_mid_goal_sub = m_nh.subscribe("/mid_goal",1,&UGVSigTgtMotionPlanner::mid_goal_call_back, this);
-  m_nf1_sub = m_nh.subscribe("/mid_layer/goal",1,&UGVSigTgtMotionPlanner::nf1_call_back, this);
-  m_line_tgt_sub = m_nh.subscribe("/line_target",1,&UGVSigTgtMotionPlanner::line_target_call_back,this);
-  m_hybrid_path_sub = m_nh.subscribe("/hybrid_path",1,&UGVSigTgtMotionPlanner::hybrid_path_call_back,this);
+  m_nf1_sub = m_nh.subscribe("/nf1",1,&NF1LocalPlanner::nf1_call_back, this);
+  m_hybrid_path_sub = m_nh.subscribe("/hybrid_path",1,&NF1LocalPlanner::hybrid_path_call_back,this);
 
   m_collision_check_client = m_nh.serviceClient<cpc_motion_planning::collision_check>("collision_check");
   m_ref_pub = m_nh.advertise<cpc_motion_planning::ref_data>("ref_traj",1);
   m_status_pub = m_nh.advertise<std_msgs::String>("ref_status_string",1);
-  m_tgt_reached_pub = m_nh.advertise<std_msgs::Int32>("target_reached",1);
+  m_tgt_reached_pub = m_nh.advertise<std_msgs::Int32MultiArray>("target_reached",1);
   m_stuck_plan_request_pub = m_nh.advertise<cpc_motion_planning::plan_request>("plan_request",1);
 
-  m_planning_timer = m_nh.createTimer(ros::Duration(PSO::PSO_REPLAN_DT), &UGVSigTgtMotionPlanner::plan_call_back, this);
+  m_planning_timer = m_nh.createTimer(ros::Duration(PSO::PSO_REPLAN_DT), &NF1LocalPlanner::plan_call_back, this);
 
   m_pso_planner = new PSO::Planner<SIMPLE_UGV>(120,50,3);
   m_pso_planner->initialize();
-
-
-  m_mid_goal=make_float2(0,0);
 
   m_ref_v = 0.0f;
   m_ref_w = 0.0f;
@@ -44,35 +39,74 @@ UGVSigTgtMotionPlanner::UGVSigTgtMotionPlanner():
   m_ref_msg.rows = 5;
   m_plan_cycle = 0;
   m_ref_start_idx = 0;
+
+  m_create_host_edt = true;
 }
 
-UGVSigTgtMotionPlanner::~UGVSigTgtMotionPlanner()
+NF1LocalPlanner::~NF1LocalPlanner()
 {
   m_pso_planner->release();
   delete m_pso_planner;
 }
 
-void UGVSigTgtMotionPlanner::nf1_call_back(const cpc_aux_mapping::grid_map::ConstPtr &msg)
+void NF1LocalPlanner::nf1_call_back(const cpc_aux_mapping::nf1_task::ConstPtr &msg)
 {
   m_goal_received = true;
+  // setup the map
   if (m_nf1_map == nullptr)
   {
-    CUDA_GEO::pos origin(msg->x_origin,msg->y_origin,msg->z_origin);
-    int3 m_nf1_map_size = make_int3(msg->x_size,msg->y_size,msg->z_size);
-    m_nf1_map = new NF1MapDT(origin,msg->width,m_nf1_map_size);
+    CUDA_GEO::pos origin(msg->nf1.x_origin,msg->nf1.y_origin,msg->nf1.z_origin);
+    int3 m_nf1_map_size = make_int3(msg->nf1.x_size,msg->nf1.y_size,msg->nf1.z_size);
+    m_nf1_map = new NF1MapDT(origin,msg->nf1.width,m_nf1_map_size);
     m_nf1_map->setup_device();
   }
   else
   {
-    m_nf1_map->m_origin = CUDA_GEO::pos(msg->x_origin,msg->y_origin,msg->z_origin);
-    m_nf1_map->m_grid_step = msg->width;
+    m_nf1_map->m_origin = CUDA_GEO::pos(msg->nf1.x_origin,msg->nf1.y_origin,msg->nf1.z_origin);
+    m_nf1_map->m_grid_step = msg->nf1.width;
   }
-  CUDA_MEMCPY_H2D(m_nf1_map->m_nf1_map,msg->payload8.data(),static_cast<size_t>(m_nf1_map->m_byte_size));
+  CUDA_MEMCPY_H2D(m_nf1_map->m_nf1_map,msg->nf1.payload8.data(),static_cast<size_t>(m_nf1_map->m_byte_size));
   m_pso_planner->m_eva.m_nf1_map = *m_nf1_map;
   m_pso_planner->m_eva.m_nf1_received = true;
+
+  // setup the drive type
+  if (msg->drive_type == cpc_aux_mapping::nf1_task::TYPE_FORWARD)
+  {
+    m_pso_planner->m_eva.m_pure_turning = false;
+    m_pso_planner->m_eva.is_forward = true;
+  }
+  else if (msg->drive_type == cpc_aux_mapping::nf1_task::TYPE_BACKWARD)
+  {
+    m_pso_planner->m_eva.m_pure_turning = false;
+    m_pso_planner->m_eva.is_forward = false;
+  }
+  else if (msg->drive_type == cpc_aux_mapping::nf1_task::TYPE_ROTATE)
+  {
+    m_pso_planner->m_eva.m_pure_turning = true;
+    m_pso_planner->m_eva.is_forward = true;
+  }
+
+  // setup the goal and carrot
+  m_goal.s.p.x = msg->goal_x;
+  m_goal.s.p.y = msg->goal_y;
+  m_goal.s.theta = msg->goal_theta;
+  m_goal.path_id = msg->path_id;
+  m_goal.act_id = msg->act_id;
+  m_goal.reaching_radius = 0.5f;
+
+  m_carrot.p.x = msg->carrot_x;
+  m_carrot.p.y = msg->carrot_y;
+  m_carrot.theta = msg->carrot_theta;
+
+  if (!check_tgt_is_same(m_goal, m_pso_planner->m_eva.m_goal))
+  {
+    m_task_is_new = true;
+  }
+
+  m_pso_planner->m_eva.setTarget(m_goal);
 }
 
-void UGVSigTgtMotionPlanner::plan_call_back(const ros::TimerEvent&)
+void NF1LocalPlanner::plan_call_back(const ros::TimerEvent&)
 {
 
   ros::Time curr_t = ros::Time::now();
@@ -116,59 +150,7 @@ void UGVSigTgtMotionPlanner::plan_call_back(const ros::TimerEvent&)
   m_plan_cycle++;
 }
 
-void UGVSigTgtMotionPlanner::line_target_call_back(const cpc_motion_planning::line_target::ConstPtr &msg)
-{
-  m_goal_received = true;
-  m_goal.s.p.x = msg->target_pose.pose.position.x;
-  m_goal.s.p.y = msg->target_pose.pose.position.y;
-
-  double phi,theta,psi;
-
-  tf::Quaternion q( msg->target_pose.pose.orientation.x,
-                    msg->target_pose.pose.orientation.y,
-                    msg->target_pose.pose.orientation.z,
-                    msg->target_pose.pose.orientation.w);
-  tf::Matrix3x3 m(q);
-  m.getRPY(phi, theta, psi);
-
-  m_goal.s.theta = psi;
-  m_goal.id++;
-
-  m_goal.do_turning = msg->do_turning;
-  m_goal.reaching_radius = msg->reaching_radius;
-}
-
-void UGVSigTgtMotionPlanner::goal_call_back(const geometry_msgs::PoseStamped::ConstPtr &msg)
-{
-  m_goal_received = true;
-  m_goal.s.p.x = msg->pose.position.x;
-  m_goal.s.p.y = msg->pose.position.y;
-
-  double phi,theta,psi;
-
-  tf::Quaternion q( msg->pose.orientation.x,
-                    msg->pose.orientation.y,
-                    msg->pose.orientation.z,
-                    msg->pose.orientation.w);
-  tf::Matrix3x3 m(q);
-  m.getRPY(phi, theta, psi);
-
-
-  m_goal.s.theta = psi;
-  m_goal.id++;
-
-  m_goal.do_turning = true;
-  m_goal.reaching_radius = 1.0f;
-}
-
-void UGVSigTgtMotionPlanner::mid_goal_call_back(const geometry_msgs::PoseStamped::ConstPtr &msg)
-{
-  m_mid_goal_received = true;
-  m_mid_goal.x = msg->pose.position.x;
-  m_mid_goal.y = msg->pose.position.y;
-}
-
-void UGVSigTgtMotionPlanner::hybrid_path_call_back(const cpc_motion_planning::path::ConstPtr &msg)
+void NF1LocalPlanner::hybrid_path_call_back(const cpc_motion_planning::path::ConstPtr &msg)
 {
   if (msg->request_ctt != m_plan_request_cycle)
     return;
@@ -176,7 +158,7 @@ void UGVSigTgtMotionPlanner::hybrid_path_call_back(const cpc_motion_planning::pa
   m_recover_planner.set_path_cell(m_stuck_recover_path);
 }
 //=====================================
-void UGVSigTgtMotionPlanner::do_start()
+void NF1LocalPlanner::do_start()
 {
   if (m_slam_odo_received && m_raw_odo_received && m_received_map && m_goal_received)
   {
@@ -189,14 +171,13 @@ void UGVSigTgtMotionPlanner::do_start()
   }
 }
 //=====================================
-void UGVSigTgtMotionPlanner::do_normal()
+void NF1LocalPlanner::do_normal()
 {
   cycle_init();
   std::cout<<"NORMAL"<<std::endl;
 
   //Planning
-  m_pso_planner->m_eva.m_pure_turning = false;
-  m_pso_planner->m_eva.setTarget(m_goal);
+  m_task_is_new = false;
   calculate_trajectory<SIMPLE_UGV>(m_pso_planner, m_traj);
 
   //Goto: Braking
@@ -209,13 +190,13 @@ void UGVSigTgtMotionPlanner::do_normal()
   else
   {
     //Goto: Stuck
-    if(is_stuck(m_traj,m_goal.s) || is_stuck_lowpass(m_pso_planner->m_model.get_ini_state()))
+    if(is_stuck(m_traj,m_carrot) || is_stuck_lowpass(m_pso_planner->m_model.get_ini_state(),m_carrot))
     {
       m_status = UGV::STUCK;
-      m_stuck_submode = STUCK_SUB_MODE::RECOVER;
-      m_braking_start_cycle = m_plan_cycle;
+      m_stuck_submode = STUCK_SUB_MODE::FULL_STUCK;
+      m_stuck_start_cycle = m_plan_cycle;
       m_plan_request_cycle = m_plan_cycle;
-      m_full_stuck_ctt = m_plan_cycle;
+      m_full_start_cycle = m_plan_cycle;
 
       // Prepare and send the request message
       cpc_motion_planning::plan_request rq_msg;
@@ -232,21 +213,16 @@ void UGVSigTgtMotionPlanner::do_normal()
     //Goto: Pos_reached
     if(is_pos_reached(m_pso_planner->m_model.get_ini_state(),m_goal.s,m_goal.reaching_radius))
     {
-      if(m_goal.do_turning)
-      {
         m_status = UGV::POS_REACHED;
-      }
-      else
-      {
-        std_msgs::Int32 reach_msg;
-        reach_msg.data = m_goal.id;
+        std_msgs::Int32MultiArray reach_msg;
+        reach_msg.data.push_back(m_goal.path_id);
+        reach_msg.data.push_back(m_goal.act_id);
         m_tgt_reached_pub.publish(reach_msg);
-      }
     }
   }
 }
 //=====================================
-void UGVSigTgtMotionPlanner::do_stuck()
+void NF1LocalPlanner::do_stuck()
 {
   cycle_init();
   switch (m_stuck_submode)
@@ -262,10 +238,10 @@ void UGVSigTgtMotionPlanner::do_stuck()
   }
 }
 //=====================================
-void UGVSigTgtMotionPlanner::do_recover()
+void NF1LocalPlanner::do_recover()
 {
   // overall time out
-  if (m_plan_cycle - m_braking_start_cycle >= 50)
+  if (m_plan_cycle - m_stuck_start_cycle >= 50)
   {
     m_status = UGV::NORMAL;
   }
@@ -284,7 +260,7 @@ void UGVSigTgtMotionPlanner::do_recover()
     // the response is empty, go to the full stuck sub mode
     full_stop_trajectory(m_traj,m_pso_planner->m_model.get_ini_state());
     m_stuck_submode = STUCK_SUB_MODE::FULL_STUCK;
-    m_full_stuck_ctt = m_plan_cycle;
+    m_full_start_cycle = m_plan_cycle;
     return;
   }
 
@@ -292,6 +268,15 @@ void UGVSigTgtMotionPlanner::do_recover()
   bool finished = m_recover_planner.calculate_trajectory(m_pso_planner->m_model.get_ini_state(),
                                                          m_edt_map,
                                                          m_traj);
+
+  if (m_recover_planner.should_braking())
+  {
+    m_braking_start_cycle = m_plan_cycle;
+    m_status = UGV::BRAKING;
+    cycle_process_based_on_status();
+    return;
+  }
+
   if(finished)
   {
     m_status = UGV::NORMAL;
@@ -299,48 +284,42 @@ void UGVSigTgtMotionPlanner::do_recover()
   }
 
   // if still stuck
-  if(is_stuck(m_traj,m_goal.s) || is_stuck_lowpass(m_pso_planner->m_model.get_ini_state()))
+  if(is_stuck(m_traj,m_goal.s) || is_stuck_lowpass(m_pso_planner->m_model.get_ini_state(), m_goal.s))
   {
-    // check wheter the current recover path is stucked
-    cpc_motion_planning::collision_check srv;
-    srv.request.collision_checking_path = m_recover_planner.get_collision_checking_path();
-    m_collision_check_client.call(srv);
-
-    // if yes, just go back to the normal mode
-    if (srv.response.collision == true)
+    // if the ref path has collision, just go back to the normal mode
+    if (check_collision_from_host_edt(m_recover_planner.get_collision_checking_path()))
     {
       m_status = UGV::NORMAL;
     }
     else
     {
       m_stuck_submode = STUCK_SUB_MODE::FULL_STUCK;
-      m_full_stuck_ctt = m_plan_cycle;
+      m_full_start_cycle = m_plan_cycle;
     }
   }
 }
 //=====================================
-void UGVSigTgtMotionPlanner::do_full_stuck()
+void NF1LocalPlanner::do_full_stuck()
 {
   std::cout<<"FULL STUCK"<<std::endl;
   //Planning
   m_pso_planner->m_eva.m_stuck = true;
-  m_pso_planner->m_eva.setTarget(m_goal);
   calculate_trajectory<SIMPLE_UGV>(m_pso_planner, m_traj);
 
   //Goto: Normal
-  if (m_plan_cycle - m_full_stuck_ctt >= 10)
+  if (m_plan_cycle - m_full_start_cycle >= 10)
   {
     m_status = UGV::NORMAL;
     m_pso_planner->m_eva.m_stuck = false;
   }
 }
 //=====================================
-void UGVSigTgtMotionPlanner::do_emergent()
+void NF1LocalPlanner::do_emergent()
 {
   cycle_init();
 }
 //=====================================
-void UGVSigTgtMotionPlanner::do_braking()
+void NF1LocalPlanner::do_braking()
 {
   cycle_init();
   std::cout<<"BRAKING"<<std::endl;
@@ -348,37 +327,31 @@ void UGVSigTgtMotionPlanner::do_braking()
   //Planning
   full_stop_trajectory(m_traj,m_pso_planner->m_model.get_ini_state());
 
-  //Goto: Normal
+  //Goto: stuck - full stuck
   if (m_plan_cycle - m_braking_start_cycle >= 10)
   {
-     m_status = UGV::NORMAL;
+     m_status = UGV::STUCK;
+     m_stuck_submode = STUCK_SUB_MODE::FULL_STUCK;
+     m_full_start_cycle = m_plan_cycle;
   }
 
 }
 //=====================================
-void UGVSigTgtMotionPlanner::do_pos_reached()
+void NF1LocalPlanner::do_pos_reached()
 {
   cycle_init();
   std::cout<<"POS_REACHED"<<std::endl;
 
-  // Planning
-  m_pso_planner->m_eva.m_pure_turning = true;
-  calculate_trajectory<SIMPLE_UGV>(m_pso_planner, m_traj);
-  if(is_heading_reached(m_pso_planner->m_model.get_ini_state(),m_goal.s))
-  {
-    std_msgs::Int32 reach_msg;
-    reach_msg.data = m_goal.id;
-    m_tgt_reached_pub.publish(reach_msg);
-  }
+  full_stop_trajectory(m_traj,m_pso_planner->m_model.get_ini_state());
 
   //Goto: Normal (New target)
-  if (m_goal.id != m_pso_planner->m_eva.m_goal.id)
+  if (m_task_is_new)
   {
     m_status = UGV::NORMAL;
   }
 }
 //=====================================
-void UGVSigTgtMotionPlanner::do_fully_reached()
+void NF1LocalPlanner::do_fully_reached()
 {
   cycle_init();
   std::cout<<"FULLY_REACHED"<<std::endl;
@@ -390,7 +363,7 @@ void UGVSigTgtMotionPlanner::do_fully_reached()
   m_status = UGV::DROPOFF;
 }
 //=====================================
-void UGVSigTgtMotionPlanner::do_dropoff()
+void NF1LocalPlanner::do_dropoff()
 {
   cycle_init();
   std::cout<<"DROPOFF"<<std::endl;
@@ -399,13 +372,13 @@ void UGVSigTgtMotionPlanner::do_dropoff()
   full_stop_trajectory(m_traj,m_pso_planner->m_model.get_ini_state());
 
   //Goto: Normal (New target)
-  if (m_goal.id != m_pso_planner->m_eva.m_goal.id)
+  if (m_task_is_new)
   {
     m_status = UGV::NORMAL;
   }
 }
 //=====================================
-void UGVSigTgtMotionPlanner::cycle_init()
+void NF1LocalPlanner::cycle_init()
 {
   if (cycle_initialized)
     return;

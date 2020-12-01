@@ -142,6 +142,8 @@ include_directories(
   ${catkin_INCLUDE_DIRS}
 )
 
+LINK_DIRECTORIES(../cpc_aux_mapping/lib)
+
 ## Declare a C++ library
 # add_library(${PROJECT_NAME}
 #   src/${PROJECT_NAME}/cpc_motion_planning.cpp
@@ -166,8 +168,8 @@ target_link_libraries(dynamic_programming
     ${catkin_LIBRARIES})
 
 cuda_add_executable(${PROJECT_NAME}_node
-    src/loc_plan/sigtgt_loc_planner_node.cpp
-    src/loc_plan/ugv_sigtgt_local_planner.cpp
+    src/loc_plan/nf1based/nf1_local_planner.cpp
+    src/loc_plan/nf1based/nf1_local_planner_node.cpp
     src/loc_plan/ugv_base_local_planner.cpp
     src/recover_plan/ugv_recover_planner.cpp
     src/kernel/pso_kernels.cu)
@@ -178,45 +180,47 @@ target_link_libraries(${PROJECT_NAME}_node
     ${CUDA_LIBRARIES}
     ${catkin_LIBRARIES})
 
-cuda_add_executable(hybrid_local_planner_node
-    src/loc_plan/hybrid/hybrid_loc_planner_node.cpp
-    src/loc_plan/hybrid/ugv_hybrid_local_planner.cpp
-    src/loc_plan/ugv_base_local_planner.cpp
-    src/kernel/pso_kernels.cu)
+#cuda_add_executable(hybrid_local_planner_node
+#    src/loc_plan/hybrid/hybrid_loc_planner_node.cpp
+#    src/loc_plan/hybrid/ugv_hybrid_local_planner.cpp
+#    src/loc_plan/ugv_base_local_planner.cpp
+#    src/kernel/pso_kernels.cu)
 
-target_link_libraries(hybrid_local_planner_node
-    ${CUDA_curand_LIBRARY}
-    ${CUDA_cublas_LIBRARY}
-    ${CUDA_LIBRARIES}
-    ${catkin_LIBRARIES})
+#target_link_libraries(hybrid_local_planner_node
+#    ${CUDA_curand_LIBRARY}
+#    ${CUDA_cublas_LIBRARY}
+#    ${CUDA_LIBRARIES}
+#    ${catkin_LIBRARIES})
 
-cuda_add_executable(corridor_node
-    src/loc_plan/corridor_planner_node.cpp
-    src/kernel/pso_kernels.cu)
+#cuda_add_executable(corridor_node
+#    src/loc_plan/corridor_planner_node.cpp
+#    src/kernel/pso_kernels.cu)
 
-target_link_libraries(corridor_node
-    ${CUDA_curand_LIBRARY}
-    ${CUDA_cublas_LIBRARY}
-    ${CUDA_LIBRARIES}
-    ${catkin_LIBRARIES})
+#target_link_libraries(corridor_node
+#    ${CUDA_curand_LIBRARY}
+#    ${CUDA_cublas_LIBRARY}
+#    ${CUDA_LIBRARIES}
+#    ${catkin_LIBRARIES})
 
-cuda_add_executable(ref_traj_node
-    src/loc_plan/ref_traj_planner_node.cpp
-    src/loc_plan/ugv_reftraj_local_planner.cpp
-    src/loc_plan/ugv_base_local_planner.cpp
-    src/kernel/pso_kernels.cu)
+#cuda_add_executable(ref_traj_node
+#    src/loc_plan/ref_traj_planner_node.cpp
+#    src/loc_plan/ugv_reftraj_local_planner.cpp
+#    src/loc_plan/ugv_base_local_planner.cpp
+#    src/kernel/pso_kernels.cu)
 
-target_link_libraries(ref_traj_node
-    ${CUDA_curand_LIBRARY}
-    ${CUDA_cublas_LIBRARY}
-    ${CUDA_LIBRARIES}
-    ${catkin_LIBRARIES})
+#target_link_libraries(ref_traj_node
+#    ${CUDA_curand_LIBRARY}
+#    ${CUDA_cublas_LIBRARY}
+#    ${CUDA_LIBRARIES}
+#    ${catkin_LIBRARIES})
 
 cuda_add_executable(nf1_mid_planning_node
-    src/mid_plan/grid_graph.cpp
-    src/mid_plan/dijkstra.cpp
-    src/mid_plan/a_star.cpp
-    src/mid_plan/nf1_mid_planner_node.cpp)
+    src/mid_plan/utils/grid_graph.cpp
+    src/mid_plan/utils/dijkstra.cpp
+    src/mid_plan/utils/a_star.cpp
+    src/mid_plan/nf1based/nf1_mid_planner_node.cpp
+    src/mid_plan/nf1based/nf1_mid_planner.cpp
+    ../cpc_aux_mapping/src/kernel/edt_post_process.cu)
 
 target_link_libraries(nf1_mid_planning_node
     ${CUDA_curand_LIBRARY}
@@ -224,62 +228,73 @@ target_link_libraries(nf1_mid_planning_node
     ${CUDA_LIBRARIES}
     ${catkin_LIBRARIES})
 
-cuda_add_executable(hybrid_nf1_mid_planning_node
-    src/mid_plan/grid_graph.cpp
-    src/mid_plan/hybrid/hybrid_dijkstra.cpp
-    src/mid_plan/a_star.cpp
-    src/mid_plan/hybrid/hybrid_nf1_mid_planner_node.cpp)
+IF(${CMAKE_SYSTEM_PROCESSOR} MATCHES "aarch64")
+    target_link_libraries(nf1_mid_planning_node cutt_arm)
+    message("link with cutt_arm")
+ELSE(${CMAKE_SYSTEM_PROCESSOR} MATCHES "aarch64")
+    target_link_libraries(nf1_mid_planning_node cutt_x86)
+    message("link with cutt_x86")
+ENDIF(${CMAKE_SYSTEM_PROCESSOR} MATCHES "aarch64")
 
-target_link_libraries(hybrid_nf1_mid_planning_node
+cuda_add_executable(glb_planning_node
+    src/mid_plan/utils/grid_graph.cpp
+    src/mid_plan/utils/a_star.cpp
+    src/glb_plan/path_smoother.cpp
+    ../cpc_aux_mapping/src/map.cpp
+    src/glb_plan/glb_map_node.cpp
+    src/glb_plan/global_planner.cpp)
+
+target_link_libraries(glb_planning_node
     ${CUDA_curand_LIBRARY}
     ${CUDA_cublas_LIBRARY}
     ${CUDA_LIBRARIES}
     ${catkin_LIBRARIES})
 
-cuda_add_executable(astar_mid_planning_node
-    src/mid_plan/grid_graph.cpp
-    src/mid_plan/a_star.cpp
-    src/mid_plan/astar_mid_planner_node.cpp)
+#cuda_add_executable(hybrid_nf1_mid_planning_node
+#    src/mid_plan/utils/grid_graph.cpp
+#    src/mid_plan/hybrid/hybrid_dijkstra.cpp
+#    src/mid_plan/utils/a_star.cpp
+#    src/mid_plan/hybrid/hybrid_nf1_mid_planner_node.cpp)
 
-target_link_libraries(astar_mid_planning_node
-    ${CUDA_curand_LIBRARY}
-    ${CUDA_cublas_LIBRARY}
-    ${CUDA_LIBRARIES}
-    ${catkin_LIBRARIES})
+#target_link_libraries(hybrid_nf1_mid_planning_node
+#    ${CUDA_curand_LIBRARY}
+#    ${CUDA_cublas_LIBRARY}
+#    ${CUDA_LIBRARIES}
+#    ${catkin_LIBRARIES})
 
-cuda_add_executable(line_follow_mid_planning_node
-    src/mid_plan/grid_graph.cpp
-    src/mid_plan/dijkstra.cpp
-    src/mid_plan/a_star.cpp
-    src/mid_plan/line_follow_mid_planner_node.cpp)
+#cuda_add_executable(astar_mid_planning_node
+#    src/mid_plan/utils/grid_graph.cpp
+#    src/mid_plan/utils/a_star.cpp
+#    src/mid_plan/astar_mid_planner_node.cpp)
 
-target_link_libraries(line_follow_mid_planning_node
-    ${CUDA_curand_LIBRARY}
-    ${CUDA_cublas_LIBRARY}
-    ${CUDA_LIBRARIES}
-    ${catkin_LIBRARIES})
-cuda_add_executable(hybrid_astar_mid_planning_node
-    src/mid_plan/grid_graph.cpp
-    src/mid_plan/hybrid/hybrid_astar.cpp
-    src/mid_plan/hybrid/hybrid_astar_mid_planner_node.cpp)
+#target_link_libraries(astar_mid_planning_node
+#    ${CUDA_curand_LIBRARY}
+#    ${CUDA_cublas_LIBRARY}
+#    ${CUDA_LIBRARIES}
+#    ${catkin_LIBRARIES})
 
-target_link_libraries(hybrid_astar_mid_planning_node
-    ${CUDA_curand_LIBRARY}
-    ${CUDA_cublas_LIBRARY}
-    ${CUDA_LIBRARIES}
-    ${catkin_LIBRARIES})
+#cuda_add_executable(hybrid_astar_mid_planning_node
+#    src/mid_plan/utils/grid_graph.cpp
+#    src/mid_plan/hybrid/hybrid_astar.cpp
+#    src/mid_plan/hybrid/hybrid_astar_mid_planner_node.cpp)
 
-cuda_add_executable(hybrid_line_follow_mid_planning_node
-    src/mid_plan/grid_graph.cpp
-    src/mid_plan/hybrid/hybrid_dijkstra.cpp
-    src/mid_plan/a_star.cpp
-    src/mid_plan/hybrid/hybrid_line_follow_mid_planner_node.cpp)
+#target_link_libraries(hybrid_astar_mid_planning_node
+#    ${CUDA_curand_LIBRARY}
+#    ${CUDA_cublas_LIBRARY}
+#    ${CUDA_LIBRARIES}
+#    ${catkin_LIBRARIES})
 
-target_link_libraries(hybrid_line_follow_mid_planning_node
-    ${CUDA_curand_LIBRARY}
-    ${CUDA_cublas_LIBRARY}
-    ${CUDA_LIBRARIES}
-    ${catkin_LIBRARIES})
+#cuda_add_executable(hybrid_line_follow_mid_planning_node
+#    src/mid_plan/utils/grid_graph.cpp
+#    src/mid_plan/hybrid/hybrid_dijkstra.cpp
+#    src/mid_plan/utils/a_star.cpp
+#    src/mid_plan/hybrid/hybrid_line_follow_mid_planner_node.cpp)
+
+#target_link_libraries(hybrid_line_follow_mid_planning_node
+#    ${CUDA_curand_LIBRARY}
+#    ${CUDA_cublas_LIBRARY}
+#    ${CUDA_LIBRARIES}
+#    ${catkin_LIBRARIES})
 
 
 
@@ -292,15 +307,15 @@ target_link_libraries(hybrid_line_follow_mid_planning_node
 ## Add cmake target dependencies of the executable
 ## same as for the library above
 add_dependencies(${PROJECT_NAME}_node ${${PROJECT_NAME}_EXPORTED_TARGETS} ${catkin_EXPORTED_TARGETS})
-add_dependencies(corridor_node ${${PROJECT_NAME}_EXPORTED_TARGETS} ${catkin_EXPORTED_TARGETS})
-add_dependencies(ref_traj_node ${${PROJECT_NAME}_EXPORTED_TARGETS} ${catkin_EXPORTED_TARGETS})
+#add_dependencies(corridor_node ${${PROJECT_NAME}_EXPORTED_TARGETS} ${catkin_EXPORTED_TARGETS})
+#add_dependencies(ref_traj_node ${${PROJECT_NAME}_EXPORTED_TARGETS} ${catkin_EXPORTED_TARGETS})
 add_dependencies(nf1_mid_planning_node ${${PROJECT_NAME}_EXPORTED_TARGETS} ${catkin_EXPORTED_TARGETS})
-add_dependencies(astar_mid_planning_node ${${PROJECT_NAME}_EXPORTED_TARGETS} ${catkin_EXPORTED_TARGETS})
-add_dependencies(line_follow_mid_planning_node ${${PROJECT_NAME}_EXPORTED_TARGETS} ${catkin_EXPORTED_TARGETS})
-add_dependencies(hybrid_astar_mid_planning_node ${${PROJECT_NAME}_EXPORTED_TARGETS} ${catkin_EXPORTED_TARGETS})
-add_dependencies(hybrid_local_planner_node ${${PROJECT_NAME}_EXPORTED_TARGETS} ${catkin_EXPORTED_TARGETS})
-add_dependencies(hybrid_nf1_mid_planning_node ${${PROJECT_NAME}_EXPORTED_TARGETS} ${catkin_EXPORTED_TARGETS})
-add_dependencies(hybrid_line_follow_mid_planning_node ${${PROJECT_NAME}_EXPORTED_TARGETS} ${catkin_EXPORTED_TARGETS})
+add_dependencies(glb_planning_node ${${PROJECT_NAME}_EXPORTED_TARGETS} ${catkin_EXPORTED_TARGETS})
+#add_dependencies(astar_mid_planning_node ${${PROJECT_NAME}_EXPORTED_TARGETS} ${catkin_EXPORTED_TARGETS})
+#add_dependencies(hybrid_astar_mid_planning_node ${${PROJECT_NAME}_EXPORTED_TARGETS} ${catkin_EXPORTED_TARGETS})
+#add_dependencies(hybrid_local_planner_node ${${PROJECT_NAME}_EXPORTED_TARGETS} ${catkin_EXPORTED_TARGETS})
+#add_dependencies(hybrid_nf1_mid_planning_node ${${PROJECT_NAME}_EXPORTED_TARGETS} ${catkin_EXPORTED_TARGETS})
+#add_dependencies(hybrid_line_follow_mid_planning_node ${${PROJECT_NAME}_EXPORTED_TARGETS} ${catkin_EXPORTED_TARGETS})
 
 ## Specify libraries to link a library or executable target against
 # target_link_libraries(${PROJECT_NAME}_node

@@ -1,5 +1,5 @@
 #include <ros/ros.h>
-#include <mid_plan/grid_graph.h>
+#include <mid_plan/utils/grid_graph.h>
 #include <geometry_msgs/PointStamped.h>
 #include <pcl_conversions/pcl_conversions.h>
 #include <pcl_ros/point_cloud.h>
@@ -11,7 +11,7 @@
 #include <algorithm>
 #include "cpc_motion_planning/ref_data.h"
 #include <mid_plan/hybrid/hybrid_dijkstra.h>
-#include <mid_plan/a_star.h>
+#include <mid_plan/utils/a_star.h>
 #include <nav_msgs/Odometry.h>
 #include <tf/tf.h>
 #include <std_msgs/Int32.h>
