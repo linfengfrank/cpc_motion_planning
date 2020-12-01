@@ -42,14 +42,17 @@ GlobalPlanner::~GlobalPlanner()
 void GlobalPlanner::goal_call_back(const geometry_msgs::PoseStamped::ConstPtr &msg)
 {
   set_goal(CUDA_GEO::pos(msg->pose.position.x, msg->pose.position.y, msg->pose.position.z));
+  std::cout<<m_map_loaded<<" "<<m_odom_received<<std::endl;
   if (m_map_loaded && m_odom_received)
   {
+    std::cout<<"enter global planning"<<std::endl;
     m_glb_path = plan(m_goal,CUDA_GEO::pos(m_curr_pose.x,m_curr_pose.y,0));
     m_ps->set_path(m_glb_path);
     m_ps->smooth_path();
     m_glb_path = m_ps->get_path();
     show_glb_path();
     publish_glb_path();
+    std::cout<<"finish global planning"<<std::endl;
   }
 }
 
