@@ -140,7 +140,7 @@ public:
   {
     for (int n = 0; n < STEP; n++)
     {
-      PSO::bound_between(p.curr_loc.site[n].x,  -2.0f,  2.0f);
+      PSO::bound_between(p.curr_loc.site[n].x,  -4.0f,  4.0f);
       PSO::bound_between(p.curr_loc.site[n].y,  -1.0f,  1.0f);    }
   }
 
@@ -150,7 +150,7 @@ public:
   {
     for (int i=0; i< STEP; i++)
     {
-      p.curr_loc.site[i].x = PSO::rand_float_gen(&(p.rs), -2.0f,  2.0f); // station target
+      p.curr_loc.site[i].x = PSO::rand_float_gen(&(p.rs), -4.0f,  4.0f); // station target
       p.curr_loc.site[i].y = PSO::rand_float_gen(&(p.rs), -1.0f,  1.0f); // theta target
       p.curr_loc.site[i].z = 0;
 

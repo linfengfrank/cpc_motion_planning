@@ -35,26 +35,56 @@ void iterate_particles_kernel(float weight,
 {
   int idx = threadIdx.x+blockDim.x*blockIdx.x;
 
-  if (idx == sw.ptcl_size-1)
-    return;
+  // Test the Differential Evolution algorithm:
+  // pick three distinct particles from the swarm (r1,r2 and r3):
+  int r1 = PSO::rand_int_gen(&(sw.ptcls[idx].rs),0,sw.ptcl_size-1);
+  while (r1 == idx)
+    r1 = PSO::rand_int_gen(&(sw.ptcls[idx].rs),0,sw.ptcl_size-1);
 
-  float r1 = PSO::rand_float_gen(&(sw.ptcls[idx].rs),0,1);
-  float r2 = PSO::rand_float_gen(&(sw.ptcls[idx].rs),0,1);
+  int r2 = PSO::rand_int_gen(&(sw.ptcls[idx].rs),0,sw.ptcl_size-1);
+  while (r2 == idx || r2 == r1)
+    r2 = PSO::rand_int_gen(&(sw.ptcls[idx].rs),0,sw.ptcl_size-1);
 
-  sw.ptcls[idx].ptcl_vel =
-      sw.ptcls[idx].ptcl_vel*weight -
-      (sw.ptcls[idx].curr_loc - sw.ptcls[idx].best_loc)*r1 -
-      (sw.ptcls[idx].curr_loc - sw.ptcls[sw.ptcl_size-1].curr_loc)*r2;
+  int r3 = PSO::rand_int_gen(&(sw.ptcls[idx].rs),0,sw.ptcl_size-1);
+  while (r3 == idx || r3 == r1 || r3 == r2)
+    r3 = PSO::rand_int_gen(&(sw.ptcls[idx].rs),0,sw.ptcl_size-1);
 
-  sw.bound_ptcl_velocity(sw.ptcls[idx]);
+  // construct the variation (stored in ptcl_vel)
+  sw.ptcls[idx].ptcl_vel = sw.ptcls[r1].best_loc + (sw.ptcls[r2].best_loc - sw.ptcls[r3].best_loc)*0.8f;
 
-  sw.ptcls[idx].curr_loc = sw.ptcls[idx].curr_loc + sw.ptcls[idx].ptcl_vel;
+  // random sample an index r, to be used in cross over later
+  int r = static_cast<int>(PSO::rand_float_gen(&(sw.ptcls[idx].rs),0,sw.steps*2-1));
 
+  // corssover
+  float cr;
+  int step, dim;
+  for (int i=0; i<sw.steps*2; i++)
+  {
+    cr = PSO::rand_float_gen(&(sw.ptcls[idx].rs),0,1);
+    step = i/2;
+    dim = i%2;
+    if (cr < 0.9f || i == r)
+    {
+      if (dim == 0)
+      {
+        sw.ptcls[idx].curr_loc[step].x = sw.ptcls[idx].ptcl_vel[step].x;
+      }
+      else
+      {
+        sw.ptcls[idx].curr_loc[step].y = sw.ptcls[idx].ptcl_vel[step].y;
+      }
+    }
+  }
+
+  //bound the particle
   sw.bound_ptcl_location(m.get_ini_state(), sw.ptcls[idx]);
 
+  //calculate the cost
   float cost = ctrl.template simulate_evaluate<Model,Evaluator,Swarm >(map,eva,m,sw,sw.ptcls[idx].curr_loc,sw.ptcls[idx].collision);
 
+  __syncthreads();
 
+  //update the cost
   if (cost < sw.ptcls[idx].best_cost && !sw.ptcls[idx].collision)
   {
     sw.ptcls[idx].best_cost = cost;
@@ -132,7 +162,9 @@ INST_group(UGV::UGVModel, UGV::UGVDPControl, UGV::NF1Evaluator, UGV::UGVSwarm<1>
 INST_group(UGV::UGVModel, UGV::UGVDPControl, UGV::NF1Evaluator, UGV::UGVSwarm<2>);
 INST_group(UGV::UGVModel, UGV::UGVDPControl, UGV::NF1Evaluator, UGV::UGVSwarm<3>);
 INST_group(UGV::UGVModel, UGV::UGVDPControl, UGV::NF1Evaluator, UGV::UGVSwarm<4>);
+INST_group(UGV::UGVModel, UGV::UGVDPControl, UGV::NF1Evaluator, UGV::UGVSwarm<6>);
 INST_group(UGV::UGVModel, UGV::UGVDPControl, UGV::NF1Evaluator, UGV::UGVSwarm<8>);
+INST_group(UGV::UGVModel, UGV::UGVDPControl, UGV::NF1Evaluator, UGV::UGVSwarm<20>);
 
 INST_initialize_particles(UGV::UGVModel, UGV::UGVJLTControl, UGV::NF1Evaluator, UGV::UGVSwarm<1>);
 INST_iterate_particles(UGV::UGVModel, UGV::UGVJLTControl, UGV::NF1Evaluator, UGV::UGVSwarm<1>);

@@ -41,16 +41,17 @@ public:
       {
         float weight = 0.95-(0.95-0.4)/static_cast<float>(m_num_of_epoches)*static_cast<float>(i);
         iterate_particles<Model, Controller, Evaluator,Swarm>(weight, map, m_eva,m_model,m_ctrl_dev,m_swarm);
-        copy_best_values<Swarm>(m_best_values,m_swarm);
-
-        int best_idx = -1;
-        cbls_stt = cublasIsamin(m_cbls_hdl,m_swarm.ptcl_size,m_best_values,1,&best_idx);
-
-        if(best_idx != -1)
-        {
-          CUDA_MEMCPY_D2D(m_swarm.ptcls+m_swarm.ptcl_size-1,m_swarm.ptcls+best_idx-1,sizeof(typename Swarm::Particle));
-        }
       }
+    }
+
+    copy_best_values<Swarm>(m_best_values,m_swarm);
+
+    int best_idx = -1;
+    cbls_stt = cublasIsamin(m_cbls_hdl,m_swarm.ptcl_size,m_best_values,1,&best_idx);
+
+    if(best_idx != -1)
+    {
+      CUDA_MEMCPY_D2D(m_swarm.ptcls+m_swarm.ptcl_size-1,m_swarm.ptcls+best_idx-1,sizeof(typename Swarm::Particle));
     }
 
     CUDA_MEMCPY_D2H(&result, m_swarm.ptcls+m_swarm.ptcl_size-1,sizeof(typename Swarm::Particle));

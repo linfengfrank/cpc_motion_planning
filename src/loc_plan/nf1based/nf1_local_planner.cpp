@@ -24,7 +24,7 @@ NF1LocalPlanner::NF1LocalPlanner():
 
   m_planning_timer = m_nh.createTimer(ros::Duration(PSO::PSO_REPLAN_DT), &NF1LocalPlanner::plan_call_back, this);
 
-  m_pso_planner = new PSO::Planner<SIMPLE_UGV>(120,50,3);
+  m_pso_planner = new PSO::Planner<SIMPLE_UGV>(256,128,1);
   m_pso_planner->initialize();
 
   m_ref_v = 0.0f;
@@ -177,9 +177,14 @@ void NF1LocalPlanner::do_normal()
   std::cout<<"NORMAL"<<std::endl;
 
   //Planning
+    auto start_time = std::chrono::steady_clock::now();
   m_task_is_new = false;
   calculate_trajectory<SIMPLE_UGV>(m_pso_planner, m_traj);
 
+  auto end_time = std::chrono::steady_clock::now();
+      std::cout << "Local planning time: "
+                << std::chrono::duration_cast<std::chrono::milliseconds>(end_time - start_time).count()
+                << " ms" << std::endl;
   //Goto: Braking
   if (m_pso_planner->result.collision)
   {
