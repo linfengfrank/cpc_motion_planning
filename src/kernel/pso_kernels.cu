@@ -87,7 +87,7 @@ void iterate_particles_de_kernel(EDTMap map, Evaluator eva, Model m, Controller 
   sw.ptcls[idx].ptcl_vel = sw.ptcls[r1].best_loc + (sw.ptcls[r2].best_loc - sw.ptcls[r3].best_loc)*0.8f;
 
   // random sample an index r, to be used in cross over later
-  int r = static_cast<int>(PSO::rand_float_gen(&(sw.ptcls[idx].rs),0,sw.steps*2-1));
+  int r = PSO::rand_int_gen(&(sw.ptcls[idx].rs),0,sw.steps*2-1);
 
   // corssover
   float cr;
