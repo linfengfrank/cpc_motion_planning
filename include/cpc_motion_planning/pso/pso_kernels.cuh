@@ -26,6 +26,10 @@ template<class Model, class Controller, class Evaluator, class Swarm>
 void iterate_particles(float weight,
                        const EDTMap &map, const Evaluator &eva, const Model &m, const Controller &ctrl, const Swarm &sw);
 
+//--------
+template<class Model, class Controller, class Evaluator, class Swarm>
+void iterate_particles_de(const EDTMap &map, const Evaluator &eva, const Model &m, const Controller &ctrl, const Swarm &sw);
+
 //---------
 template<class Swarm>
 void copy_best_values(float *best_values, const Swarm &sw);

@@ -57,6 +57,35 @@ public:
     cudaDeviceSynchronize();
   }
 
+  void plan_de(const EDTMap &map)
+  {
+    //test_plan<N>(s,goal,m_ptcls, m_best_values, m_num_of_ptcls, &result, true,m_carrier,m_cbls_hdl);
+    cublasStatus_t cbls_stt;
+
+    initialize_particles<Model, Controller, Evaluator, Swarm>(m_first_time, map, m_eva,m_model,m_ctrl_dev,m_swarm);
+    m_first_time = false;
+    for (int ctt = 0; ctt <m_num_of_episodes; ctt++)
+    {
+      for (int i=0;i<m_num_of_epoches;i++)
+      {
+        iterate_particles_de<Model, Controller, Evaluator,Swarm>(map, m_eva,m_model,m_ctrl_dev,m_swarm);
+      }
+    }
+
+    copy_best_values<Swarm>(m_best_values,m_swarm);
+
+    int best_idx = -1;
+    cbls_stt = cublasIsamin(m_cbls_hdl,m_swarm.ptcl_size,m_best_values,1,&best_idx);
+
+    if(best_idx != -1)
+    {
+      CUDA_MEMCPY_D2D(m_swarm.ptcls+m_swarm.ptcl_size-1,m_swarm.ptcls+best_idx-1,sizeof(typename Swarm::Particle));
+    }
+
+    CUDA_MEMCPY_D2H(&result, m_swarm.ptcls+m_swarm.ptcl_size-1,sizeof(typename Swarm::Particle));
+    cudaDeviceSynchronize();
+  }
+
   void initialize()
   {
     create_particles();

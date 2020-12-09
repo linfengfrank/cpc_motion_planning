@@ -61,7 +61,70 @@ void iterate_particles_kernel(float weight,
     sw.ptcls[idx].best_loc = sw.ptcls[idx].curr_loc;
   }
 }
+//---------
+//---
+template<class Model, class Controller, class Evaluator, class Swarm>
+__global__
+void iterate_particles_de_kernel(EDTMap map, Evaluator eva, Model m, Controller ctrl, Swarm sw)
+{
+  int idx = threadIdx.x+blockDim.x*blockIdx.x;
 
+  // Test the Differential Evolution algorithm:
+  // pick three distinct particles from the swarm (r1,r2 and r3):
+  int r1 = PSO::rand_int_gen(&(sw.ptcls[idx].rs),0,sw.ptcl_size-1);
+  while (r1 == idx)
+    r1 = PSO::rand_int_gen(&(sw.ptcls[idx].rs),0,sw.ptcl_size-1);
+
+  int r2 = PSO::rand_int_gen(&(sw.ptcls[idx].rs),0,sw.ptcl_size-1);
+  while (r2 == idx || r2 == r1)
+    r2 = PSO::rand_int_gen(&(sw.ptcls[idx].rs),0,sw.ptcl_size-1);
+
+  int r3 = PSO::rand_int_gen(&(sw.ptcls[idx].rs),0,sw.ptcl_size-1);
+  while (r3 == idx || r3 == r1 || r3 == r2)
+    r3 = PSO::rand_int_gen(&(sw.ptcls[idx].rs),0,sw.ptcl_size-1);
+
+  // construct the variation (stored in ptcl_vel)
+  sw.ptcls[idx].ptcl_vel = sw.ptcls[r1].best_loc + (sw.ptcls[r2].best_loc - sw.ptcls[r3].best_loc)*0.8f;
+
+  // random sample an index r, to be used in cross over later
+  int r = static_cast<int>(PSO::rand_float_gen(&(sw.ptcls[idx].rs),0,sw.steps*2-1));
+
+  // corssover
+  float cr;
+  int step, dim;
+  for (int i=0; i<sw.steps*2; i++)
+  {
+    cr = PSO::rand_float_gen(&(sw.ptcls[idx].rs),0,1);
+    step = i/2;
+    dim = i%2;
+    if (cr < 0.9f || i == r)
+    {
+      if (dim == 0)
+      {
+        sw.ptcls[idx].curr_loc[step].x = sw.ptcls[idx].ptcl_vel[step].x;
+      }
+      else
+      {
+        sw.ptcls[idx].curr_loc[step].y = sw.ptcls[idx].ptcl_vel[step].y;
+      }
+    }
+  }
+
+  //bound the particle
+  sw.bound_ptcl_location(m.get_ini_state(), sw.ptcls[idx]);
+
+  //calculate the cost
+  float cost = ctrl.template simulate_evaluate<Model,Evaluator,Swarm >(map,eva,m,sw,sw.ptcls[idx].curr_loc,sw.ptcls[idx].collision);
+
+  __syncthreads();
+
+  //update the cost
+  if (cost < sw.ptcls[idx].best_cost && !sw.ptcls[idx].collision)
+  {
+    sw.ptcls[idx].best_cost = cost;
+    sw.ptcls[idx].best_loc = sw.ptcls[idx].curr_loc;
+  }
+}
 //---------
 template<class Swarm>
 __global__
@@ -95,6 +158,13 @@ void iterate_particles(float weight,
 }
 
 //---------
+template<class Model, class Controller, class Evaluator, class Swarm>
+void iterate_particles_de(const EDTMap &map, const Evaluator &eva, const Model &m, const Controller &ctrl, const Swarm &sw)
+{
+  iterate_particles_de_kernel<Model,Controller,Evaluator,Swarm><<<1,sw.ptcl_size>>>(map,eva,m,ctrl,sw);
+}
+
+//---------
 template<class Swarm>
 void copy_best_values(float *best_values, const Swarm &sw)
 {
@@ -117,6 +187,9 @@ void copy_best_values(float *best_values, const Swarm &sw)
 #define INST_iterate_particles(M,C,E,S) template void PSO::iterate_particles< M,C,E,S > \
 (float, const EDTMap&, const E&, const M&, const C& , const S&);
 
+#define INST_iterate_particles_de(M,C,E,S) template void PSO::iterate_particles_de< M,C,E,S > \
+(const EDTMap&, const E&, const M&, const C& , const S&);
+
 #define INST_setup_random_states(S) template void PSO::setup_random_states< S > \
 (const S&);
 
@@ -125,6 +198,7 @@ void copy_best_values(float *best_values, const Swarm &sw)
 
 #define INST_group(M,C,E,S) INST_initialize_particles(M,C,E,S) \
   INST_iterate_particles(M,C,E,S) \
+  INST_iterate_particles_de(M,C,E,S) \
   INST_setup_random_states(S) \
   INST_copy_best_values(S)
 

@@ -104,10 +104,13 @@ protected:
   }
 
   template<class Model, class Controller, class Evaluator, class Swarm>
-  void calculate_trajectory(PSO::Planner<Model, Controller, Evaluator, Swarm> *planner, std::vector<UGV::UGVModel::State> &traj)
+  void calculate_trajectory(PSO::Planner<Model, Controller, Evaluator, Swarm> *planner, std::vector<UGV::UGVModel::State> &traj, bool use_de = false)
   {
     // conduct the motion planning
-    planner->plan(*m_edt_map);
+    if (use_de)
+      planner->plan_de(*m_edt_map);
+    else
+      planner->plan(*m_edt_map);
 
     // generate the trajectory
     traj = planner->generate_trajectory();

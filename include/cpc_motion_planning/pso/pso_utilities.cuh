@@ -28,6 +28,18 @@ float rand_float_gen(curandState *rs, float min, float max)
 }
 
 __host__ __device__ __forceinline__
+int rand_int_gen(curandState *rs, int min, int max)
+{
+  float output_float = rand_float_gen(rs, static_cast<float>(min), static_cast<float>(max)+0.9999f);
+  int output = static_cast<int>(output_float);
+
+  if (output > max) output = max;
+  if (output < min) output = min;
+
+  return output;
+}
+
+__host__ __device__ __forceinline__
 void bound_between(float &val, float min, float max)
 {
     if (val < min)
