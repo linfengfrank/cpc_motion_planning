@@ -47,5 +47,12 @@ void bound_between(float &val, float min, float max)
     else if (val > max)
         val = max;
 }
+
+__host__ __device__ __forceinline__
+void modulo_bound_between(float &val, float min, float max)
+{
+  float m = max - min;
+  val = val - floorf((val-min)/m)*m;
+}
 }
 #endif // PSO_CUH
