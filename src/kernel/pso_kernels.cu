@@ -100,13 +100,16 @@ void iterate_particles_de_kernel(EDTMap map, Evaluator eva, Model m, Controller 
     if (cr < 0.9f || i == r)
     {
       if (dim == 0)
-      {
         sw.ptcls[idx].curr_loc[step].x = sw.ptcls[idx].ptcl_vel[step].x;
-      }
       else
-      {
         sw.ptcls[idx].curr_loc[step].y = sw.ptcls[idx].ptcl_vel[step].y;
-      }
+    }
+    else
+    {
+      if (dim == 0)
+        sw.ptcls[idx].curr_loc[step].x = sw.ptcls[idx].best_loc[step].x;
+      else
+        sw.ptcls[idx].curr_loc[step].y = sw.ptcls[idx].best_loc[step].y;
     }
   }
 
