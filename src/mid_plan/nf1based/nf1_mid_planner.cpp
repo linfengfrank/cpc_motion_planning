@@ -195,10 +195,10 @@ void NF1MidPlanner::plan(const ros::TimerEvent&)
   }
   m_d_map->dijkstra2D_with_line_map(tgt,m_line_map);
 
-  auto end_time = std::chrono::steady_clock::now();
-      std::cout << "Middle planning time: "
-                << std::chrono::duration_cast<std::chrono::milliseconds>(end_time - start_time).count()
-                << " ms" << std::endl;
+//  auto end_time = std::chrono::steady_clock::now();
+//      std::cout << "Middle planning time: "
+//                << std::chrono::duration_cast<std::chrono::milliseconds>(end_time - start_time).count()
+//                << " ms" << std::endl;
 
   // publish the nf1 and mid_goal
   CUDA_GEO::pos carrot = m_d_map->coord2pos(tgt);

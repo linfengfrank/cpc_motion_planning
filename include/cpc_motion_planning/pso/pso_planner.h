@@ -57,6 +57,16 @@ public:
 
     CUDA_MEMCPY_D2H(&result, m_swarm.ptcls+m_swarm.ptcl_size-1,sizeof(typename Swarm::Particle));
     cudaDeviceSynchronize();
+
+    typename Swarm::Trace tr = m_smoother->perform_path_integral(map, result.best_loc);
+
+    float cost_2 = evaluate_trace<Model, Controller, Evaluator,Swarm>(map, m_eva,m_model,m_ctrl_dev,m_swarm,tr);
+
+    if(cost_2 < result.best_cost)
+    {
+      result.best_loc = tr;
+      std::cout<<"MPPI_better: "<<result.best_cost - cost_2<<std::endl;
+    }
   }
 
   void plan_de(const EDTMap &map)
@@ -87,11 +97,15 @@ public:
     CUDA_MEMCPY_D2H(&result, m_swarm.ptcls+m_swarm.ptcl_size-1,sizeof(typename Swarm::Particle));
     cudaDeviceSynchronize();
 
-    result.best_loc = m_smoother->perform_path_integral(map, result.best_loc);
+    typename Swarm::Trace tr = m_smoother->perform_path_integral(map, result.best_loc);
 
-    float cost_2 = evaluate_trace<Model, Controller, Evaluator,Swarm>(map, m_eva,m_model,m_ctrl_dev,m_swarm,result.best_loc);
+    float cost_2 = evaluate_trace<Model, Controller, Evaluator,Swarm>(map, m_eva,m_model,m_ctrl_dev,m_swarm,tr);
 
-    std::cout<<result.best_cost<<", "<<cost_2<<std::endl;
+    if(cost_2 < result.best_cost)
+    {
+      result.best_loc = tr;
+      std::cout<<"MPPI_better: "<<result.best_cost - cost_2<<std::endl;
+    }
   }
 
   void initialize()

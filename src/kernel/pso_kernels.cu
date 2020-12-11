@@ -137,8 +137,8 @@ void path_integral_kernel(EDTMap map, Evaluator eva, Model m, Controller ctrl, S
 
   for (int i = 0 ; i < sw.steps; i++)
   {
-    sw.ptcls[idx].ptcl_vel[i].x = 0.2f*PSO::rand_float_gen(&(sw.ptcls[idx].rs),-1,1);
-    sw.ptcls[idx].ptcl_vel[i].y = 0.1f*PSO::rand_float_gen(&(sw.ptcls[idx].rs),-1,1);
+    sw.ptcls[idx].ptcl_vel[i].x = 0.5f*PSO::rand_float_gen(&(sw.ptcls[idx].rs),-1,1);
+    sw.ptcls[idx].ptcl_vel[i].y = 0.2f*PSO::rand_float_gen(&(sw.ptcls[idx].rs),-1,1);
 
     sw.ptcls[idx].curr_loc[i].x = tr[i].x + sw.ptcls[idx].ptcl_vel[i].x;
     sw.ptcls[idx].curr_loc[i].y = tr[i].y + sw.ptcls[idx].ptcl_vel[i].y;
@@ -284,6 +284,7 @@ INST_iterate_particles(UGV::UGVModel, UGV::UGVDPControl, UGV::RefTrajEvaluator, 
 
 INST_initialize_particles(UGV::UGVModel, UGV::UGVDPControl, UGV::RecoverEvaluator, UGV::UGVSwarm<3>);
 INST_iterate_particles(UGV::UGVModel, UGV::UGVDPControl, UGV::RecoverEvaluator, UGV::UGVSwarm<3>);
+INST_path_integral(UGV::UGVModel, UGV::UGVDPControl, UGV::RecoverEvaluator, UGV::UGVSwarm<3>);
 
 INST_initialize_particles(UGV::UGVModel, UGV::UGVDPControl, UGV::HybridEvaluator, UGV::UGVSwarm<1>);
 INST_iterate_particles(UGV::UGVModel, UGV::UGVDPControl, UGV::HybridEvaluator, UGV::UGVSwarm<1>);

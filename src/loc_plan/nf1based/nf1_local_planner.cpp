@@ -176,9 +176,16 @@ void NF1LocalPlanner::do_normal()
   cycle_init();
   std::cout<<"NORMAL"<<std::endl;
 
+    auto start_time = std::chrono::steady_clock::now();
   //Planning
   m_task_is_new = false;
   calculate_trajectory<SIMPLE_UGV>(m_pso_planner, m_traj, true);
+
+  auto end_time = std::chrono::steady_clock::now();
+      std::cout << "Local planning time: "
+                << std::chrono::duration_cast<std::chrono::milliseconds>(end_time - start_time).count()
+                << " ms" << std::endl;
+
 
   //Goto: Braking
   if (m_pso_planner->result.collision)

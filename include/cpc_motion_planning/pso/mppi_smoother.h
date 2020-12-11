@@ -12,7 +12,7 @@ public:
     m_ctrl(ctrl),
     m_eva(eva),
     m_swarm(sw),
-    m_N(10)
+    m_N(50)
   {
     m_ptcl_group = new typename Swarm::Particle[m_swarm->ptcl_size*m_N];
     m_w_group = new float[m_swarm->ptcl_size*m_N];
@@ -43,7 +43,7 @@ public:
     }
 
     float eta=0;
-    float lambada = 2.0f;
+    float lambada = 0.01f;
     for (int i=0; i<m_swarm->ptcl_size*m_N; i++)
     {
       eta += exp(-1/lambada*(m_ptcl_group[i].best_cost-Smin));
@@ -62,7 +62,7 @@ public:
         output[step].y += m_w_group[i]*m_ptcl_group[i].ptcl_vel[step].y;
       }
     }
-    std::cout<<"!!!: "<<eta<<std::endl;
+//    std::cout<<"!!!: "<<eta<<std::endl;
     return output;
   }
 
