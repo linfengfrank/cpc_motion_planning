@@ -3,6 +3,7 @@
 
 #include <cpc_motion_planning/cuda_matrix_factory.h>
 #include <cpc_motion_planning/pso/pso_kernels.cuh>
+#include <cpc_motion_planning/pso/mppi_smoother.h>
 
 namespace PSO
 {
@@ -16,11 +17,12 @@ public:
     m_first_time(true)
   {
     m_swarm.ptcl_size = num_of_ptcls;
+    m_smoother = new MppiSmoother<Model, Controller, Evaluator,Swarm>(&m_model, &m_ctrl_dev, &m_eva, &m_swarm);
   }
 
   ~Planner()
   {
-
+    delete m_smoother;
   }
 
   std::vector<typename Model::State> generate_trajectory()
@@ -84,6 +86,12 @@ public:
 
     CUDA_MEMCPY_D2H(&result, m_swarm.ptcls+m_swarm.ptcl_size-1,sizeof(typename Swarm::Particle));
     cudaDeviceSynchronize();
+
+    result.best_loc = m_smoother->perform_path_integral(map, result.best_loc);
+
+    float cost_2 = evaluate_trace<Model, Controller, Evaluator,Swarm>(map, m_eva,m_model,m_ctrl_dev,m_swarm,result.best_loc);
+
+    std::cout<<result.best_cost<<", "<<cost_2<<std::endl;
   }
 
   void initialize()
@@ -131,6 +139,7 @@ public:
   Controller m_ctrl_dev;
   Controller m_ctrl_host;
   Swarm m_swarm;
+  MppiSmoother<Model, Controller, Evaluator,Swarm> *m_smoother;
 
 };
 

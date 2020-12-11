@@ -34,8 +34,16 @@ void iterate_particles_de(const EDTMap &map, const Evaluator &eva, const Model &
 template<class Swarm>
 void copy_best_values(float *best_values, const Swarm &sw);
 
-////---------
-//float evaluate_trajectory_wrapper(const State &s0, const Trace &tr, VoidPtrCarrier ptr_car,const UniformBinCarrier &ubc,
-//               const EDTMap &map, const Trace &last_tr);
+//---------
+template<class Model, class Controller, class Evaluator, class Swarm>
+void path_integral(const EDTMap &map, const Evaluator &eva,
+                   const Model &m, const Controller &ctrl,
+                   const Swarm &sw, const typename Swarm::Trace &tr);
+
+//---------
+template<class Model, class Controller, class Evaluator, class Swarm>
+float evaluate_trace(const EDTMap &map, const Evaluator &eva,
+                   const Model &m, const Controller &ctrl,
+                   const Swarm &sw, const typename Swarm::Trace &tr);
 }
 #endif // PSO_KERNELS_CUH

@@ -129,6 +129,32 @@ void iterate_particles_de_kernel(EDTMap map, Evaluator eva, Model m, Controller 
   }
 }
 //---------
+template<class Model, class Controller, class Evaluator, class Swarm>
+__global__
+void path_integral_kernel(EDTMap map, Evaluator eva, Model m, Controller ctrl, Swarm sw, typename Swarm::Trace tr)
+{
+  int idx = threadIdx.x+blockDim.x*blockIdx.x;
+
+  for (int i = 0 ; i < sw.steps; i++)
+  {
+    sw.ptcls[idx].ptcl_vel[i].x = 0.2f*PSO::rand_float_gen(&(sw.ptcls[idx].rs),-1,1);
+    sw.ptcls[idx].ptcl_vel[i].y = 0.1f*PSO::rand_float_gen(&(sw.ptcls[idx].rs),-1,1);
+
+    sw.ptcls[idx].curr_loc[i].x = tr[i].x + sw.ptcls[idx].ptcl_vel[i].x;
+    sw.ptcls[idx].curr_loc[i].y = tr[i].y + sw.ptcls[idx].ptcl_vel[i].y;
+  }
+
+  sw.ptcls[idx].best_cost = ctrl.template simulate_evaluate<Model,Evaluator,Swarm >(map,eva,m,sw,sw.ptcls[idx].curr_loc,sw.ptcls[idx].collision);
+}
+//---------
+template<class Model, class Controller, class Evaluator, class Swarm>
+__global__
+void evaluate_trace_kernel(EDTMap map, Evaluator eva, Model m, Controller ctrl, Swarm sw, typename Swarm::Trace tr, float* cost)
+{
+  bool collision;
+  *cost = ctrl.template simulate_evaluate<Model,Evaluator,Swarm >(map,eva,m,sw,tr,collision);
+}
+//---------
 template<class Swarm>
 __global__
 void copy_best_value_kernel(float* best_values, Swarm sw)
@@ -174,13 +200,28 @@ void copy_best_values(float *best_values, const Swarm &sw)
   copy_best_value_kernel<Swarm><<<1,sw.ptcl_size>>>(best_values,sw);
 }
 
-//float evaluate_trajectory_wrapper(const UAVModel::State &s0, const Trace &tr, VoidPtrCarrier ptr_car,const UniformBinCarrier &ubc,
-//               const EDTMap &map, const Trace &last_tr)
-//{
-//  return 0;
-////  return evaluate_trajectory(s0, goal, tr, ptr_car,ubc,
-////                             map, last_tr);
-//}
+template<class Model, class Controller, class Evaluator, class Swarm>
+void path_integral(const EDTMap &map, const Evaluator &eva,
+                   const Model &m, const Controller &ctrl,
+                   const Swarm &sw, const typename Swarm::Trace &tr)
+{
+  path_integral_kernel<Model,Controller,Evaluator,Swarm><<<1,sw.ptcl_size>>>(map,eva,m,ctrl,sw,tr);
+}
+
+//---------
+template<class Model, class Controller, class Evaluator, class Swarm>
+float evaluate_trace(const EDTMap &map, const Evaluator &eva,
+                   const Model &m, const Controller &ctrl,
+                   const Swarm &sw, const typename Swarm::Trace &tr)
+{
+  float hst_float;
+  float *dev_float;
+  CUDA_ALLOC_DEV_MEM(&dev_float,sizeof (float));
+  evaluate_trace_kernel<Model,Controller,Evaluator,Swarm><<<1,1>>>(map,eva,m,ctrl,sw,tr,dev_float);
+  CUDA_MEMCPY_D2H(&hst_float,dev_float,sizeof (float));
+  CUDA_FREE_DEV_MEM(dev_float);
+  return hst_float;
+}
 
 }
 
@@ -193,6 +234,11 @@ void copy_best_values(float *best_values, const Swarm &sw)
 #define INST_iterate_particles_de(M,C,E,S) template void PSO::iterate_particles_de< M,C,E,S > \
 (const EDTMap&, const E&, const M&, const C& , const S&);
 
+#define INST_path_integral(M,C,E,S) template void PSO::path_integral< M,C,E,S > \
+(const EDTMap&, const E&, const M&, const C& , const S&, const typename S::Trace&);\
+  template float PSO::evaluate_trace< M,C,E,S > \
+  (const EDTMap&, const E&, const M&, const C& , const S&, const typename S::Trace&);
+
 #define INST_setup_random_states(S) template void PSO::setup_random_states< S > \
 (const S&);
 
@@ -202,6 +248,7 @@ void copy_best_values(float *best_values, const Swarm &sw)
 #define INST_group(M,C,E,S) INST_initialize_particles(M,C,E,S) \
   INST_iterate_particles(M,C,E,S) \
   INST_iterate_particles_de(M,C,E,S) \
+  INST_path_integral(M,C,E,S) \
   INST_setup_random_states(S) \
   INST_copy_best_values(S)
 
