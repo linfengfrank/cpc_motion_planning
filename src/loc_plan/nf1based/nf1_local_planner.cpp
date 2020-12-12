@@ -178,7 +178,7 @@ void NF1LocalPlanner::do_normal()
 
   //Planning
   m_task_is_new = false;
-  calculate_trajectory<SIMPLE_UGV>(m_pso_planner, m_traj, true);
+  calculate_trajectory<SIMPLE_UGV>(m_pso_planner, m_traj, false);
 
   //Goto: Braking
   if (m_pso_planner->result.collision)
