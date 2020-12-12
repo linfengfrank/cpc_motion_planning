@@ -7,6 +7,11 @@
 UGVRecMotionPlanner::UGVRecMotionPlanner()
 {
   m_pso_planner = new PSO::Planner<RECOVER_UGV>(120,50,3);
+
+  // Init swarm
+  m_pso_planner->m_swarm.set_dt(0.5f);
+  m_pso_planner->m_swarm.set_var(make_float3(2.0f,1.0f,1.0f));
+  m_pso_planner->m_file_location = "/home/sp/cpc_ws/ugv_1030/";
   m_pso_planner->initialize();
 
   m_curr_action_id = 0;
