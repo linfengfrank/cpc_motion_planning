@@ -22,13 +22,13 @@ public:
   }
 
 
-  void load_data(CUDA_MAT::CudaMatrixFactory &factory, bool load_to_host)
+  void load_data(const std::string& file_location, CUDA_MAT::CudaMatrixFactory &factory, bool load_to_host)
   {
-    S_A = static_cast<CUDA_MAT::Matrix<4,UGVModel::Input>*>(factory.load_cuda_matrix<4,UGVModel::Input>("/home/sp/cpc_ws/ugv_new/SA.dat",load_to_host));
-    factory.load_uniform_bin("/home/sp/cpc_ws/ugv_new/pos_bin.dat",ubc.bins[0]);
-    factory.load_uniform_bin("/home/sp/cpc_ws/ugv_new/vel_bin.dat",ubc.bins[1]);
-    factory.load_uniform_bin("/home/sp/cpc_ws/ugv_new/theta_bin.dat",ubc.bins[2]);
-    factory.load_uniform_bin("/home/sp/cpc_ws/ugv_new/w_bin.dat",ubc.bins[3]);
+    S_A = static_cast<CUDA_MAT::Matrix<4,UGVModel::Input>*>(factory.load_cuda_matrix<4,UGVModel::Input>(file_location+"SA.dat",load_to_host));
+    factory.load_uniform_bin(file_location+"pos_bin.dat",ubc.bins[0]);
+    factory.load_uniform_bin(file_location+"vel_bin.dat",ubc.bins[1]);
+    factory.load_uniform_bin(file_location+"theta_bin.dat",ubc.bins[2]);
+    factory.load_uniform_bin(file_location+"w_bin.dat",ubc.bins[3]);
   }
 
   void release_data(CUDA_MAT::CudaMatrixFactory &factory, bool load_from_host)
@@ -70,7 +70,7 @@ public:
     collision = false;
     int prev_i = -1;
     float3 site_target;
-    for (float t=0.0f; t<PSO::PSO_TOTAL_T; t+=dt)
+    for (float t=0.0f; t<sw.total_t; t+=dt)
     {
       int i = static_cast<int>(floor(t/sw.step_dt));
       if (i > sw.steps - 1)
@@ -104,7 +104,7 @@ public:
     float dt = PSO::PSO_CTRL_DT;
     int prev_i = -1;
     float3 site_target;
-    for (float t=0.0f; t<PSO::PSO_TOTAL_T; t+=dt)
+    for (float t=0.0f; t<sw.total_t; t+=dt)
     {
       int i = static_cast<int>(floor(t/sw.step_dt));
       if (i > sw.steps - 1)

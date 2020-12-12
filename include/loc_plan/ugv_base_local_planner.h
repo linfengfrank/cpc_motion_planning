@@ -122,7 +122,7 @@ protected:
     float dt = PSO::PSO_CTRL_DT;
     curr_s.v = 0;
     curr_s.w = 0;
-    for (float t=0.0f; t<PSO::PSO_TOTAL_T; t+=dt)
+    for (float t=0.0f; t<4; t+=dt)
     {
       traj.push_back(curr_s);
     }

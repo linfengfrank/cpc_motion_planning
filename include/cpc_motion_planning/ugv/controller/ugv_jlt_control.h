@@ -21,7 +21,7 @@ public:
 
   }
 
-  void load_data(CUDA_MAT::CudaMatrixFactory &factory, bool load_to_host)
+  void load_data(const std::string& file_location, CUDA_MAT::CudaMatrixFactory &factory, bool load_to_host)
   {
     m_limit[1].aMax = 0.5;
     m_limit[1].aMin = -0.5;
@@ -100,7 +100,7 @@ public:
     collision = false;
     int prev_i = -1;
     float3 site_target;
-    for (float t=dt; t<PSO::PSO_TOTAL_T; t+=dt)
+    for (float t=dt; t<sw.total_t; t+=dt)
     {
       int i = static_cast<int>(floor(t/sw.step_dt));
       if (i > sw.steps - 1)
@@ -146,7 +146,7 @@ public:
     float2 u;
     int prev_i = -1;
     float3 site_target;
-    for (float t=0.0f; t<PSO::PSO_TOTAL_T; t+=dt)
+    for (float t=0.0f; t<sw.total_t; t+=dt)
     {
       int i = static_cast<int>(floor(t/sw.step_dt));
       if (i > sw.steps - 1)

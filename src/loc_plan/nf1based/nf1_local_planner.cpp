@@ -25,6 +25,10 @@ NF1LocalPlanner::NF1LocalPlanner():
   m_planning_timer = m_nh.createTimer(ros::Duration(PSO::PSO_REPLAN_DT), &NF1LocalPlanner::plan_call_back, this);
 
   m_pso_planner = new PSO::Planner<SIMPLE_UGV>(120,50,3);
+  // Init swarm
+  m_pso_planner->m_swarm.set_dt(0.5f);
+  m_pso_planner->m_swarm.set_var(make_float3(2.0f,1.0f,1.0f));
+  m_pso_planner->m_file_location = "/home/sp/cpc_ws/ugv_1030/";
   m_pso_planner->initialize();
 
   m_ref_v = 0.0f;

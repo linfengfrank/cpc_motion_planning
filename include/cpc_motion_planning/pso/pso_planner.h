@@ -89,8 +89,8 @@ public:
   void initialize()
   {
     create_particles();
-    m_ctrl_dev.load_data(m_factory,false);
-    m_ctrl_host.load_data(m_factory,true);
+    m_ctrl_dev.load_data(m_file_location, m_factory,false);
+    m_ctrl_host.load_data(m_file_location, m_factory,true);
   }
 
   void release()
@@ -131,6 +131,7 @@ public:
   Controller m_ctrl_dev;
   Controller m_ctrl_host;
   Swarm m_swarm;
+  std::string m_file_location;
 
 };
 
