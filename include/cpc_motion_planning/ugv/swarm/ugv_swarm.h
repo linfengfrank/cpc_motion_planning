@@ -125,8 +125,9 @@ public:
 
   }
 
-  void set_dt(float dt)
+  void set_step_dt(int steps_, float dt)
   {
+    steps = min(steps_,STEP);
     step_dt = dt;
     total_t = steps * step_dt;
   }

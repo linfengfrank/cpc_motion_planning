@@ -14,10 +14,13 @@ NF1LocalPlanner::NF1LocalPlanner():
   m_nf1_map(nullptr)
 {
   std::string dp_file_location;
-  float var_s, var_theta;
+  float var_s, var_theta, step_dt;
+  int step_num;
   m_nh.param<std::string>("/dp_file_location",dp_file_location,"");
   m_nh.param<float>("/var_s",var_s,2.0);
   m_nh.param<float>("/var_theta",var_theta,1.0);
+  m_nh.param<float>("/step_dt",step_dt,1.0);
+  m_nh.param<int>("/step_num",step_num,4);
 
   m_nf1_sub = m_nh.subscribe("/nf1",1,&NF1LocalPlanner::nf1_call_back, this);
   m_hybrid_path_sub = m_nh.subscribe("/hybrid_path",1,&NF1LocalPlanner::hybrid_path_call_back,this);
@@ -32,10 +35,11 @@ NF1LocalPlanner::NF1LocalPlanner():
 
   m_pso_planner = new PSO::Planner<SIMPLE_UGV>(120,50,3);
   // Init swarm
-  m_pso_planner->m_swarm.set_dt(0.5f);
+  m_pso_planner->m_swarm.set_step_dt(step_num, step_dt);
   m_pso_planner->m_swarm.set_var(make_float3(var_s,var_theta,1.0f));
   m_pso_planner->m_file_location = dp_file_location;
   m_pso_planner->initialize();
+  m_recover_planner.init_swarm(step_num, step_dt, var_s, var_theta, dp_file_location);
 
   m_ref_v = 0.0f;
   m_ref_w = 0.0f;

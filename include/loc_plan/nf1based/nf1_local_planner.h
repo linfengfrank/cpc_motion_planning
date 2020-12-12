@@ -6,7 +6,7 @@
 #include <recover_plan/ugv_recover_planner.h>
 #include <cpc_aux_mapping/nf1_task.h>
 
-#define SIMPLE_UGV UGV::UGVModel,UGV::UGVDPControl,UGV::NF1Evaluator,UGV::UGVSwarm<4>
+#define SIMPLE_UGV UGV::UGVModel,UGV::UGVDPControl,UGV::NF1Evaluator,UGV::UGVSwarm<8>
 class NF1LocalPlanner : public UGVLocalMotionPlanner
 {
   enum STUCK_SUB_MODE
