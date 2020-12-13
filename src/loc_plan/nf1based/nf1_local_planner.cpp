@@ -320,6 +320,14 @@ void NF1LocalPlanner::do_full_stuck()
   m_pso_planner->m_eva.m_stuck = true;
   calculate_trajectory<SIMPLE_UGV>(m_pso_planner, m_traj);
 
+  //Goto: Braking
+  if (m_pso_planner->result.collision)
+  {
+    m_braking_start_cycle = m_plan_cycle;
+    m_status = UGV::BRAKING;
+    cycle_process_based_on_status();
+  }
+
   //Goto: Normal
   if (m_plan_cycle - m_full_start_cycle >= 10)
   {
