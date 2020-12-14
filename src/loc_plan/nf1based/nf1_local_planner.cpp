@@ -21,6 +21,7 @@ NF1LocalPlanner::NF1LocalPlanner():
   m_nh.param<float>("/var_theta",var_theta,1.0);
   m_nh.param<float>("/step_dt",step_dt,1.0);
   m_nh.param<int>("/step_num",step_num,4);
+  m_nh.param<bool>("/use_de",m_use_de,false);
 
   m_nf1_sub = m_nh.subscribe("/nf1",1,&NF1LocalPlanner::nf1_call_back, this);
   m_hybrid_path_sub = m_nh.subscribe("/hybrid_path",1,&NF1LocalPlanner::hybrid_path_call_back,this);
@@ -192,7 +193,7 @@ void NF1LocalPlanner::do_normal()
 
   //Planning
   m_task_is_new = false;
-  calculate_trajectory<SIMPLE_UGV>(m_pso_planner, m_traj, false);
+  calculate_trajectory<SIMPLE_UGV>(m_pso_planner, m_traj, m_use_de);
 
   //Goto: Braking
   if (m_pso_planner->result.collision)
