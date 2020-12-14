@@ -28,6 +28,20 @@ public:
     return m_ctrl_host.template generate_trajectory<Model,Swarm>(m_model,m_swarm,result.best_loc);
   }
 
+  void update_best_ptcl()
+  {
+    // Find the best cost among the swarm
+    copy_best_values<Swarm>(m_best_values,m_swarm);
+    int best_idx = -1;
+    cublasIsamin(m_cbls_hdl,m_swarm.ptcl_size,m_best_values,1,&best_idx);
+
+    // Update the global best
+    if(best_idx != -1)
+    {
+      update_glb_best<Swarm>(best_idx-1,m_swarm);
+    }
+  }
+
   void plan(const EDTMap &map)
   {
     //test_plan<N>(s,goal,m_ptcls, m_best_values, m_num_of_ptcls, &result, true,m_carrier,m_cbls_hdl);
@@ -36,24 +50,17 @@ public:
     for (int ctt = 0; ctt <m_num_of_episodes; ctt ++)
     {
       initialize_particles<Model, Controller, Evaluator, Swarm>(m_first_time, map, m_eva,m_model,m_ctrl_dev,m_swarm);
+      update_best_ptcl();
       m_first_time = false;
       for (int i=0;i<m_num_of_epoches;i++)
       {
         float weight = 0.95-(0.95-0.4)/static_cast<float>(m_num_of_epoches)*static_cast<float>(i);
         iterate_particles<Model, Controller, Evaluator,Swarm>(weight, map, m_eva,m_model,m_ctrl_dev,m_swarm);
-        copy_best_values<Swarm>(m_best_values,m_swarm);
-
-        int best_idx = -1;
-        cbls_stt = cublasIsamin(m_cbls_hdl,m_swarm.ptcl_size,m_best_values,1,&best_idx);
-
-        if(best_idx != -1)
-        {
-          CUDA_MEMCPY_D2D(m_swarm.ptcls+m_swarm.ptcl_size-1,m_swarm.ptcls+best_idx-1,sizeof(typename Swarm::Particle));
-        }
+        update_best_ptcl();
       }
     }
 
-    CUDA_MEMCPY_D2H(&result, m_swarm.ptcls+m_swarm.ptcl_size-1,sizeof(typename Swarm::Particle));
+    CUDA_MEMCPY_D2H(&result, m_swarm.best_ptcl,sizeof(typename Swarm::Particle));
     cudaDeviceSynchronize();
   }
 
@@ -79,10 +86,10 @@ public:
 
     if(best_idx != -1)
     {
-      CUDA_MEMCPY_D2D(m_swarm.ptcls+m_swarm.ptcl_size-1,m_swarm.ptcls+best_idx-1,sizeof(typename Swarm::Particle));
+      CUDA_MEMCPY_D2D(m_swarm.best_ptcl,m_swarm.ptcls+best_idx-1,sizeof(typename Swarm::Particle));
     }
 
-    CUDA_MEMCPY_D2H(&result, m_swarm.ptcls+m_swarm.ptcl_size-1,sizeof(typename Swarm::Particle));
+    CUDA_MEMCPY_D2H(&result, m_swarm.best_ptcl, sizeof(typename Swarm::Particle));
     cudaDeviceSynchronize();
   }
 
