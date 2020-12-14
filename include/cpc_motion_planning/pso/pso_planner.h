@@ -78,16 +78,7 @@ public:
         iterate_particles_de<Model, Controller, Evaluator,Swarm>(map, m_eva,m_model,m_ctrl_dev,m_swarm);
       }
     }
-
-    copy_best_values<Swarm>(m_best_values,m_swarm);
-
-    int best_idx = -1;
-    cbls_stt = cublasIsamin(m_cbls_hdl,m_swarm.ptcl_size,m_best_values,1,&best_idx);
-
-    if(best_idx != -1)
-    {
-      CUDA_MEMCPY_D2D(m_swarm.best_ptcl,m_swarm.ptcls+best_idx-1,sizeof(typename Swarm::Particle));
-    }
+    update_best_ptcl();
 
     CUDA_MEMCPY_D2H(&result, m_swarm.best_ptcl, sizeof(typename Swarm::Particle));
     cudaDeviceSynchronize();
