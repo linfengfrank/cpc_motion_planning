@@ -100,12 +100,18 @@ public:
     m_ctrl_host.release_data(m_factory,true);
   }
 
+  void create_particles(typename Swarm::Particle** ptr_addr, int ptcl_num)
+  {
+    typename Swarm::Particle* tdata = new typename Swarm::Particle[ptcl_num];
+    CUDA_ALLOC_DEV_MEM(ptr_addr,ptcl_num*sizeof(typename Swarm::Particle));
+    CUDA_MEMCPY_H2D(*ptr_addr,tdata,ptcl_num*sizeof(typename Swarm::Particle));
+    delete [] tdata;
+  }
+
   void create_particles()
   {
-    typename Swarm::Particle* tdata = new typename Swarm::Particle[m_swarm.ptcl_size];
-    CUDA_ALLOC_DEV_MEM(&m_swarm.ptcls,m_swarm.ptcl_size*sizeof(typename Swarm::Particle));
-    CUDA_MEMCPY_H2D(m_swarm.ptcls,tdata,m_swarm.ptcl_size*sizeof(typename Swarm::Particle));
-    delete [] tdata;
+    create_particles(&m_swarm.ptcls, m_swarm.ptcl_size);
+    create_particles(&m_swarm.best_ptcl, 1);
 
     setup_random_states<Swarm>(m_swarm);
     CUDA_ALLOC_DEV_MEM(&m_best_values,m_swarm.ptcl_size*sizeof(float));
@@ -115,6 +121,7 @@ public:
   void delete_particles()
   {
     CUDA_FREE_DEV_MEM(m_swarm.ptcls);
+    CUDA_FREE_DEV_MEM(m_swarm.best_ptcl);
     CUDA_FREE_DEV_MEM(m_best_values);
     cublasDestroy(m_cbls_hdl);
   }
