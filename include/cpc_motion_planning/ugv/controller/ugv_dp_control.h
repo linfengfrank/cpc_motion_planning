@@ -24,7 +24,7 @@ public:
 
   void load_data(const std::string& file_location, CUDA_MAT::CudaMatrixFactory &factory, bool load_to_host)
   {
-    S_A = static_cast<CUDA_MAT::Matrix<4,UGVModel::Input>*>(factory.load_cuda_matrix<4,UGVModel::Input>(file_location+"SA.dat",load_to_host));
+    factory.load_cuda_matrix<4,UGVModel::Input>(&S_A,file_location+"SA.dat",load_to_host);
     factory.load_uniform_bin(file_location+"pos_bin.dat",ubc.bins[0]);
     factory.load_uniform_bin(file_location+"vel_bin.dat",ubc.bins[1]);
     factory.load_uniform_bin(file_location+"theta_bin.dat",ubc.bins[2]);
