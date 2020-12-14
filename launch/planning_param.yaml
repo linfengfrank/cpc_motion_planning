@@ -1,6 +1,12 @@
 dp_file_location: /home/sp/cpc_ws/ugv_1430/
-var_s: 2.0
+var_s: 3.0
 var_theta: 1.0
-step_num: 4
+step_num: 5
 step_dt: 0.5
 use_de: false
+
+#var_s: 2.0
+#var_theta: 1.0
+#step_num: 6
+#step_dt: 0.5
+#use_de: false
