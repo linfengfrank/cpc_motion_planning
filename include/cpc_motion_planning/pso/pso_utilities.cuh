@@ -14,6 +14,11 @@ const int PSO_REPLAN_CYCLE = 4;
 const float PSO_REPLAN_DT = PSO_REPLAN_CYCLE * PSO_CTRL_DT;
 const int PSO_PLAN_CONSUME_CYCLE = 2;
 
+struct EvaData
+{
+  bool collision;
+};
+
 __host__ __device__ __forceinline__
 float rand_float_gen(curandState *rs, float min, float max)
 {

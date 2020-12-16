@@ -67,7 +67,8 @@ public:
 
     float cost = 0;
     float dt = PSO::PSO_SIM_DT;
-    collision = false;
+    PSO::EvaData data;
+    data.collision = false;
     int prev_i = -1;
     float3 site_target;
     for (float t=0.0f; t<sw.total_t; t+=dt)
@@ -87,11 +88,11 @@ public:
       m.model_forward(s,u,dt);
 
       //cost += 0.1f*sqrtf(u.x*u.x + 0.5f*u.y*u.y + u.z*u.z);
-      cost += eva.process_cost(s,map,t,collision);
+      cost += eva.process_cost(s,map,t,data);
 
     }
     cost += eva.final_cost(s,map);
-
+    collision = data.collision;
     return cost;
   }
 

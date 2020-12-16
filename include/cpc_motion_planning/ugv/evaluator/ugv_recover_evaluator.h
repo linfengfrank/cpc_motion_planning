@@ -98,7 +98,7 @@ public:
   }
 
   __host__ __device__
-  float process_cost(const UGVModel::State &s, const EDTMap &map, const float &time, bool &collision) const
+  float process_cost(const UGVModel::State &s, const EDTMap &map, const float &time, PSO::EvaData &data) const
   {
     float cost = 0;
 
@@ -110,7 +110,7 @@ public:
 
     if (rd < 0.351f && time < 0.31f)
     {
-      collision = true;
+      data.collision = true;
     }
 
     switch (m_mode)
