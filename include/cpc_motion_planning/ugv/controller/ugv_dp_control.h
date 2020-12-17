@@ -85,7 +85,7 @@ public:
       if (min_dist < PSO::MIN_DIST)
       {
         // Does not allow the situation to get worse
-        if (min_dist < initial_dist || min_dist < 0.1f)
+        if (min_dist < initial_dist || min_dist < 0.21f)
         {
           collision_state = PSO::COLLISION;
           first_collision_time = 0;
@@ -116,6 +116,7 @@ public:
     PSO::CollisionState collision_state; //Collision state
     float first_collision_time = 1000; //Time of first collision
     float initial_dist = data.min_dist; //Initial distance to obstacle
+    float traj_min_dist = initial_dist; //The minimum distance on the trajectory
 
     // Init the collision state depends on the initial situation
     if (data.min_dist < PSO::MIN_DIST)
@@ -145,11 +146,15 @@ public:
       cost += eva.process_cost(s,map,t,data);
 
       update_collision_state(collision_state, data.min_dist, initial_dist, first_collision_time, t);
+
+      if (data.min_dist < traj_min_dist)
+        traj_min_dist = data.min_dist;
     }
 
-    // If there is a collision in close time OR the vehicle has not be able to
-    // recover from a initial collision, the trajectory is deemed as collision.
-    if ((collision_state == PSO::COLLISION && first_collision_time < 0.31f) || collision_state == PSO::INIT_COLLISION)
+    // If there is a collision in close time, OR the vehicle has not be able to
+    // recover from a initial collision, OR the minimum distance on the trajectory
+    // is lower than 0.2, the trajectory is deemed as collision.
+    if ((collision_state == PSO::COLLISION && first_collision_time < 0.31f) || collision_state == PSO::INIT_COLLISION || traj_min_dist < 0.21f)
       is_traj_collision = true;
     else
       is_traj_collision = false;
