@@ -149,10 +149,12 @@ public:
     if (rd < 0.451f)
       cost += (1000 + expf(-4.5f*rd)*1000);
 
-    if (rd < 0.351f && time < 0.31f)
+    if (rd < PSO::MIN_DIST && time < 0.31f)
     {
       data.collision = true;
     }
+
+    data.min_dist = rd;
 
     if (m_nf1_received)
     {

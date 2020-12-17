@@ -59,16 +59,70 @@ public:
     return output;
   }
 
+  __host__ __device__
+  void update_collision_state(PSO::CollisionState &collision_state, float min_dist, float initial_dist, float &first_collision_time, float t)
+  {
+    switch (collision_state)
+    {
+    case PSO::FREE:
+    {
+      if (min_dist < PSO::MIN_DIST)
+      {
+        collision_state = PSO::COLLISION;
+        first_collision_time = t;
+      }
+      break;
+    }
+
+    case PSO::COLLISION:
+    {
+      // Do nothing
+      break;
+    }
+
+    case PSO::INIT_COLLISION:
+    {
+      if (min_dist < PSO::MIN_DIST)
+      {
+        // Does not allow the situation to get worse
+        if (min_dist < initial_dist || min_dist < 0.1f)
+        {
+          collision_state = PSO::COLLISION;
+          first_collision_time = 0;
+        }
+        // Other wise do nothing, have not get out of collision yet
+      }
+      else
+      {
+        // Got out of collision, go to the free state
+        collision_state = PSO::FREE;
+      }
+      break;
+    }
+    }
+  }
+
   template<class Model, class Evaluator, class Swarm>
   __host__ __device__
-  float simulate_evaluate(const EDTMap &map, const Evaluator &eva, Model &m, const Swarm &sw, const typename Swarm::Trace &ttr, bool &collision)
+  float simulate_evaluate(const EDTMap &map, const Evaluator &eva, Model &m, const Swarm &sw, const typename Swarm::Trace &ttr, bool &is_traj_collision)
   {
     typename Model::State s = m.get_ini_state();
 
     float cost = 0;
     float dt = PSO::PSO_SIM_DT;
-    PSO::EvaData data;
-    data.collision = false;
+
+    PSO::EvaData data; //Data to be received from the evaluator
+    eva.process_cost(s,map,0,data); // Conduct measurement of the initial state
+    PSO::CollisionState collision_state; //Collision state
+    float first_collision_time = 1000; //Time of first collision
+    float initial_dist = data.min_dist; //Initial distance to obstacle
+
+    // Init the collision state depends on the initial situation
+    if (data.min_dist < PSO::MIN_DIST)
+      collision_state = PSO::INIT_COLLISION;
+    else
+      collision_state = PSO::FREE;
+
     int prev_i = -1;
     float3 site_target;
     for (float t=0.0f; t<sw.total_t; t+=dt)
@@ -90,9 +144,17 @@ public:
       //cost += 0.1f*sqrtf(u.x*u.x + 0.5f*u.y*u.y + u.z*u.z);
       cost += eva.process_cost(s,map,t,data);
 
+      update_collision_state(collision_state, data.min_dist, initial_dist, first_collision_time, t);
     }
+
+    // If there is a collision in close time OR the vehicle has not be able to
+    // recover from a initial collision, the trajectory is deemed as collision.
+    if ((collision_state == PSO::COLLISION && first_collision_time < 0.31f) || collision_state == PSO::INIT_COLLISION)
+      is_traj_collision = true;
+    else
+      is_traj_collision = false;
+
     cost += eva.final_cost(s,map);
-    collision = data.collision;
     return cost;
   }
 

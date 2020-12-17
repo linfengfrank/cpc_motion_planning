@@ -10,13 +10,27 @@ namespace PSO
 //const float PSO_TOTAL_T = 4.0f;
 const float PSO_SIM_DT = 0.1f;
 const float PSO_CTRL_DT = 0.05f;
+const float MIN_DIST = 0.351f;
 const int PSO_REPLAN_CYCLE = 4;
 const float PSO_REPLAN_DT = PSO_REPLAN_CYCLE * PSO_CTRL_DT;
 const int PSO_PLAN_CONSUME_CYCLE = 2;
 
+enum CollisionState
+{
+  FREE = 0,
+  COLLISION,
+  INIT_COLLISION
+};
+
 struct EvaData
 {
   bool collision;
+  float min_dist;
+  __host__ __device__
+  EvaData():collision(false),min_dist(0)
+  {
+
+  }
 };
 
 __host__ __device__ __forceinline__
