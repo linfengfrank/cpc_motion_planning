@@ -174,8 +174,8 @@ public:
         if (m_stuck)
         {
           //stuck mode, encourage random move to get out of stuck
-          cost += expf(-4.5f*rd)*100;
-          cost += 2.0f*fabsf(fabsf(s.v) - 0.3f) + 0.02f*nf_cost;
+//          cost += expf(-4.5f*rd)*100;
+          cost += 2.0f*fabsf(fabsf(s.v) - 0.3f) + 0.5f*fabsf(fabsf(s.w) - 0.2f);// + 0.02f*nf_cost;
         }
         else
         {
