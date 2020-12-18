@@ -163,7 +163,7 @@ public:
         //Pure heading cost
         cost += 5.0f*sqrtf(s.v*s.v); // stay still during turning
         float yaw_diff = s.theta - m_goal.s.theta;
-        yaw_diff = yaw_diff - floorf((yaw_diff + M_PI) / (2 * M_PI)) * 2 * M_PI;
+        yaw_diff = yaw_diff - floorf((yaw_diff + CUDA_F_PI) / (2 * CUDA_F_PI)) * 2 * CUDA_F_PI;
         cost += 0.5f*fabsf(yaw_diff);
       }
       else
@@ -185,9 +185,9 @@ public:
           if (is_forward)
             yaw_diff = s.theta - getDesiredHeading(c);//bilinear_theta(s.p, m_nf1_map);//getDesiredHeading(c);
           else
-            yaw_diff = s.theta + M_PI - getDesiredHeading(c);
+            yaw_diff = s.theta + CUDA_F_PI - getDesiredHeading(c);
 
-          yaw_diff = yaw_diff - floorf((yaw_diff + M_PI) / (2 * M_PI)) * 2 * M_PI;
+          yaw_diff = yaw_diff - floorf((yaw_diff + CUDA_F_PI) / (2 * CUDA_F_PI)) * 2 * CUDA_F_PI;
           cost += yaw_diff*yaw_diff*s.v*s.v;
         }
       }
