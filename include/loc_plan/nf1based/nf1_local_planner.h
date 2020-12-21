@@ -55,6 +55,7 @@ private:
 
   bool m_goal_received;
   bool m_task_is_new;
+  bool m_use_de;
   PSO::Planner<SIMPLE_UGV> *m_pso_planner;
   UGV::NF1Evaluator::Target m_goal;
   UGV::UGVModel::State m_carrot;

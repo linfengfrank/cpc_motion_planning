@@ -111,18 +111,35 @@ public:
     else
       head_pos = get_head_pos(s,-head_dist);
 
+    // Head cost is needed anyway
     CUDA_GEO::coord head_c = m_nf1_map.pos2coord(make_float3(head_pos.x,head_pos.y,0));
-//    CUDA_GEO::coord ctr_c = m_nf1_map.pos2coord(make_float3(s.p.x,s.p.y,0));
 
+    // Calculate the distance between vehicle center and final goal
+    float2 ctr_diff_to_goal = s.p-m_goal.s.p;
+    float ctr_dist_to_goal = sqrtf(dot(ctr_diff_to_goal,ctr_diff_to_goal));
+    if(ctr_dist_to_goal > fabsf(head_dist))
+    {
+      // If distance too far, only consider the Head cost
 #ifdef  __CUDA_ARCH__
-    // Must use c.x c.y and 0 here! Because the NF1 map has only 1 layer.
-    nf_cost = m_nf1_map.nf1_const_at(head_c.x,head_c.y,0);
+      nf_cost = m_nf1_map.nf1_const_at(head_c.x,head_c.y,0)+5;
 #endif
+    }
+    else
+    {
+      // If close to the final goal, also consider the center cost
+      float k = ctr_dist_to_goal / fabsf(head_dist);
+      CUDA_GEO::coord ctr_c = m_nf1_map.pos2coord(make_float3(s.p.x,s.p.y,0));
+#ifdef  __CUDA_ARCH__
+      // Must use c.x c.y and 0 here! Because the NF1 map has only 1 layer.
+      nf_cost = k*(m_nf1_map.nf1_const_at(head_c.x,head_c.y,0)+5) + (1.0f - k) * m_nf1_map.nf1_const_at(ctr_c.x,ctr_c.y,0);
+#endif
+    }
+
     return nf_cost;
   }
 
   __host__ __device__
-  float process_cost(const UGVModel::State &s, const EDTMap &map, const float &time, bool &collision) const
+  float process_cost(const UGVModel::State &s, const EDTMap &map, const float &time, PSO::EvaData &data) const
   {
     float cost = 0;
 
@@ -132,10 +149,12 @@ public:
     if (rd < 0.451f)
       cost += (1000 + expf(-4.5f*rd)*1000);
 
-    if (rd < 0.351f && time < 0.31f)
+    if (rd < PSO::MIN_DIST && time < 0.31f)
     {
-      collision = true;
+      data.collision = true;
     }
+
+    data.min_dist = rd;
 
     if (m_nf1_received)
     {
@@ -144,7 +163,7 @@ public:
         //Pure heading cost
         cost += 5.0f*sqrtf(s.v*s.v); // stay still during turning
         float yaw_diff = s.theta - m_goal.s.theta;
-        yaw_diff = yaw_diff - floorf((yaw_diff + M_PI) / (2 * M_PI)) * 2 * M_PI;
+        yaw_diff = yaw_diff - floorf((yaw_diff + CUDA_F_PI) / (2 * CUDA_F_PI)) * 2 * CUDA_F_PI;
         cost += 0.5f*fabsf(yaw_diff);
       }
       else
@@ -155,8 +174,8 @@ public:
         if (m_stuck)
         {
           //stuck mode, encourage random move to get out of stuck
-          cost += expf(-4.5f*rd)*100;
-          cost += 2.0f*fabsf(fabsf(s.v) - 0.3f) + 0.02f*nf_cost;
+//          cost += expf(-4.5f*rd)*100;
+          cost += 2.0f*fabsf(fabsf(s.v) - 0.3f) + 0.5f*fabsf(fabsf(s.w) - 0.2f);// + 0.02f*nf_cost;
         }
         else
         {
@@ -166,9 +185,9 @@ public:
           if (is_forward)
             yaw_diff = s.theta - getDesiredHeading(c);//bilinear_theta(s.p, m_nf1_map);//getDesiredHeading(c);
           else
-            yaw_diff = s.theta + M_PI - getDesiredHeading(c);
+            yaw_diff = s.theta + CUDA_F_PI - getDesiredHeading(c);
 
-          yaw_diff = yaw_diff - floorf((yaw_diff + M_PI) / (2 * M_PI)) * 2 * M_PI;
+          yaw_diff = yaw_diff - floorf((yaw_diff + CUDA_F_PI) / (2 * CUDA_F_PI)) * 2 * CUDA_F_PI;
           cost += yaw_diff*yaw_diff*s.v*s.v;
         }
       }

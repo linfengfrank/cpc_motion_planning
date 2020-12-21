@@ -23,12 +23,20 @@ void initialize_particles(bool first_run,
 
 //---------
 template<class Model, class Controller, class Evaluator, class Swarm>
-void iterate_particles(float weight,
+void iterate_particles(float2 weight,
                        const EDTMap &map, const Evaluator &eva, const Model &m, const Controller &ctrl, const Swarm &sw);
+
+//--------
+template<class Model, class Controller, class Evaluator, class Swarm>
+void iterate_particles_de(const EDTMap &map, const Evaluator &eva, const Model &m, const Controller &ctrl, const Swarm &sw);
 
 //---------
 template<class Swarm>
 void copy_best_values(float *best_values, const Swarm &sw);
+
+//---------
+template<class Swarm>
+void update_glb_best(int sw_best_idx, const Swarm &sw);
 
 ////---------
 //float evaluate_trajectory_wrapper(const State &s0, const Trace &tr, VoidPtrCarrier ptr_car,const UniformBinCarrier &ubc,

@@ -21,7 +21,7 @@ public:
 
   }
 
-  void load_data(CUDA_MAT::CudaMatrixFactory &factory, bool load_to_host)
+  void load_data(const std::string& file_location, CUDA_MAT::CudaMatrixFactory &factory, bool load_to_host)
   {
     m_limit[1].aMax = 0.5;
     m_limit[1].aMin = -0.5;
@@ -97,10 +97,10 @@ public:
     int curr_site_idx = -1;
     float start_time = 0.0f;
     float2 u;
-    collision = false;
+    PSO::EvaData data;
     int prev_i = -1;
     float3 site_target;
-    for (float t=dt; t<PSO::PSO_TOTAL_T; t+=dt)
+    for (float t=dt; t<sw.total_t; t+=dt)
     {
       int i = static_cast<int>(floor(t/sw.step_dt));
       if (i > sw.steps - 1)
@@ -125,11 +125,11 @@ public:
       s.p.y = s.p.y + (s.v*dt )*sin(s.theta);
       cost += 0.1f*s.v*s.v + 0.2f*s.w*s.w;
       cost += 0.1f*u.x*u.x + 0.4f*u.y*u.y;
-      cost += eva.process_cost(s,map,t,collision);
+      cost += eva.process_cost(s,map,t,data);
 
     }
     cost += eva.final_cost(s,map);
-
+    collision = data.collision;
     return cost;
   }
 
@@ -146,7 +146,7 @@ public:
     float2 u;
     int prev_i = -1;
     float3 site_target;
-    for (float t=0.0f; t<PSO::PSO_TOTAL_T; t+=dt)
+    for (float t=0.0f; t<sw.total_t; t+=dt)
     {
       int i = static_cast<int>(floor(t/sw.step_dt));
       if (i > sw.steps - 1)

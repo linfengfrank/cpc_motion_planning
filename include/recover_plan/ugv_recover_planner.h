@@ -12,6 +12,7 @@ public:
   UGVRecMotionPlanner();
   ~UGVRecMotionPlanner();
 
+  void init_swarm(int step_num, float step_dt, float var_s, float var_theta, std::string file_location);
   bool calculate_trajectory(const UGV::UGVModel::State &s, EDTMap *edt_map, std::vector<UGV::UGVModel::State> &traj);
   void set_path_cell(const cpc_motion_planning::path &path);
   cpc_motion_planning::path_action get_collision_checking_path()

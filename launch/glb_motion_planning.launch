@@ -2,6 +2,7 @@
 <launch>
 <include file="$(find cpc_reference_publisher)/launch/ref_pub.launch"/>
 <rosparam file="$(find cpc_aux_mapping)/launch/Cmap.yaml" command="load"/>
+<rosparam file="$(find cpc_motion_planning)/launch/planning_param.yaml" command="load"/>
 <node pkg="cpc_motion_planning" type="glb_planning_node" name="glb_planning_node" output="screen">
 <remap from="/set_global_goal" to ="/move_base_simple/goal"/>
 <remap from="/slam_odom" to ="/UgvOdomTopic"/>

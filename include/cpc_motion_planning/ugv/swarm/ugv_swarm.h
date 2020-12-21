@@ -115,12 +115,26 @@ public:
   UGVSwarm()
   {
     steps = STEP;
-    step_dt = PSO::PSO_TOTAL_T/static_cast<float>(steps);
+    step_dt = 0.5f;
+    total_t = steps * step_dt;
+    var = make_float3(1,1,1);
   }
 
   ~UGVSwarm()
   {
 
+  }
+
+  void set_step_dt(int steps_, float dt)
+  {
+    steps = min(steps_,STEP);
+    step_dt = dt;
+    total_t = steps * step_dt;
+  }
+
+  void set_var(float3 var_)
+  {
+    var = var_;
   }
 
   //---
@@ -140,8 +154,9 @@ public:
   {
     for (int n = 0; n < STEP; n++)
     {
-      PSO::bound_between(p.curr_loc.site[n].x,  -2.0f,  2.0f);
-      PSO::bound_between(p.curr_loc.site[n].y,  -1.0f,  1.0f);    }
+      PSO::bound_between(p.curr_loc.site[n].x,  -var.x,  var.x);
+      PSO::bound_between(p.curr_loc.site[n].y,  -var.y,  var.y);
+    }
   }
 
   //---
@@ -150,8 +165,8 @@ public:
   {
     for (int i=0; i< STEP; i++)
     {
-      p.curr_loc.site[i].x = PSO::rand_float_gen(&(p.rs), -2.0f,  2.0f); // station target
-      p.curr_loc.site[i].y = PSO::rand_float_gen(&(p.rs), -1.0f,  1.0f); // theta target
+      p.curr_loc.site[i].x = PSO::rand_float_gen(&(p.rs), -var.x,  var.x); // station target
+      p.curr_loc.site[i].y = PSO::rand_float_gen(&(p.rs), -var.y,  var.y); // theta target
       p.curr_loc.site[i].z = 0;
 
       p.ptcl_vel.site[i].x = PSO::rand_float_gen(&(p.rs), -1.0f, 1.0f);
@@ -167,9 +182,12 @@ public:
   }
 
   Particle *ptcls;
+  Particle *best_ptcl;
   int ptcl_size;
   int steps;
   float step_dt;
+  float total_t;
+  float3 var;
 };
 }
 #endif // UGV_SWARM_H

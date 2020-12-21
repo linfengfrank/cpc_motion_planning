@@ -7,12 +7,20 @@
 UGVRecMotionPlanner::UGVRecMotionPlanner()
 {
   m_pso_planner = new PSO::Planner<RECOVER_UGV>(120,50,3);
-  m_pso_planner->initialize();
 
   m_curr_action_id = 0;
 
   ros::NodeHandle nh;
   m_carrot_pub = nh.advertise<geometry_msgs::PoseStamped>("/carrot",1);
+}
+
+void UGVRecMotionPlanner::init_swarm(int step_num, float step_dt, float var_s, float var_theta, std::string file_location)
+{
+  // Init swarm
+  m_pso_planner->m_swarm.set_step_dt(step_num,step_dt);
+  m_pso_planner->m_swarm.set_var(make_float3(var_s,var_theta,1.0f));
+  m_pso_planner->m_file_location = file_location;
+  m_pso_planner->initialize();
 }
 
 UGVRecMotionPlanner::~UGVRecMotionPlanner()
