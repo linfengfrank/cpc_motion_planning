@@ -133,11 +133,12 @@ void NF1LocalPlanner::plan_call_back(const ros::TimerEvent&)
   int ref_counter = m_ref_start_idx;
   int next_ref_start_idx = (m_plan_cycle+1)*PSO::PSO_REPLAN_CYCLE+PSO::PSO_PLAN_CONSUME_CYCLE;
 
-
+  ros::Time t_inc = curr_t;
   for (UGV::UGVModel::State traj_s : m_traj)
   {
     ref_counter++;
-    add_to_ref_msg(m_ref_msg,ref_counter,traj_s);
+    t_inc = t_inc + ros::Duration(PSO::PSO_CTRL_DT);
+    add_to_ref_msg(m_ref_msg,ref_counter,traj_s,t_inc);
 
     if (ref_counter == next_ref_start_idx)
     {
@@ -159,6 +160,7 @@ void NF1LocalPlanner::plan_call_back(const ros::TimerEvent&)
 
   m_ref_msg.data.clear();
   m_ref_msg.ids.clear();
+  m_ref_msg.time.clear();
 #ifdef SHOW_PC
   plot_trajectory(m_traj);
 #endif

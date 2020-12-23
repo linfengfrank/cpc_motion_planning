@@ -96,7 +96,7 @@ protected:
 #endif
   void update_reference_log(const cpc_motion_planning::ref_data &ref, const ros::Time &curr_t);
   UGV::UGVModel::State predict_state(const nav_msgs::Odometry &odom, const double &psi, const int &ref_start_idx, bool is_heading_ref);
-  void add_to_ref_msg(cpc_motion_planning::ref_data& ref_msg, int ref_counter, const UGV::UGVModel::State &traj);
+  void add_to_ref_msg(cpc_motion_planning::ref_data& ref_msg, int ref_counter, const UGV::UGVModel::State &traj, const ros::Time &curr_t);
 
   template <typename T> int sgn(T val)
   {

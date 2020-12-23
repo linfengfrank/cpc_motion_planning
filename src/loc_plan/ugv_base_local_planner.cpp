@@ -141,9 +141,10 @@ void UGVLocalMotionPlanner::load_into_queue(const cpc_motion_planning::ref_data 
 }
 #endif
 
-void UGVLocalMotionPlanner::add_to_ref_msg(cpc_motion_planning::ref_data& ref_msg, int ref_counter, const UGV::UGVModel::State &traj_s)
+void UGVLocalMotionPlanner::add_to_ref_msg(cpc_motion_planning::ref_data& ref_msg, int ref_counter, const UGV::UGVModel::State &traj_s, const ros::Time &t)
 {
   ref_msg.ids.push_back(ref_counter);
+  ref_msg.time.push_back(t.toSec());
   ref_msg.data.push_back(traj_s.v);
   ref_msg.data.push_back(traj_s.w);
   ref_msg.data.push_back(traj_s.theta);
