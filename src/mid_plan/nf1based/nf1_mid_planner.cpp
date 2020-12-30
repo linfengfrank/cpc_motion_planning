@@ -324,7 +324,7 @@ std::vector<float2> NF1MidPlanner::get_local_path()
   }
 
   // from the closest point to the path down the road
-  int end_idx = min(m_curr_act_path.size(),m_closest_pnt_idx+80);
+  int end_idx = min(m_curr_act_path.size(),m_closest_pnt_idx+120);
   std::vector<float2> local_path;
   CUDA_GEO::pos p;
   for (int i = m_closest_pnt_idx; i< end_idx; i++)
