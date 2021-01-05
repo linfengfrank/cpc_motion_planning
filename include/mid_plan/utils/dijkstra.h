@@ -9,7 +9,7 @@ class Dijkstra : public GridGraph
 public:
   Dijkstra(int maxX, int maxY, int maxZ);
   void dijkstra2D(CUDA_GEO::coord glb_tgt);
-  void dijkstra2D_with_line_map(CUDA_GEO::coord glb_tgt, EDTMap* line_map);
+  void dijkstra2D_with_line_map(CUDA_GEO::coord glb_tgt, EDTMap* line_map, bool is_path_blocked);
   void dijkstra2D_with_line(CUDA_GEO::coord glb_tgt, CUDA_GEO::pos seg_a, CUDA_GEO::pos seg_b);
   CUDA_GEO::coord find_available_target_with_line(CUDA_GEO::coord start, CUDA_GEO::coord goal, EDTMap* line_map);
   void dijkstra3D(CUDA_GEO::coord glb_tgt);

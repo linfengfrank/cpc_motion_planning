@@ -60,7 +60,7 @@ void Dijkstra::dijkstra2D(CUDA_GEO::coord glb_tgt)
   }
 }
 
-void Dijkstra::dijkstra2D_with_line_map(CUDA_GEO::coord glb_tgt, EDTMap* line_map)
+void Dijkstra::dijkstra2D_with_line_map(CUDA_GEO::coord glb_tgt, EDTMap* line_map, bool is_path_blocked)
 {
   memcpy(_id_map,_init_id_map,sizeof(nodeInfo)*static_cast<size_t>(_w*_h*_d));
   //Get the local Dijkstra target
@@ -102,9 +102,12 @@ void Dijkstra::dijkstra2D_with_line_map(CUDA_GEO::coord glb_tgt, EDTMap* line_ma
             float new_g = sqrtf(static_cast<float>(ix*ix+iy*iy))*getGridStep() +
                 m->g + obsCostAt(pc,0);
 
-            pc_pos = coord2pos(pc);
-            line_dist = line_map->getEDT(make_float2(pc_pos.x,pc_pos.y));
-            new_g += 1.5f*line_dist*line_dist;
+            if (!is_path_blocked)
+            {
+              pc_pos = coord2pos(pc);
+              line_dist = line_map->getEDT(make_float2(pc_pos.x,pc_pos.y));
+              new_g += 1.5f*line_dist*line_dist;
+            }
 
             if (p->g > new_g)
             {

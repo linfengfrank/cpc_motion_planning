@@ -180,9 +180,10 @@ void NF1MidPlanner::plan(const ros::TimerEvent&)
   CUDA_GEO::coord glb_tgt = m_d_map->pos2coord(m_goal);
   glb_tgt.z = 0;
   glb_tgt = m_d_map->rayCast(start,glb_tgt).back();
+  bool is_future_path_blocked = true;
   if(m_line_following_mode)
   {
-    prepare_line_map(get_local_path());
+    prepare_line_map(get_local_path(is_future_path_blocked));
     start = m_d_map->get_first_free_coord(start);
     tgt = m_d_map->find_available_target_with_line(start,glb_tgt,m_line_map);
   }
@@ -193,12 +194,12 @@ void NF1MidPlanner::plan(const ros::TimerEvent&)
     std::vector<CUDA_GEO::coord> path = m_a_map->AStar2D(glb_tgt,start,false,length);
     tgt = path[0];
   }
-  m_d_map->dijkstra2D_with_line_map(tgt,m_line_map);
+  m_d_map->dijkstra2D_with_line_map(tgt,m_line_map,is_future_path_blocked);
 
   auto end_time = std::chrono::steady_clock::now();
       std::cout << "Middle planning time: "
                 << std::chrono::duration_cast<std::chrono::milliseconds>(end_time - start_time).count()
-                << " ms" << std::endl;
+                << " ms, is future path blocked: "<<is_future_path_blocked<< std::endl;
 
   // publish the nf1 and mid_goal
   CUDA_GEO::pos carrot = m_d_map->coord2pos(tgt);
@@ -284,7 +285,7 @@ void NF1MidPlanner::slam_odo_call_back(const nav_msgs::Odometry::ConstPtr &msg)
   m_curr_pose.z = psi;
 }
 
-std::vector<float2> NF1MidPlanner::get_local_path()
+std::vector<float2> NF1MidPlanner::get_local_path(bool &is_future_path_blocked)
 {
   float2 m_curr_pos = make_float2(m_curr_pose.x, m_curr_pose.y);
   float2 diff;
@@ -324,7 +325,7 @@ std::vector<float2> NF1MidPlanner::get_local_path()
   }
 
   // from the closest point to the path down the road
-  int end_idx = min(m_curr_act_path.size(),m_closest_pnt_idx+80);
+  int end_idx = min(m_curr_act_path.size(),m_closest_pnt_idx+120);
   std::vector<float2> local_path;
   CUDA_GEO::pos p;
   for (int i = m_closest_pnt_idx; i< end_idx; i++)
@@ -337,6 +338,23 @@ std::vector<float2> NF1MidPlanner::get_local_path()
       break;
   }
 
+  // determine whether the future path is blocked
+  CUDA_GEO::coord exam_crd;
+  float exam_dist;
+  is_future_path_blocked = false;
+  for (float2 exam_p : local_path)
+  {
+    p.x = exam_p.x;
+    p.y = exam_p.y;
+    p.z = 0;
+    exam_crd = m_d_map->pos2coord(p);
+    exam_dist = m_d_map->getEdt(exam_crd,0);
+    if (exam_dist < 0.51f)
+    {
+      is_future_path_blocked = true;
+      break;
+    }
+  }
   // from the closest point to the path before
   // this part is reserved so that it can be used to selected as local target
   // so when the "down the road path" has no available target, we can choose a target from this part
