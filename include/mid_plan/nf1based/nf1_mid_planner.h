@@ -47,7 +47,7 @@ private:
   void prepare_line_map(const std::vector<float2> &path);
 
   void load_straight_line_mission(const std_msgs::Int32::ConstPtr &msg);
-  std::vector<float2> get_local_path();
+  std::vector<float2> get_local_path(bool &is_future_path_blocked);
   void set_curr_act_path();
 
 private:

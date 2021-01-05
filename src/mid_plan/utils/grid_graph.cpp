@@ -140,6 +140,16 @@ bool GridGraph::isSeen(const CUDA_GEO::coord & s, const bool default_value) cons
   return _val_map[coord2index(s)].s;
 }
 
+float GridGraph::getEdt(const CUDA_GEO::coord & s, const float default_value) const
+{
+  if (s.x<0 || s.x>=_w ||
+      s.y<0 || s.y>=_h ||
+      s.z<0 || s.z>=_d)
+    return default_value;
+
+  return _val_map[coord2index(s)].d * _gridstep;
+}
+
 void GridGraph::copyIdData(const cpc_aux_mapping::grid_map::ConstPtr &msg)
 {
   if (msg->x_size != _w || msg->y_size != _h || msg->z_size != _d)
