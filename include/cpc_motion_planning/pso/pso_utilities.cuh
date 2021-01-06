@@ -26,6 +26,7 @@ struct EvaData
 {
   bool collision;
   float min_dist;
+  float current_v;
   __host__ __device__
   EvaData():collision(false),min_dist(0)
   {

@@ -98,6 +98,7 @@ public:
     float start_time = 0.0f;
     float2 u;
     PSO::EvaData data;
+    data.current_v = s.v;
     int prev_i = -1;
     float3 site_target;
     for (float t=dt; t<sw.total_t; t+=dt)
