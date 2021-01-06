@@ -179,8 +179,17 @@ public:
         }
         else
         {
+          // A gain factor to adjust the angular speed cost
+          // When moving "backward" (accoring to the current moving direction)
+          // Do not add the angular speed cost
+          float gain = data.current_v * (is_forward ? 1.0f : -1.0f);
+          if (gain < 0.1f)
+            gain = 0;
+          if (gain > 1.0f)
+            gain = 1.0f;
+
           //normal mode
-          cost += 1.0f*nf_cost + 1.0f*sqrtf(0.005f*s.v*s.v + 1.0f*s.w*s.w);
+          cost += 1.0f*nf_cost + 1.0f*sqrtf(0.005f*s.v*s.v + 1.0f*s.w*s.w*gain);
           float yaw_diff;
           if (is_forward)
             yaw_diff = s.theta - getDesiredHeading(c);//bilinear_theta(s.p, m_nf1_map);//getDesiredHeading(c);

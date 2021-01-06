@@ -112,6 +112,7 @@ public:
     float dt = PSO::PSO_SIM_DT;
 
     PSO::EvaData data; //Data to be received from the evaluator
+    data.current_v = s.v;
     eva.process_cost(s,map,0,data); // Conduct measurement of the initial state
     PSO::CollisionState collision_state; //Collision state
     float first_collision_time = 1000; //Time of first collision
