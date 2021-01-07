@@ -145,6 +145,7 @@ public:
     {
       PSO::bound_between(p.ptcl_vel.site[n].x, -0.3f, 0.3f);
       PSO::bound_between(p.ptcl_vel.site[n].y, -0.3f, 0.3f);
+      PSO::bound_between(p.ptcl_vel.site[n].z, -0.3f, 0.3f);
     }
   }
 
@@ -156,6 +157,7 @@ public:
     {
       PSO::bound_between(p.curr_loc.site[n].x,  -var.x,  var.x);
       PSO::bound_between(p.curr_loc.site[n].y,  -var.y,  var.y);
+      PSO::bound_between(p.curr_loc.site[n].z,  -1,  1);
     }
   }
 
@@ -167,11 +169,11 @@ public:
     {
       p.curr_loc.site[i].x = PSO::rand_float_gen(&(p.rs), -var.x,  var.x); // station target
       p.curr_loc.site[i].y = PSO::rand_float_gen(&(p.rs), -var.y,  var.y); // theta target
-      p.curr_loc.site[i].z = 0;
+      p.curr_loc.site[i].z = PSO::rand_float_gen(&(p.rs), -1.0f, 1.0f);;
 
-      p.ptcl_vel.site[i].x = PSO::rand_float_gen(&(p.rs), -1.0f, 1.0f);
-      p.ptcl_vel.site[i].y = PSO::rand_float_gen(&(p.rs), -1.0f, 1.0f);
-      p.ptcl_vel.site[i].z = 0;
+      p.ptcl_vel.site[i].x = PSO::rand_float_gen(&(p.rs), -0.3f, 0.3f);
+      p.ptcl_vel.site[i].y = PSO::rand_float_gen(&(p.rs), -0.3f, 0.3f);
+      p.ptcl_vel.site[i].z = PSO::rand_float_gen(&(p.rs), -0.3f, 0.3f);;
     }
     bound_ptcl_velocity(p);
     bound_ptcl_location(s_ini,p);

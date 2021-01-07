@@ -4,6 +4,7 @@ var_theta: 1.0
 step_num: 5
 step_dt: 0.5
 use_de: false
+use_auto_direction: true
 
 #var_s: 2.0
 #var_theta: 1.0
