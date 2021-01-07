@@ -31,6 +31,7 @@ public:
     m_pure_turning = false;
     m_nf1_received = false;
     m_stuck = false;
+    m_using_auto_direction = false;
   }
 
   ~NF1Evaluator()
@@ -143,7 +144,8 @@ public:
   {
     float cost = 0;
 
-    is_forward = data.is_forward;
+    if (m_using_auto_direction)
+      is_forward = data.is_forward;
 
     float rd = getMinDist(s,map);
     cost += expf(-9.5f*rd)*10;
@@ -231,6 +233,7 @@ public:
   bool m_stuck;
   NF1MapDT m_nf1_map;
   bool m_nf1_received;
+  bool m_using_auto_direction;
 };
 }
 
