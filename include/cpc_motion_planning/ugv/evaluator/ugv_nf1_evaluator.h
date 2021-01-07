@@ -143,6 +143,8 @@ public:
   {
     float cost = 0;
 
+    is_forward = data.is_forward;
+
     float rd = getMinDist(s,map);
     cost += expf(-9.5f*rd)*10;
 
@@ -224,7 +226,7 @@ public:
   }
 
   Target m_goal;
-  bool is_forward;
+  mutable bool is_forward;
   bool m_pure_turning;
   bool m_stuck;
   NF1MapDT m_nf1_map;

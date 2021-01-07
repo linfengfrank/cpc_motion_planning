@@ -137,6 +137,7 @@ public:
       {
         //update the site target
         site_target = update_site_target(s,ttr[i]);
+        data.is_forward = (ttr[i].z > 0 ? true : false);
       }
       prev_i = i;
 
