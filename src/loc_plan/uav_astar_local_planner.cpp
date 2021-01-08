@@ -12,7 +12,7 @@ UAVAstarMotionPlanner::UAVAstarMotionPlanner():
   UAVLocalMotionPlanner(),
   m_goal_received(false)
 {
-  m_goal_sub = m_nh.subscribe("/mid_layer/goal",1,&UAVAstarMotionPlanner::goal_call_back, this);
+  m_goal_sub = m_nh.subscribe("mid_layer/goal",1,&UAVAstarMotionPlanner::goal_call_back, this);
 
   m_ref_pub = m_nh.advertise<cpc_motion_planning::ref_data>("ref_traj",1);
 

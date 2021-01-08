@@ -1,0 +1,9 @@
+<?xml version="1.0"?>
+<launch>
+<include file="$(find cpc_motion_planning)/launch/motion_nf1_sitl.launch">
+    <arg name="vehicle" value="/iris_0"/>
+</include>
+<include file="$(find cpc_motion_planning)/launch/motion_nf1_sitl.launch">
+    <arg name="vehicle" value="/iris_1"/>
+</include>
+</launch>

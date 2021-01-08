@@ -12,7 +12,13 @@
 #include "cpc_motion_planning/ref_data.h"
 #include <mid_plan/dijkstra.h>
 #include <mid_plan/a_star.h>
+#include <tf/tf.h>
+#include <nav_msgs/Odometry.h>
 #define SHOWPC
+
+
+  tf::Vector3 gt_offset;
+  bool got_offset=false;
 
 typedef pcl::PointCloud<pcl::PointXYZRGB> PointCloud;
 PointCloud::Ptr pclOut (new PointCloud);
@@ -58,9 +64,9 @@ void publishMap(int tgt_height_coord)
         {
           p = mid_map->coord2pos(c);
           pcl::PointXYZRGB clrP;
-          clrP.x = p.x;
-          clrP.y = p.y;
-          clrP.z = p.z;
+          clrP.x = p.x+gt_offset[0];
+          clrP.y = p.y+gt_offset[1];
+          clrP.z = p.z+gt_offset[2];
 
           if ( d < 128)
           {
@@ -161,6 +167,19 @@ void goalCallback(const geometry_msgs::PoseStamped::ConstPtr &msg)
   goal.z = msg->pose.position.z;
 }
 //---
+void get_gt_odom(const nav_msgs::Odometry::ConstPtr &msg)
+{
+  if(got_offset)
+  {
+    return;
+  }
+  gt_offset[0]=msg->pose.pose.position.x;
+  gt_offset[1]=msg->pose.pose.position.y;
+  gt_offset[2]=msg->pose.pose.position.z;
+  got_offset=true;
+  std::cout<<"---------------------offset x is "<<gt_offset[0]<<std::endl;
+}
+//---
 void glb_plan(const ros::TimerEvent&)
 {
   if (!received_cmd || !received_map)
@@ -206,12 +225,13 @@ int main(int argc, char **argv)
   mid_goal_pub = new ros::Publisher;
   ros::NodeHandle nh;
   ros::Subscriber map_sub = nh.subscribe("/edt_map", 1, &mapCallback);
-  ros::Subscriber stuck_sub = nh.subscribe("/stuck", 1, &stuckCallback);
+  ros::Subscriber stuck_sub = nh.subscribe("stuck", 1, &stuckCallback);
   ros::Subscriber glb_tgt_sub = nh.subscribe("/move_base_simple/goal", 1, &goalCallback);
+  ros::Subscriber  m_offset_sub= nh.subscribe("/ground_truth/odom", 1,&get_gt_odom);
 
-  *pc_pub = nh.advertise<PointCloud> ("/nf1", 1);
-  *mid_goal_pub = nh.advertise<PointCloud> ("/mid_goal", 1);
-  *nf1_pub = nh.advertise<cpc_aux_mapping::grid_map>("/mid_layer/goal",1);
+  *pc_pub = nh.advertise<PointCloud> ("nf1", 1);
+  *mid_goal_pub = nh.advertise<PointCloud> ("mid_goal", 1);
+  *nf1_pub = nh.advertise<cpc_aux_mapping::grid_map>("mid_layer/goal",1);
 
   pclOut->header.frame_id = "/world";
   nh.param<float>("/nndp_cpp/fly_height",FLY_HEIGHT,2.0);
