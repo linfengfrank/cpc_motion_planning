@@ -46,7 +46,7 @@ private:
   void plan(const ros::TimerEvent&);
   void prepare_line_map(const std::vector<float2> &path);
 
-  std::vector<float2> get_local_path(bool &is_future_path_blocked);
+  std::vector<float2> get_local_path(bool &is_future_path_blocked, bool &is_goal_in_view);
   void set_curr_act_path();
 
 private:

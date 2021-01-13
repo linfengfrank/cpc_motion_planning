@@ -176,18 +176,28 @@ void NF1MidPlanner::plan(const ros::TimerEvent&)
 
   CUDA_GEO::coord tgt;
   CUDA_GEO::coord start(m_d_map->getMaxX()/2,m_d_map->getMaxY()/2,0);
-  CUDA_GEO::coord glb_tgt = m_d_map->pos2coord(m_goal);
-  glb_tgt.z = 0;
-  glb_tgt = m_d_map->rayCast(start,glb_tgt).back();
   bool is_future_path_blocked = true;
+  bool is_goal_in_view = true;
+  bool is_goal_blocked = false;
   if(m_line_following_mode)
   {
-    prepare_line_map(get_local_path(is_future_path_blocked));
+    prepare_line_map(get_local_path(is_future_path_blocked,is_goal_in_view));
+
+    CUDA_GEO::coord glb_tgt = m_d_map->pos2coord(m_goal);
+    glb_tgt.z = 0;
+
     start = m_d_map->get_first_free_coord(start);
     tgt = m_d_map->find_available_target_with_line(start,glb_tgt,m_line_map);
+
+    if(is_goal_in_view && !(tgt == glb_tgt))
+      is_goal_blocked = true;
   }
   else
   {
+    CUDA_GEO::coord glb_tgt = m_d_map->pos2coord(m_goal);
+    glb_tgt.z = 0;
+    glb_tgt = m_d_map->rayCast(start,glb_tgt).back();
+
     // find the target
     float length = 0.0f;
     std::vector<CUDA_GEO::coord> path = m_a_map->AStar2D(glb_tgt,start,false,length);
@@ -209,6 +219,14 @@ void NF1MidPlanner::plan(const ros::TimerEvent&)
   m_nf1_msg.carrot_theta = 0;
   m_nf1_pub.publish(m_nf1_msg);
   publish_mid_goal(tgt);
+
+  // if the current goal is blocked, swith to the next path action
+  if (is_goal_blocked && m_curr_act_id+1 < m_path.actions.size())
+  {
+    m_curr_act_id++;
+    set_curr_act_path();
+  }
+
 
   //show the nf1 map
 #ifdef SHOWPC
@@ -246,13 +264,14 @@ void NF1MidPlanner::slam_odo_call_back(const nav_msgs::Odometry::ConstPtr &msg)
   m_curr_pose.z = psi;
 }
 
-std::vector<float2> NF1MidPlanner::get_local_path(bool &is_future_path_blocked)
+std::vector<float2> NF1MidPlanner::get_local_path(bool &is_future_path_blocked, bool&is_goal_in_view)
 {
   float2 m_curr_pos = make_float2(m_curr_pose.x, m_curr_pose.y);
   float2 diff;
   float min_dist = 1e6;
   float dist;
 
+  // first find the closest point on the path
   if(m_closest_pnt_idx == -1)
   {
     for (size_t i =0;i<m_curr_act_path.size();i++)
@@ -286,7 +305,11 @@ std::vector<float2> NF1MidPlanner::get_local_path(bool &is_future_path_blocked)
   }
 
   // from the closest point to the path down the road
+  is_goal_in_view = false;
   int end_idx = min(m_curr_act_path.size(),m_closest_pnt_idx+120);
+  if (end_idx == static_cast<int>(m_curr_act_path.size()))
+    is_goal_in_view = true;
+
   std::vector<float2> local_path;
   CUDA_GEO::pos p;
   for (int i = m_closest_pnt_idx; i< end_idx; i++)
