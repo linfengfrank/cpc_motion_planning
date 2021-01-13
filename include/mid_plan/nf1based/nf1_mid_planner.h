@@ -46,7 +46,6 @@ private:
   void plan(const ros::TimerEvent&);
   void prepare_line_map(const std::vector<float2> &path);
 
-  void load_straight_line_mission(const std_msgs::Int32::ConstPtr &msg);
   std::vector<float2> get_local_path(bool &is_future_path_blocked);
   void set_curr_act_path();
 
@@ -198,26 +197,6 @@ private:
       line_strip.points.push_back(pnt);
     }
     m_straight_line_vis_pub.publish(line_strip);
-  }
-
-  std::vector<float2> make_straight_path(const float2 &a, const float2 &b)
-  {
-    std::vector<float2> path;
-    float2 delta = b-a;
-    float dist = sqrtf(dot(delta,delta));
-
-    if (dist < 0.1f)
-    {
-      path.push_back(b);
-      return path;
-    }
-
-    delta = delta/dist;
-    for (float l = 0; l <= dist; l+=0.1f)
-    {
-      path.push_back(a+delta*l);
-    }
-    return path;
   }
 
   std::vector<float2> cascade_vector(const std::vector<float2> &A, const std::vector<float2> &B)

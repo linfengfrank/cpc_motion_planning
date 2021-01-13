@@ -10,7 +10,6 @@ NF1MidPlanner::NF1MidPlanner():
 {
   m_map_sub = m_nh.subscribe("/edt_map", 1, &NF1MidPlanner::map_call_back,this);
   m_glb_tgt_sub = m_nh.subscribe("/set_global_goal", 1, &NF1MidPlanner::goal_call_back, this);
-  m_straight_line_mission_sub = m_nh.subscribe("/start_mission", 1, &NF1MidPlanner::load_straight_line_mission, this);
   m_slam_odom_sub = m_nh.subscribe("/slam_odom", 1, &NF1MidPlanner::slam_odo_call_back, this);
   m_glb_path_sub = m_nh.subscribe("/global_path",1, &NF1MidPlanner::glb_path_call_back, this);
   m_goal_reach_sub = m_nh.subscribe("/target_reached",1, &NF1MidPlanner::goal_reached_call_back, this);
@@ -229,44 +228,6 @@ void NF1MidPlanner::prepare_line_map(const std::vector<float2> &path)
   CUDA_MEMCPY_H2D(m_line_map->m_sd_map,m_line_map->m_hst_sd_map,m_line_map->m_byte_size);
   GPU_EDT::edt_from_occupancy(m_line_map, m_rot_plan);
   CUDA_MEMCPY_D2H(m_line_map->m_hst_sd_map,m_line_map->m_sd_map,m_line_map->m_byte_size);
-}
-
-void NF1MidPlanner::load_straight_line_mission(const std_msgs::Int32::ConstPtr &msg)
-{
-  // Read in the data files
-  std::ifstream corridor_file;
-  float data[2];
-  std::vector<float2> wps;
-  corridor_file.open("/home/sp/path.txt");
-  std::cout<<"Read in data"<<std::endl;
-  while(1)
-  {
-    if (corridor_file>>data[0]>>data[1])
-    {
-      wps.push_back((make_float2(data[0],data[1])));
-      std::cout<<data[0]<<" "<<data[1]<<std::endl;
-    }
-    else
-    {
-      break;
-    }
-  }
-
-  // We need at least two waypoint to form a line
-  if(wps.size()>1)
-  {
-    show_path(wps);
-    m_curr_act_path.clear();
-    for (size_t i=0; i<wps.size()-1;i++)
-    {
-      m_curr_act_path = cascade_vector(m_curr_act_path,make_straight_path(wps[i],wps[i+1]));
-    }
-    float3 act_path_goal = make_float3(m_curr_act_path.back().x, m_curr_act_path.back().y, 0);
-    set_nf1_task_info(cpc_aux_mapping::nf1_task::TYPE_FORWARD,0,0,act_path_goal);
-    m_closest_pnt_idx = -1;
-    m_line_following_mode = true;
-    m_received_goal = true;
-  }
 }
 
 void NF1MidPlanner::slam_odo_call_back(const nav_msgs::Odometry::ConstPtr &msg)

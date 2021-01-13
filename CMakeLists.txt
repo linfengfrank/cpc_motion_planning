@@ -250,6 +250,17 @@ target_link_libraries(glb_planning_node
     ${CUDA_LIBRARIES}
     ${catkin_LIBRARIES})
 
+cuda_add_executable(glb_plan_load_node
+    src/glb_plan/glb_load_plan_node.cpp
+    src/glb_plan/path_smoother.cpp
+    src/glb_plan/global_plan_loader.cpp)
+
+target_link_libraries(glb_plan_load_node
+    ${CUDA_curand_LIBRARY}
+    ${CUDA_cublas_LIBRARY}
+    ${CUDA_LIBRARIES}
+    ${catkin_LIBRARIES})
+
 #cuda_add_executable(hybrid_nf1_mid_planning_node
 #    src/mid_plan/utils/grid_graph.cpp
 #    src/mid_plan/hybrid/hybrid_dijkstra.cpp
