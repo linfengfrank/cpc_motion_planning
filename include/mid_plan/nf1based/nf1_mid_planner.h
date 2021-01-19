@@ -48,6 +48,7 @@ private:
 
   std::vector<float2> get_local_path(bool &is_future_path_blocked, bool &is_goal_in_view);
   void set_curr_act_path();
+  bool find_reachable_target(bool use_line, CUDA_GEO::coord& start, CUDA_GEO::coord& reachable_tgt);
 
 private:
   ros::NodeHandle m_nh;
@@ -223,7 +224,7 @@ private:
     return sqrtf(static_cast<float>(a_square*b_square - a_dot_b*a_dot_b)/static_cast<float>(b_square));
   }
 
-  bool is_curvature_too_big(const std::vector<float2> &path, size_t start, size_t end)
+  bool is_curvature_too_big(const std::vector<float2> &path, size_t start, size_t end,float th_dist = 0.15f)
   {
     float2 start_point = path[start];
     float2 end_point = path[end];
@@ -239,7 +240,7 @@ private:
         max_deviation = deviation;
     }
 
-    if (max_deviation > 0.15f)
+    if (max_deviation > th_dist)
       return true;
     else
       return false;

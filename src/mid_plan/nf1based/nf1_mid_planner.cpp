@@ -167,6 +167,34 @@ void NF1MidPlanner::set_goal(CUDA_GEO::pos goal)
   m_goal = goal;
 }
 
+bool NF1MidPlanner::find_reachable_target(bool use_line, CUDA_GEO::coord& start, CUDA_GEO::coord& reachable_tgt)
+{
+  //set start
+  start = CUDA_GEO::coord(m_d_map->getMaxX()/2,m_d_map->getMaxY()/2,0);
+  start = m_d_map->get_first_free_coord(start);
+
+  //transfer m_goal to grid
+  CUDA_GEO::coord aimed_tgt = m_d_map->pos2coord(m_goal);
+  aimed_tgt.z = 0;
+
+  if (use_line)
+  {
+    reachable_tgt = m_d_map->find_available_target_with_line(start,aimed_tgt,m_line_map);
+  }
+  else
+  {
+    aimed_tgt = m_d_map->rayCast(start,aimed_tgt).back();
+    float length = 0.0f;
+    std::vector<CUDA_GEO::coord> path = m_a_map->AStar2D(aimed_tgt,start,false,length);
+    reachable_tgt = path[0];
+  }
+
+  if (reachable_tgt == aimed_tgt)
+    return true;
+  else
+    return false;
+}
+
 void NF1MidPlanner::plan(const ros::TimerEvent&)
 {
   if (!m_received_goal || !m_received_map || !m_received_odom)
@@ -174,36 +202,40 @@ void NF1MidPlanner::plan(const ros::TimerEvent&)
 
   auto start_time = std::chrono::steady_clock::now();
 
-  CUDA_GEO::coord tgt;
-  CUDA_GEO::coord start(m_d_map->getMaxX()/2,m_d_map->getMaxY()/2,0);
+  CUDA_GEO::coord reachable_tgt;
+  CUDA_GEO::coord start;
   bool is_future_path_blocked = true;
   bool is_goal_in_view = true;
   bool is_goal_blocked = false;
   if(m_line_following_mode)
   {
-    prepare_line_map(get_local_path(is_future_path_blocked,is_goal_in_view));
+    // Get the local path
+    std::vector<float2> local_path = get_local_path(is_future_path_blocked,is_goal_in_view);
 
-    CUDA_GEO::coord glb_tgt = m_d_map->pos2coord(m_goal);
-    glb_tgt.z = 0;
+    if (local_path.size() > 0)
+    {
+      set_goal(CUDA_GEO::pos(local_path.back().x,local_path.back().y,0));
+      prepare_line_map(local_path);
+      bool is_goal_reachable = find_reachable_target(true, start, reachable_tgt);
 
-    start = m_d_map->get_first_free_coord(start);
-    tgt = m_d_map->find_available_target_with_line(start,glb_tgt,m_line_map);
+      if(is_goal_in_view && !is_goal_reachable)
+        is_goal_blocked = true;
+    }
+    else
+    {
+      m_line_map->clearOccupancy();
+      set_goal(CUDA_GEO::pos(m_curr_act_path[m_closest_pnt_idx].x,m_curr_act_path[m_closest_pnt_idx].y,0));
+      is_future_path_blocked = true;
 
-    if(is_goal_in_view && !(tgt == glb_tgt))
-      is_goal_blocked = true;
+      find_reachable_target(true, start, reachable_tgt);
+    }
   }
   else
   {
-    CUDA_GEO::coord glb_tgt = m_d_map->pos2coord(m_goal);
-    glb_tgt.z = 0;
-    glb_tgt = m_d_map->rayCast(start,glb_tgt).back();
-
-    // find the target
-    float length = 0.0f;
-    std::vector<CUDA_GEO::coord> path = m_a_map->AStar2D(glb_tgt,start,false,length);
-    tgt = path[0];
+    m_line_map->clearOccupancy();
+    find_reachable_target(true, start, reachable_tgt);
   }
-  m_d_map->dijkstra2D_with_line_map(tgt,m_line_map,is_future_path_blocked);
+  m_d_map->dijkstra2D_with_line_map(reachable_tgt,m_line_map,is_future_path_blocked);
 
   auto end_time = std::chrono::steady_clock::now();
       std::cout << "Middle planning time: "
@@ -211,14 +243,14 @@ void NF1MidPlanner::plan(const ros::TimerEvent&)
                 << " ms, is future path blocked: "<<is_future_path_blocked<< std::endl;
 
   // publish the nf1 and mid_goal
-  CUDA_GEO::pos carrot = m_d_map->coord2pos(tgt);
+  CUDA_GEO::pos carrot = m_d_map->coord2pos(reachable_tgt);
   setup_map_msg(m_nf1_msg.nf1,m_d_map,false);
   copy_map_to_msg(m_nf1_msg.nf1,m_d_map);
   m_nf1_msg.carrot_x = carrot.x;
   m_nf1_msg.carrot_y = carrot.y;
   m_nf1_msg.carrot_theta = 0;
   m_nf1_pub.publish(m_nf1_msg);
-  publish_mid_goal(tgt);
+  publish_mid_goal(reachable_tgt);
 
   // if the current goal is blocked, swith to the next path action
   if (is_goal_blocked && m_curr_act_id+1 < m_path.actions.size())
@@ -339,6 +371,24 @@ std::vector<float2> NF1MidPlanner::get_local_path(bool &is_future_path_blocked, 
       break;
     }
   }
+
+  // if the future path is not blocked, select the future target according to the curvature
+  if (!is_future_path_blocked)
+  {
+    std::vector<float2> tmp_path;
+    for (int i = 0; i< local_path.size(); i++)
+    {
+      p.x = local_path[i].x;
+      p.y = local_path[i].y;
+      if(!is_curvature_too_big(local_path,0,i,0.20f))
+        tmp_path.push_back(local_path[i]);
+      else
+        break;
+    }
+    local_path = tmp_path;
+  }
+
+
   // from the closest point to the path before
   // this part is reserved so that it can be used to selected as local target
   // so when the "down the road path" has no available target, we can choose a target from this part
@@ -358,13 +408,5 @@ std::vector<float2> NF1MidPlanner::get_local_path(bool &is_future_path_blocked, 
   // cascade the pre_path and the local_path
   local_path = cascade_vector(pre_path,local_path);
 
-  if (local_path.size()==0)
-  {
-    set_goal(CUDA_GEO::pos(m_curr_act_path[m_closest_pnt_idx].x,m_curr_act_path[m_closest_pnt_idx].y,0));
-  }
-  else
-  {
-    set_goal(CUDA_GEO::pos(local_path.back().x,local_path.back().y,0));
-  }
   return local_path;
 }
