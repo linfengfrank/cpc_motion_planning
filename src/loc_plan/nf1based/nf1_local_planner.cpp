@@ -33,6 +33,7 @@ NF1LocalPlanner::NF1LocalPlanner():
   m_status_pub = m_nh.advertise<std_msgs::String>("ref_status_string",1);
   m_tgt_reached_pub = m_nh.advertise<std_msgs::Int32MultiArray>("target_reached",1);
   m_stuck_plan_request_pub = m_nh.advertise<cpc_motion_planning::plan_request>("plan_request",1);
+  m_drive_dir_pub = m_nh.advertise<std_msgs::Int32>("drive_dir",1);
 
   m_planning_timer = m_nh.createTimer(ros::Duration(PSO::PSO_REPLAN_DT), &NF1LocalPlanner::plan_call_back, this);
 
@@ -199,6 +200,15 @@ void NF1LocalPlanner::do_normal()
   //Planning
   m_task_is_new = false;
   calculate_trajectory<SIMPLE_UGV>(m_pso_planner, m_traj, m_use_de);
+
+  //Update the drive direction
+  std_msgs::Int32 drive_dir;
+  if (m_pso_planner->result.best_loc[0].z > 0)
+    drive_dir.data = cpc_aux_mapping::nf1_task::TYPE_FORWARD;
+  else
+    drive_dir.data = cpc_aux_mapping::nf1_task::TYPE_BACKWARD;
+
+  m_drive_dir_pub.publish(drive_dir);
 
   //Goto: Braking
   if (m_pso_planner->result.collision)

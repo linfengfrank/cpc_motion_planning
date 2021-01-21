@@ -6,14 +6,15 @@ NF1MidPlanner::NF1MidPlanner():
   m_received_map(false),
   m_received_goal(false),
   m_line_following_mode(false),
-  m_curr_act_id(-1)
+  m_curr_act_id(-1),
+  m_drive_dir(-1)
 {
   m_map_sub = m_nh.subscribe("/edt_map", 1, &NF1MidPlanner::map_call_back,this);
   m_glb_tgt_sub = m_nh.subscribe("/set_global_goal", 1, &NF1MidPlanner::goal_call_back, this);
   m_slam_odom_sub = m_nh.subscribe("/slam_odom", 1, &NF1MidPlanner::slam_odo_call_back, this);
   m_glb_path_sub = m_nh.subscribe("/global_path",1, &NF1MidPlanner::glb_path_call_back, this);
   m_goal_reach_sub = m_nh.subscribe("/target_reached",1, &NF1MidPlanner::goal_reached_call_back, this);
-
+  m_drive_dir_sub = m_nh.subscribe("/drive_dir",1,&NF1MidPlanner::drive_dir_call_back, this);
 
   m_pc_pub = m_nh.advertise<PointCloud> ("/nf1_vis", 1);
   m_mid_goal_pub = m_nh.advertise<geometry_msgs::PoseStamped> ("/mid_goal", 1);
@@ -296,9 +297,14 @@ void NF1MidPlanner::slam_odo_call_back(const nav_msgs::Odometry::ConstPtr &msg)
   m_curr_pose.z = psi;
 }
 
+void NF1MidPlanner::drive_dir_call_back(const std_msgs::Int32::ConstPtr &msg)
+{
+  m_drive_dir = msg->data;
+}
+
 std::vector<float2> NF1MidPlanner::get_local_path(bool &is_future_path_blocked, bool&is_goal_in_view)
 {
-  float2 m_curr_pos = make_float2(m_curr_pose.x, m_curr_pose.y);
+  float2 m_curr_pos = get_head_pos();
   float2 diff;
   float min_dist = 1e6;
   float dist;

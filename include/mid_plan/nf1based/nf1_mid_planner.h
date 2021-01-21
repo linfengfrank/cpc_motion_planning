@@ -42,6 +42,7 @@ private:
   void glb_path_call_back(const cpc_motion_planning::path::ConstPtr &msg);
   void slam_odo_call_back(const nav_msgs::Odometry::ConstPtr &msg);
   void goal_reached_call_back(const std_msgs::Int32MultiArray::ConstPtr &msg);
+  void drive_dir_call_back(const std_msgs::Int32::ConstPtr &msg);
   void set_goal(CUDA_GEO::pos goal);
   void plan(const ros::TimerEvent&);
   void prepare_line_map(const std::vector<float2> &path);
@@ -60,6 +61,7 @@ private:
   ros::Subscriber m_slam_odom_sub;
   ros::Subscriber m_glb_path_sub;
   ros::Subscriber m_goal_reach_sub;
+  ros::Subscriber m_drive_dir_sub;
 
   ros::Publisher m_nf1_pub;
   ros::Publisher m_pc_pub;
@@ -84,6 +86,7 @@ private:
   float3 m_curr_pose;
 
   int m_closest_pnt_idx;
+  int m_drive_dir;
 
   // helper functions
 private:
@@ -266,6 +269,17 @@ private:
   float in_pi(float in)
   {
     return in - floor((in + M_PI) / (2 * M_PI)) * 2 * M_PI;
+  }
+
+  float2 get_head_pos()
+  {
+    float2 curr_pos = make_float2(m_curr_pose.x, m_curr_pose.y);
+    if (m_drive_dir >=0)
+    {
+      float l = (m_drive_dir == cpc_aux_mapping::nf1_task::TYPE_FORWARD) ? 0.3f : -0.3f;
+      curr_pos += make_float2(cosf(m_curr_pose.z),sinf(m_curr_pose.z))*l;
+    }
+    return curr_pos;
   }
 };
 

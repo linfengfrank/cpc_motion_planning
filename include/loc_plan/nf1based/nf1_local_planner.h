@@ -52,6 +52,7 @@ private:
   ros::Publisher m_status_pub;
   ros::Publisher m_tgt_reached_pub;
   ros::Publisher m_stuck_plan_request_pub;
+  ros::Publisher m_drive_dir_pub;
 
   bool m_goal_received;
   bool m_task_is_new;
