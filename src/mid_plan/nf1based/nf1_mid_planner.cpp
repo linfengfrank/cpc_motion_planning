@@ -9,6 +9,12 @@ NF1MidPlanner::NF1MidPlanner():
   m_curr_act_id(-1),
   m_drive_dir(-1)
 {
+  m_nh.param<int>("/clp_idx_search_start",m_clp_idx_search_start,-50);
+  m_nh.param<int>("/clp_idx_serach_end",m_clp_idx_search_end,50);
+  m_nh.param<int>("/look_ahead",m_look_ahead,50);
+  m_nh.param<int>("/look_back",m_look_back,-50);
+  m_nh.param<float>("/curvature_split",m_curvature_split,0.2f);
+
   m_map_sub = m_nh.subscribe("/edt_map", 1, &NF1MidPlanner::map_call_back,this);
   m_glb_tgt_sub = m_nh.subscribe("/set_global_goal", 1, &NF1MidPlanner::goal_call_back, this);
   m_slam_odom_sub = m_nh.subscribe("/slam_odom", 1, &NF1MidPlanner::slam_odo_call_back, this);
@@ -326,8 +332,8 @@ std::vector<float2> NF1MidPlanner::get_local_path(bool &is_future_path_blocked, 
   }
   else
   {
-    int start_idx = max(0,m_closest_pnt_idx-80);
-    int end_idx = min(m_curr_act_path.size(),m_closest_pnt_idx+80);
+    int start_idx = max(0,m_closest_pnt_idx+m_clp_idx_search_start);
+    int end_idx = min(m_curr_act_path.size(),m_closest_pnt_idx+m_clp_idx_search_end);
 
     for (int i = start_idx;i<end_idx;i++)
     {
@@ -344,7 +350,7 @@ std::vector<float2> NF1MidPlanner::get_local_path(bool &is_future_path_blocked, 
 
   // from the closest point to the path down the road
   is_goal_in_view = false;
-  int end_idx = min(m_curr_act_path.size(),m_closest_pnt_idx+120);
+  int end_idx = min(m_curr_act_path.size(),m_closest_pnt_idx+m_look_ahead);
   if (end_idx == static_cast<int>(m_curr_act_path.size()))
     is_goal_in_view = true;
 
@@ -386,7 +392,7 @@ std::vector<float2> NF1MidPlanner::get_local_path(bool &is_future_path_blocked, 
     {
       p.x = local_path[i].x;
       p.y = local_path[i].y;
-      if(!is_curvature_too_big(local_path,0,i,0.20f))
+      if(!is_curvature_too_big(local_path,0,i,m_curvature_split))
         tmp_path.push_back(local_path[i]);
       else
         break;
@@ -398,7 +404,7 @@ std::vector<float2> NF1MidPlanner::get_local_path(bool &is_future_path_blocked, 
   // from the closest point to the path before
   // this part is reserved so that it can be used to selected as local target
   // so when the "down the road path" has no available target, we can choose a target from this part
-  int start_idx = max(0,m_closest_pnt_idx-80);
+  int start_idx = max(0,m_closest_pnt_idx+m_look_back);
   std::vector<float2> pre_path;
   for (int i = m_closest_pnt_idx-1; i>= start_idx; i--)
   {

@@ -5,6 +5,12 @@ step_num: 5
 step_dt: 0.5
 use_de: false
 use_auto_direction: true
+#clp: closest point
+clp_idx_search_start: 0
+clp_idx_serach_end: 80
+look_ahead: 120
+look_back: -50
+curvature_split: 0.15
 
 #var_s: 2.0
 #var_theta: 1.0

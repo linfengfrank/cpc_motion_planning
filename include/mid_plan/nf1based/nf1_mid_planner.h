@@ -87,6 +87,11 @@ private:
 
   int m_closest_pnt_idx;
   int m_drive_dir;
+  int m_clp_idx_search_start;
+  int m_clp_idx_search_end;
+  int m_look_ahead;
+  int m_look_back;
+  float m_curvature_split;
 
   // helper functions
 private:
