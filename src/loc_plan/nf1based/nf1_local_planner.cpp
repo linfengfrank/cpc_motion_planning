@@ -24,6 +24,9 @@ NF1LocalPlanner::NF1LocalPlanner():
   m_nh.param<int>("/step_num",step_num,4);
   m_nh.param<bool>("/use_de",m_use_de,false);
   m_nh.param<bool>("/use_auto_direction",use_auto_direction,false);
+  m_nh.param<int>("/swarm_size",m_swarm_size,120);
+  m_nh.param<int>("/batch_num",m_batch_num,40);
+  m_nh.param<int>("/episode_num",m_episode_num,2);
 
   m_nf1_sub = m_nh.subscribe("/nf1",1,&NF1LocalPlanner::nf1_call_back, this);
   m_hybrid_path_sub = m_nh.subscribe("/hybrid_path",1,&NF1LocalPlanner::hybrid_path_call_back,this);
@@ -33,10 +36,11 @@ NF1LocalPlanner::NF1LocalPlanner():
   m_status_pub = m_nh.advertise<std_msgs::String>("ref_status_string",1);
   m_tgt_reached_pub = m_nh.advertise<std_msgs::Int32MultiArray>("target_reached",1);
   m_stuck_plan_request_pub = m_nh.advertise<cpc_motion_planning::plan_request>("plan_request",1);
+  m_drive_dir_pub = m_nh.advertise<std_msgs::Int32>("drive_dir",1);
 
   m_planning_timer = m_nh.createTimer(ros::Duration(PSO::PSO_REPLAN_DT), &NF1LocalPlanner::plan_call_back, this);
 
-  m_pso_planner = new PSO::Planner<SIMPLE_UGV>(120,50,3);
+  m_pso_planner = new PSO::Planner<SIMPLE_UGV>(m_swarm_size,m_batch_num,m_episode_num);
   // Init swarm
   m_pso_planner->m_swarm.set_step_dt(step_num, step_dt);
   m_pso_planner->m_swarm.set_var(make_float3(var_s,var_theta,1.0f));
@@ -199,6 +203,15 @@ void NF1LocalPlanner::do_normal()
   //Planning
   m_task_is_new = false;
   calculate_trajectory<SIMPLE_UGV>(m_pso_planner, m_traj, m_use_de);
+
+  //Update the drive direction
+  std_msgs::Int32 drive_dir;
+  if (m_pso_planner->result.best_loc[0].z > 0)
+    drive_dir.data = cpc_aux_mapping::nf1_task::TYPE_FORWARD;
+  else
+    drive_dir.data = cpc_aux_mapping::nf1_task::TYPE_BACKWARD;
+
+  m_drive_dir_pub.publish(drive_dir);
 
   //Goto: Braking
   if (m_pso_planner->result.collision)

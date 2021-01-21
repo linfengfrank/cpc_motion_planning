@@ -52,6 +52,7 @@ private:
   ros::Publisher m_status_pub;
   ros::Publisher m_tgt_reached_pub;
   ros::Publisher m_stuck_plan_request_pub;
+  ros::Publisher m_drive_dir_pub;
 
   bool m_goal_received;
   bool m_task_is_new;
@@ -70,6 +71,9 @@ private:
   int m_stuck_start_cycle;
   int m_full_start_cycle;
   int m_plan_request_cycle;
+  int m_swarm_size;
+  int m_batch_num;
+  int m_episode_num;
   NF1MapDT *m_nf1_map;
   cpc_motion_planning::path m_stuck_recover_path;
   UGVRecMotionPlanner m_recover_planner;

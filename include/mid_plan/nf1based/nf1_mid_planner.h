@@ -42,13 +42,14 @@ private:
   void glb_path_call_back(const cpc_motion_planning::path::ConstPtr &msg);
   void slam_odo_call_back(const nav_msgs::Odometry::ConstPtr &msg);
   void goal_reached_call_back(const std_msgs::Int32MultiArray::ConstPtr &msg);
+  void drive_dir_call_back(const std_msgs::Int32::ConstPtr &msg);
   void set_goal(CUDA_GEO::pos goal);
   void plan(const ros::TimerEvent&);
   void prepare_line_map(const std::vector<float2> &path);
 
-  void load_straight_line_mission(const std_msgs::Int32::ConstPtr &msg);
-  std::vector<float2> get_local_path(bool &is_future_path_blocked);
+  std::vector<float2> get_local_path(bool &is_future_path_blocked, bool &is_goal_in_view);
   void set_curr_act_path();
+  bool find_reachable_target(bool use_line, CUDA_GEO::coord& start, CUDA_GEO::coord& reachable_tgt);
 
 private:
   ros::NodeHandle m_nh;
@@ -60,6 +61,7 @@ private:
   ros::Subscriber m_slam_odom_sub;
   ros::Subscriber m_glb_path_sub;
   ros::Subscriber m_goal_reach_sub;
+  ros::Subscriber m_drive_dir_sub;
 
   ros::Publisher m_nf1_pub;
   ros::Publisher m_pc_pub;
@@ -84,6 +86,12 @@ private:
   float3 m_curr_pose;
 
   int m_closest_pnt_idx;
+  int m_drive_dir;
+  int m_clp_idx_search_start;
+  int m_clp_idx_search_end;
+  int m_look_ahead;
+  int m_look_back;
+  float m_curvature_split;
 
   // helper functions
 private:
@@ -200,26 +208,6 @@ private:
     m_straight_line_vis_pub.publish(line_strip);
   }
 
-  std::vector<float2> make_straight_path(const float2 &a, const float2 &b)
-  {
-    std::vector<float2> path;
-    float2 delta = b-a;
-    float dist = sqrtf(dot(delta,delta));
-
-    if (dist < 0.1f)
-    {
-      path.push_back(b);
-      return path;
-    }
-
-    delta = delta/dist;
-    for (float l = 0; l <= dist; l+=0.1f)
-    {
-      path.push_back(a+delta*l);
-    }
-    return path;
-  }
-
   std::vector<float2> cascade_vector(const std::vector<float2> &A, const std::vector<float2> &B)
   {
     std::vector<float2> AB;
@@ -244,7 +232,7 @@ private:
     return sqrtf(static_cast<float>(a_square*b_square - a_dot_b*a_dot_b)/static_cast<float>(b_square));
   }
 
-  bool is_curvature_too_big(const std::vector<float2> &path, size_t start, size_t end)
+  bool is_curvature_too_big(const std::vector<float2> &path, size_t start, size_t end,float th_dist = 0.15f)
   {
     float2 start_point = path[start];
     float2 end_point = path[end];
@@ -260,7 +248,7 @@ private:
         max_deviation = deviation;
     }
 
-    if (max_deviation > 0.15f)
+    if (max_deviation > th_dist)
       return true;
     else
       return false;
@@ -286,6 +274,17 @@ private:
   float in_pi(float in)
   {
     return in - floor((in + M_PI) / (2 * M_PI)) * 2 * M_PI;
+  }
+
+  float2 get_head_pos()
+  {
+    float2 curr_pos = make_float2(m_curr_pose.x, m_curr_pose.y);
+    if (m_drive_dir >=0)
+    {
+      float l = (m_drive_dir == cpc_aux_mapping::nf1_task::TYPE_FORWARD) ? 0.3f : -0.3f;
+      curr_pos += make_float2(cosf(m_curr_pose.z),sinf(m_curr_pose.z))*l;
+    }
+    return curr_pos;
   }
 };
 
