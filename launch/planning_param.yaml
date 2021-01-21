@@ -11,6 +11,9 @@ clp_idx_serach_end: 80
 look_ahead: 120
 look_back: -50
 curvature_split: 0.15
+swarm_size: 120
+batch_num: 30
+episode_num: 2
 
 #var_s: 2.0
 #var_theta: 1.0

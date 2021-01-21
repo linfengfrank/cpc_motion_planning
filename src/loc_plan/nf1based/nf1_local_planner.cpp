@@ -24,6 +24,9 @@ NF1LocalPlanner::NF1LocalPlanner():
   m_nh.param<int>("/step_num",step_num,4);
   m_nh.param<bool>("/use_de",m_use_de,false);
   m_nh.param<bool>("/use_auto_direction",use_auto_direction,false);
+  m_nh.param<int>("/swarm_size",m_swarm_size,120);
+  m_nh.param<int>("/batch_num",m_batch_num,40);
+  m_nh.param<int>("/episode_num",m_episode_num,2);
 
   m_nf1_sub = m_nh.subscribe("/nf1",1,&NF1LocalPlanner::nf1_call_back, this);
   m_hybrid_path_sub = m_nh.subscribe("/hybrid_path",1,&NF1LocalPlanner::hybrid_path_call_back,this);
@@ -37,7 +40,7 @@ NF1LocalPlanner::NF1LocalPlanner():
 
   m_planning_timer = m_nh.createTimer(ros::Duration(PSO::PSO_REPLAN_DT), &NF1LocalPlanner::plan_call_back, this);
 
-  m_pso_planner = new PSO::Planner<SIMPLE_UGV>(120,50,3);
+  m_pso_planner = new PSO::Planner<SIMPLE_UGV>(m_swarm_size,m_batch_num,m_episode_num);
   // Init swarm
   m_pso_planner->m_swarm.set_step_dt(step_num, step_dt);
   m_pso_planner->m_swarm.set_var(make_float3(var_s,var_theta,1.0f));

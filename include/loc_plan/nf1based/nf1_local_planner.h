@@ -71,6 +71,9 @@ private:
   int m_stuck_start_cycle;
   int m_full_start_cycle;
   int m_plan_request_cycle;
+  int m_swarm_size;
+  int m_batch_num;
+  int m_episode_num;
   NF1MapDT *m_nf1_map;
   cpc_motion_planning::path m_stuck_recover_path;
   UGVRecMotionPlanner m_recover_planner;
