@@ -79,6 +79,7 @@ endif()
    FILES
    astar_service.srv
    collision_check.srv
+   glb_plan_srv.srv
  )
 
 ## Generate actions in the 'action' folder
