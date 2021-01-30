@@ -7,6 +7,7 @@ GlobalPlanner::GlobalPlanner():
 {
   m_glb_tgt_sub = m_nh.subscribe("/set_global_goal", 1, &GlobalPlanner::goal_call_back, this);
   m_slam_odom_sub = m_nh.subscribe("/slam_odom", 1, &GlobalPlanner::slam_odo_call_back, this);
+  m_glb_plan_execute_sub = m_nh.subscribe("/exe_glb_plan",1,&GlobalPlanner::exe_curr_glb_plan, this);
 
   m_glb_path_pub = m_nh.advertise<cpc_motion_planning::path>("/global_path",1);
   m_nh.param<std::string>("/cmap_filename",m_cmap_filename,"");
@@ -23,6 +24,8 @@ GlobalPlanner::GlobalPlanner():
   m_path_pcl->header.frame_id = "/world";
   m_path_vis_pub = m_nh.advertise<PointCloud> ("/glb_path_vis", 1);
 
+  m_glb_plan_srv =  m_nh.advertiseService("/glb_plan_srv",&GlobalPlanner::glb_plan_service,this);
+
   m_show_map_timer = m_nh.createTimer(ros::Duration(2.0), &GlobalPlanner::show_glb_map, this);
 
   m_ps = new PathSmoother(m_a_map);
@@ -37,6 +40,46 @@ GlobalPlanner::~GlobalPlanner()
   delete [] m_h;
   delete [] m_s;
   delete [] m_t;
+}
+
+void GlobalPlanner::exe_curr_glb_plan(const std_msgs::Bool::ConstPtr &msg)
+{
+  if (m_map_loaded && m_glb_path.size()>0)
+  {
+    publish_glb_path();
+  }
+}
+
+bool GlobalPlanner::glb_plan_service(cpc_motion_planning::glb_plan_srv::Request &req,
+                      cpc_motion_planning::glb_plan_srv::Response &res)
+{
+  CUDA_GEO::pos start(req.start.position.x, req.start.position.y,0);
+  CUDA_GEO::pos goal(req.goal.position.x, req.goal.position.y,0);
+  if (m_map_loaded)
+  {
+    m_glb_path = plan(goal,start);
+    m_ps->set_path(m_glb_path);
+    m_ps->smooth_path();
+    m_glb_path = m_ps->get_path();
+
+    geometry_msgs::Pose tmp_pose;
+    for (CUDA_GEO::pos pnt: m_glb_path)
+    {
+      tmp_pose.position.x = pnt.x;
+      tmp_pose.position.y = pnt.y;
+      res.path.push_back(tmp_pose);
+    }
+
+    if (!req.save_as_name.empty())
+    {
+      std::ofstream mylog(req.save_as_name);
+      for (CUDA_GEO::pos pnt: m_glb_path)
+        mylog<<pnt.x<<" "<<pnt.y<<std::endl;
+
+      mylog.close();
+    }
+  }
+  return true;
 }
 
 void GlobalPlanner::goal_call_back(const geometry_msgs::PoseStamped::ConstPtr &msg)

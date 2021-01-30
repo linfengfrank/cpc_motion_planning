@@ -10,6 +10,9 @@
 #include <pcl_ros/point_cloud.h>
 #include <cpc_motion_planning/path.h>
 #include <glb_plan/path_smoother.h>
+#include <cpc_motion_planning/glb_plan_srv.h>
+#include <std_msgs/Bool.h>
+
 class GlobalPlanner
 {
   typedef pcl::PointCloud<pcl::PointXYZRGB> PointCloud;
@@ -21,6 +24,9 @@ public:
   std::vector<CUDA_GEO::pos> plan(const CUDA_GEO::pos &goal, const CUDA_GEO::pos &start);
 
 public:
+  bool glb_plan_service(cpc_motion_planning::glb_plan_srv::Request &req,
+                        cpc_motion_planning::glb_plan_srv::Response &res);
+  void exe_curr_glb_plan(const std_msgs::Bool::ConstPtr &msg);
   void goal_call_back(const geometry_msgs::PoseStamped::ConstPtr &msg);
   void slam_odo_call_back(const nav_msgs::Odometry::ConstPtr &msg);
   void set_goal(CUDA_GEO::pos goal);
@@ -227,6 +233,8 @@ public:
   int *m_h;
   int *m_s;
   int *m_t;
+  ros::ServiceServer m_glb_plan_srv;
+  ros::Subscriber m_glb_plan_execute_sub;
 };
 
 #endif // GLOBAL_PLANNER_H
