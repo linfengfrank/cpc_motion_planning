@@ -32,6 +32,10 @@ void iterate_particles(float weight,
 template<class Swarm>
 void copy_best_values(float *best_values, const Swarm &sw);
 
+//---------
+template<class Swarm>
+void update_glb_best(int sw_best_idx, const Swarm &sw);
+
 ////---------
 //float evaluate_trajectory_wrapper(const State &s0, const Trace &tr, VoidPtrCarrier ptr_car,const UniformBinCarrier &ubc,
 //               const EDTMap &map, const Trace &last_tr);

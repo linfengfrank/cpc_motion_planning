@@ -143,7 +143,7 @@ public:
       PSO::bound_between(p.curr_loc.site[n].x,  s_ini.p.x-9.0f,  s_ini.p.x+9.0f);
       PSO::bound_between(p.curr_loc.site[n].y,  s_ini.p.y-9.0f,  s_ini.p.y+9.0f);
       PSO::bound_between(p.curr_loc.site[n].z,  s_ini.p.z-9.0f,  s_ini.p.z+9.0f);
-      //bound_between(p.curr_loc.site[n].z,  1.6f,  1.65f);
+      PSO::bound_between(p.curr_loc.site[n].z,  1.9f,  2.01f);
     }
   }
 
@@ -170,6 +170,7 @@ public:
   }
 
   Particle *ptcls;
+  Particle *best_ptcl;
   int ptcl_size;
   int steps;
   float step_dt;

@@ -170,6 +170,7 @@ public:
   }
 
   Particle *ptcls;
+  Particle *best_ptcl;
   int ptcl_size;
   int steps;
   float step_dt;
