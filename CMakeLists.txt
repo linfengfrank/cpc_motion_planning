@@ -80,6 +80,7 @@ endif()
    astar_service.srv
    collision_check.srv
    glb_plan_srv.srv
+   exe_recorded_path.srv
  )
 
 ## Generate actions in the 'action' folder

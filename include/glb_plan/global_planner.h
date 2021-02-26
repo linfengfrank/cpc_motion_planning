@@ -12,6 +12,8 @@
 #include <glb_plan/path_smoother.h>
 #include <cpc_motion_planning/glb_plan_srv.h>
 #include <std_msgs/Bool.h>
+#include <std_msgs/String.h>
+#include <cpc_motion_planning/exe_recorded_path.h>
 
 class GlobalPlanner
 {
@@ -22,7 +24,8 @@ public:
   bool load_c_map();
   void perform_edt();
   std::vector<CUDA_GEO::pos> plan(const CUDA_GEO::pos &goal, const CUDA_GEO::pos &start);
-
+  bool exe_recorded_path(cpc_motion_planning::exe_recorded_path::Request &req,
+                         cpc_motion_planning::exe_recorded_path::Response &res);
 public:
   bool glb_plan_service(cpc_motion_planning::glb_plan_srv::Request &req,
                         cpc_motion_planning::glb_plan_srv::Response &res);
@@ -204,6 +207,92 @@ public:
   {
     return in - floor((in + M_PI) / (2 * M_PI)) * 2 * M_PI;
   }
+
+  std::vector<float2> make_straight_path(const float2 &a, const float2 &b)
+  {
+    std::vector<float2> path;
+    float2 delta = b-a;
+    float dist = sqrtf(dot(delta,delta));
+
+    if (dist < 0.1f)
+    {
+      path.push_back(b);
+      return path;
+    }
+
+    delta = delta/dist;
+    for (float l = 0; l <= dist; l+=0.1f)
+    {
+      path.push_back(a+delta*l);
+    }
+    return path;
+  }
+
+  std::vector<size_t> split_merge(const std::vector<float2> &path)
+  {
+    std::vector<size_t> split_idx;
+
+    // If there is no path, return the center point
+    if (path.size() <= 1)
+    {
+      return split_idx;
+    }
+
+    std::stack<std::pair<unsigned int,unsigned int>> task; // fist is anchor, second is target
+    task.push(std::make_pair(path.size() - 1, 0));
+
+    unsigned int check = static_cast<unsigned int>(path.size()) - 1;
+
+    split_idx.push_back(path.size() - 1);
+    while (task.size() > 0)
+    {
+      unsigned int target = task.top().second;
+      unsigned int anchor = task.top().first;
+      task.pop();
+      // find the largest distance
+      unsigned int max_id = 0;
+      float max_dist = 0;
+      for (unsigned int j = target; j< anchor; j++)
+      {
+        float dist = pnt2line_dist(path[anchor],path[target],path[j]);
+        if (dist > max_dist)
+        {
+          max_dist = dist;
+          max_id = j;
+        }
+      }
+
+      if (max_dist > 0.2f)
+      {
+        task.push(std::make_pair(max_id, target));
+        task.push(std::make_pair(anchor, max_id));
+        target = max_id;
+      }
+      else
+      {
+        split_idx.push_back(target);
+        if (target >= check)
+        {
+          std::cout<<"path size: "<<path.size()<<std::endl;
+          ROS_ERROR("Wrong split sequence");
+          exit(-1);
+        }
+        check = target;
+      }
+    }
+    std::reverse(split_idx.begin(),split_idx.end());
+    return split_idx;
+  }
+
+  std::vector<float2> cascade_vector(const std::vector<float2> &A, const std::vector<float2> &B)
+  {
+    std::vector<float2> AB;
+    AB.reserve( A.size() + B.size() ); // preallocate memory
+    AB.insert( AB.end(), A.begin(), A.end() );
+    AB.insert( AB.end(), B.begin(), B.end() );
+    return AB;
+  }
+
 public:
   int m_glb_path_id;
   std::vector<CUDA_GEO::pos> m_glb_path;
@@ -218,6 +307,7 @@ public:
   ros::NodeHandle m_nh;
   ros::Subscriber m_slam_odom_sub;
   ros::Subscriber m_glb_tgt_sub;
+  ros::ServiceServer m_recorded_path_srv;
   float3 m_curr_pose;
   CUDA_GEO::pos m_goal;
   CUDA_GEO::pos m_origin;
@@ -235,6 +325,7 @@ public:
   int *m_t;
   ros::ServiceServer m_glb_plan_srv;
   ros::Subscriber m_glb_plan_execute_sub;
+  std::vector<float2> m_curr_act_path;
 };
 
 #endif // GLOBAL_PLANNER_H

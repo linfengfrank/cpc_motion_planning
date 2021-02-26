@@ -25,6 +25,7 @@ GlobalPlanner::GlobalPlanner():
   m_path_vis_pub = m_nh.advertise<PointCloud> ("/glb_path_vis", 1);
 
   m_glb_plan_srv =  m_nh.advertiseService("/glb_plan_srv",&GlobalPlanner::glb_plan_service,this);
+  m_recorded_path_srv = m_nh.advertiseService("/exe_recorded_path", &GlobalPlanner::exe_recorded_path, this);
 
   m_show_map_timer = m_nh.createTimer(ros::Duration(2.0), &GlobalPlanner::show_glb_map, this);
 
@@ -240,4 +241,87 @@ std::vector<CUDA_GEO::pos> GlobalPlanner::plan(const CUDA_GEO::pos &goal_pos, co
   }
 
   return output;
+}
+
+bool GlobalPlanner::exe_recorded_path(cpc_motion_planning::exe_recorded_path::Request &req,
+                                      cpc_motion_planning::exe_recorded_path::Response &res)
+{
+  res.success = false;
+  // Read in the data files
+  std::ifstream corridor_file;
+  float data[2];
+  std::vector<float2> wps, wps_raw;
+  corridor_file.open(req.file_name);
+  std::cout<<"Read in data"<<std::endl;
+  while(1)
+  {
+    if (corridor_file>>data[0]>>data[1])
+    {
+      wps_raw.push_back((make_float2(data[0],data[1])));
+    }
+    else
+    {
+      break;
+    }
+  }
+
+  // Scan the wps_raw to remove the stopped part
+  if (wps_raw.size() <=1 )
+    return true;
+
+  wps.push_back(wps_raw.front());
+  for (size_t i = 1; i < wps_raw.size(); i++)
+  {
+    float2 d = wps_raw[i] - wps.back();
+    if (sqrtf(dot(d,d)) > 0.1)
+      wps.push_back(wps_raw[i]);
+  }
+
+  // We need at least two waypoint to form a line
+  if(wps.size()>1)
+  {
+    m_curr_act_path.clear();
+    for (size_t i=0; i<wps.size()-1;i++)
+    {
+      m_curr_act_path = cascade_vector(m_curr_act_path,make_straight_path(wps[i],wps[i+1]));
+    }
+    std::vector<size_t> split_idx = split_merge(m_curr_act_path);
+
+    std::vector<size_t> cusp_idx;
+    cusp_idx.push_back(split_idx.front());
+    for (size_t i=1; i<split_idx.size()-1;i++)
+    {
+      float2 a = m_curr_act_path[split_idx[i]] - m_curr_act_path[split_idx[i-1]];
+      float2 b = m_curr_act_path[split_idx[i+1]] - m_curr_act_path[split_idx[i]];
+      float norm_a = sqrtf(dot(a,a));
+      float norm_b = sqrtf(dot(b,b));
+      float theta = acosf(dot(a,b)/(norm_a*norm_b));
+
+      if (theta > 0.5*M_PI)
+        cusp_idx.push_back(split_idx[i]);
+    }
+    cusp_idx.push_back(split_idx.back());
+
+    cpc_motion_planning::path glb_path;
+    glb_path.request_ctt =  m_glb_path_id++;
+
+    //--- set the path action
+    for (size_t i=0; i<cusp_idx.size()-1;i++)
+    {
+      std::cout<<cusp_idx[i]<<" "<<cusp_idx[i+1]<<" "<<m_curr_act_path.size()-1<<std::endl;
+      cpc_motion_planning::path_action pa;
+      for (size_t j=cusp_idx[i]; j<cusp_idx[i+1];j++)
+      {
+        pa.x.push_back(m_curr_act_path[j].x);
+        pa.y.push_back(m_curr_act_path[j].y);
+        pa.theta.push_back(0);
+        pa.type = cpc_motion_planning::path_action::TYPE_FORWARD;
+      }
+      glb_path.actions.push_back(pa);
+    }
+    m_glb_path_pub.publish(glb_path);
+  }
+
+  res.success = true;
+  return true;
 }
