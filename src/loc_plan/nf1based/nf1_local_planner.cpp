@@ -246,11 +246,15 @@ void NF1LocalPlanner::do_normal()
     //Goto: Pos_reached
     if(is_pos_reached(m_pso_planner->m_model.get_ini_state(),m_goal.s,m_goal.reaching_radius))
     {
-        m_status = UGV::POS_REACHED;
-        std_msgs::Int32MultiArray reach_msg;
-        reach_msg.data.push_back(m_goal.path_id);
-        reach_msg.data.push_back(m_goal.act_id);
-        m_tgt_reached_pub.publish(reach_msg);
+        float2 carrot_diff = m_pso_planner->m_model.get_ini_state().p - m_carrot.p;
+        if (sqrtf(dot(carrot_diff,carrot_diff))<m_goal.reaching_radius)
+        {
+          m_status = UGV::POS_REACHED;
+          std_msgs::Int32MultiArray reach_msg;
+          reach_msg.data.push_back(m_goal.path_id);
+          reach_msg.data.push_back(m_goal.act_id);
+          m_tgt_reached_pub.publish(reach_msg);
+        }
     }
   }
 }
@@ -423,6 +427,12 @@ void NF1LocalPlanner::cycle_init()
 {
   if (cycle_initialized)
     return;
+
+  float2 diff = m_goal.s.p - m_carrot.p;
+  if (sqrtf(dot(diff,diff)) <= 2*m_edt_map->m_grid_step)
+    m_pso_planner->m_eva.m_accurate_reaching = true;
+  else
+    m_pso_planner->m_eva.m_accurate_reaching = false;
 
   cycle_initialized = true;
   bool is_heading_ref;

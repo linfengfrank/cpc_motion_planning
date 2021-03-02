@@ -318,7 +318,9 @@ std::vector<float2> NF1MidPlanner::get_local_path(bool &is_future_path_blocked, 
   // first find the closest point on the path
   if(m_closest_pnt_idx == -1)
   {
-    for (size_t i =0;i<m_curr_act_path.size();i++)
+    size_t start_idx = 0;
+    size_t end_idx = min(m_curr_act_path.size(),m_clp_idx_search_end);
+    for (size_t i =start_idx;i<end_idx;i++)
     {
       diff = m_curr_pos - m_curr_act_path[i];
       dist = dot(diff,diff);

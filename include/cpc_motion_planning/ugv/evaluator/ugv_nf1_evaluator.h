@@ -27,6 +27,7 @@ public:
 
   NF1Evaluator()
   {
+    m_accurate_reaching = false;
     is_forward = true;
     m_pure_turning = false;
     m_nf1_received = false;
@@ -118,7 +119,7 @@ public:
     // Calculate the distance between vehicle center and final goal
     float2 ctr_diff_to_goal = s.p-m_goal.s.p;
     float ctr_dist_to_goal = sqrtf(dot(ctr_diff_to_goal,ctr_diff_to_goal));
-    if(ctr_dist_to_goal > fabsf(head_dist))
+    if(ctr_dist_to_goal > fabsf(head_dist) || !m_accurate_reaching)
     {
       // If distance too far, only consider the Head cost
 #ifdef  __CUDA_ARCH__
@@ -227,6 +228,7 @@ public:
     return  cost;
   }
 
+  bool m_accurate_reaching;
   Target m_goal;
   mutable bool is_forward;
   bool m_pure_turning;
