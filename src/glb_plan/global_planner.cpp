@@ -45,17 +45,19 @@ GlobalPlanner::~GlobalPlanner()
 
 void GlobalPlanner::exe_curr_glb_plan(const std_msgs::Bool::ConstPtr &msg)
 {
-  if (m_map_loaded && m_glb_path.size()>0)
+  if (m_map_loaded && m_glb_path_msg.actions.size()>0)
   {
-    publish_glb_path();
+    m_glb_path_pub.publish(m_glb_path_msg);
   }
 }
 
 bool GlobalPlanner::glb_plan_service(cpc_motion_planning::glb_plan_srv::Request &req,
                       cpc_motion_planning::glb_plan_srv::Response &res)
 {
+  m_glb_path_msg.actions.clear();
   CUDA_GEO::pos start(req.start.position.x, req.start.position.y,0);
   CUDA_GEO::pos goal(req.goal.position.x, req.goal.position.y,0);
+
   if (m_map_loaded)
   {
     m_glb_path = plan(goal,start);
@@ -79,12 +81,14 @@ bool GlobalPlanner::glb_plan_service(cpc_motion_planning::glb_plan_srv::Request 
 
       mylog.close();
     }
+    prepare_glb_path();
   }
   return true;
 }
 
 void GlobalPlanner::goal_call_back(const geometry_msgs::PoseStamped::ConstPtr &msg)
 {
+  m_glb_path_msg.actions.clear();
   set_goal(CUDA_GEO::pos(msg->pose.position.x, msg->pose.position.y, msg->pose.position.z));
   if (m_map_loaded && m_odom_received)
   {
@@ -93,7 +97,8 @@ void GlobalPlanner::goal_call_back(const geometry_msgs::PoseStamped::ConstPtr &m
     m_ps->smooth_path();
     m_glb_path = m_ps->get_path();
     show_glb_path();
-    publish_glb_path();
+    prepare_glb_path();
+    m_glb_path_pub.publish(m_glb_path_msg);
   }
 }
 
@@ -246,6 +251,7 @@ std::vector<CUDA_GEO::pos> GlobalPlanner::plan(const CUDA_GEO::pos &goal_pos, co
 bool GlobalPlanner::exe_recorded_path(cpc_motion_planning::exe_recorded_path::Request &req,
                                       cpc_motion_planning::exe_recorded_path::Response &res)
 {
+  m_glb_path_msg.actions.clear();
   res.success = false;
   // Read in the data files
   std::ifstream corridor_file;
@@ -319,7 +325,7 @@ bool GlobalPlanner::exe_recorded_path(cpc_motion_planning::exe_recorded_path::Re
       }
       glb_path.actions.push_back(pa);
     }
-    m_glb_path_pub.publish(glb_path);
+    m_glb_path_msg = glb_path;
   }
 
   res.success = true;

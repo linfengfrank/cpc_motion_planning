@@ -118,7 +118,7 @@ public:
     m_path_pcl->clear();
   }
 
-  void publish_glb_path()
+  void prepare_glb_path()
   {
     cpc_motion_planning::path glb_path;
     glb_path.request_ctt = m_glb_path_id++;
@@ -145,7 +145,7 @@ public:
 
       // publish the global map only when the drive direction can be set
       glb_path.actions.push_back(pa);
-      m_glb_path_pub.publish(glb_path);
+      m_glb_path_msg = glb_path;
     }
   }
 
@@ -326,6 +326,7 @@ public:
   ros::ServiceServer m_glb_plan_srv;
   ros::Subscriber m_glb_plan_execute_sub;
   std::vector<float2> m_curr_act_path;
+  cpc_motion_planning::path m_glb_path_msg;
 };
 
 #endif // GLOBAL_PLANNER_H

@@ -30,6 +30,7 @@ NF1MidPlanner::NF1MidPlanner():
   m_pclOut = PointCloud::Ptr(new PointCloud);
   m_pclOut->header.frame_id = "/world";
   m_glb_plan_timer = m_nh.createTimer(ros::Duration(0.333), &NF1MidPlanner::plan, this);
+  m_path.request_ctt = -1;
 }
 
 NF1MidPlanner::~NF1MidPlanner()
@@ -59,12 +60,16 @@ void NF1MidPlanner::goal_reached_call_back(const std_msgs::Int32MultiArray::Cons
 
 void NF1MidPlanner::glb_path_call_back(const cpc_motion_planning::path::ConstPtr &msg)
 {
-  // Read in the data files
-  m_line_following_mode = true;
-  m_received_goal = true;
-  m_path = *msg;
-  m_curr_act_id = 0;
-  set_curr_act_path();
+  if (m_path.request_ctt != msg->request_ctt)
+  {
+    std::cout<<"Global path: "<<msg->request_ctt<<" received."<<std::endl;
+    // Read in the data files
+    m_line_following_mode = true;
+    m_received_goal = true;
+    m_path = *msg;
+    m_curr_act_id = 0;
+    set_curr_act_path();
+  }
 }
 
 void NF1MidPlanner::set_curr_act_path()
