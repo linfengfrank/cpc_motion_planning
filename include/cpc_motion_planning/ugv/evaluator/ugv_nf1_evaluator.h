@@ -33,6 +33,7 @@ public:
     m_nf1_received = false;
     m_stuck = false;
     m_using_auto_direction = false;
+    m_safety_radius = 0.401f;
   }
 
   ~NF1Evaluator()
@@ -151,7 +152,7 @@ public:
     float rd = getMinDist(s,map);
     cost += expf(-9.5f*rd)*10;
 
-    if (rd < 0.451f)
+    if (rd < m_safety_radius)
       cost += (1000 + expf(-4.5f*rd)*1000);
 
     if (rd < PSO::MIN_DIST && time < 0.31f)
@@ -236,6 +237,7 @@ public:
   NF1MapDT m_nf1_map;
   bool m_nf1_received;
   bool m_using_auto_direction;
+  float m_safety_radius;
 };
 }
 

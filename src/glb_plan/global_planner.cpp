@@ -5,6 +5,7 @@ GlobalPlanner::GlobalPlanner():
   m_map_loaded(false),
   m_odom_received(false)
 {
+  m_nh.param<float>("/global_safety_radius",m_safety_radius,0.51f);
   m_glb_tgt_sub = m_nh.subscribe("/set_global_goal", 1, &GlobalPlanner::goal_call_back, this);
   m_slam_odom_sub = m_nh.subscribe("/slam_odom", 1, &GlobalPlanner::slam_odo_call_back, this);
   m_glb_plan_execute_sub = m_nh.subscribe("/exe_glb_plan",1,&GlobalPlanner::exe_curr_glb_plan, this);
@@ -237,7 +238,7 @@ std::vector<CUDA_GEO::pos> GlobalPlanner::plan(const CUDA_GEO::pos &goal_pos, co
   CUDA_GEO::coord start = m_a_map->pos2coord(start_pos);
   CUDA_GEO::coord goal = m_a_map->pos2coord(goal_pos);
   float length = 0.0f;
-  std::vector<CUDA_GEO::coord> coord_path =  m_a_map->AStar2D(goal,start,false,length);
+  std::vector<CUDA_GEO::coord> coord_path =  m_a_map->AStar2D(goal,start,false,length,m_safety_radius);
   std::reverse(coord_path.begin(),coord_path.end());
 
   for (size_t i=0; i<coord_path.size();i++)

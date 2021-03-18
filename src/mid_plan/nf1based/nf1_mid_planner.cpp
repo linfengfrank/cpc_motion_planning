@@ -7,13 +7,15 @@ NF1MidPlanner::NF1MidPlanner():
   m_received_goal(false),
   m_line_following_mode(false),
   m_curr_act_id(-1),
-  m_drive_dir(-1)
+  m_drive_dir(-1),
+  m_safety_radius(0.51f)
 {
   m_nh.param<int>("/clp_idx_search_start",m_clp_idx_search_start,-50);
   m_nh.param<int>("/clp_idx_serach_end",m_clp_idx_search_end,50);
   m_nh.param<int>("/look_ahead",m_look_ahead,50);
   m_nh.param<int>("/look_back",m_look_back,-50);
   m_nh.param<float>("/curvature_split",m_curvature_split,0.2f);
+  m_nh.param<float>("/mid_safety_radius",m_safety_radius,0.51f);
 
   m_map_sub = m_nh.subscribe("/edt_map", 1, &NF1MidPlanner::map_call_back,this);
   m_glb_tgt_sub = m_nh.subscribe("/set_global_goal", 1, &NF1MidPlanner::goal_call_back, this);
@@ -183,7 +185,7 @@ bool NF1MidPlanner::find_reachable_target(bool use_line, CUDA_GEO::coord& start,
 {
   //set start
   start = CUDA_GEO::coord(m_d_map->getMaxX()/2,m_d_map->getMaxY()/2,0);
-  start = m_d_map->get_first_free_coord(start);
+  start = m_d_map->get_first_free_coord(start,m_safety_radius);
 
   //transfer m_goal to grid
   CUDA_GEO::coord aimed_tgt = m_d_map->pos2coord(m_goal);
@@ -191,13 +193,13 @@ bool NF1MidPlanner::find_reachable_target(bool use_line, CUDA_GEO::coord& start,
 
   if (use_line)
   {
-    reachable_tgt = m_d_map->find_available_target_with_line(start,aimed_tgt,m_line_map);
+    reachable_tgt = m_d_map->find_available_target_with_line(start,aimed_tgt,m_line_map,m_safety_radius);
   }
   else
   {
     aimed_tgt = m_d_map->rayCast(start,aimed_tgt).back();
     float length = 0.0f;
-    std::vector<CUDA_GEO::coord> path = m_a_map->AStar2D(aimed_tgt,start,false,length);
+    std::vector<CUDA_GEO::coord> path = m_a_map->AStar2D(aimed_tgt,start,false,length,m_safety_radius);
     reachable_tgt = path[0];
   }
 
@@ -247,7 +249,7 @@ void NF1MidPlanner::plan(const ros::TimerEvent&)
     m_line_map->clearOccupancy();
     find_reachable_target(true, start, reachable_tgt);
   }
-  m_d_map->dijkstra2D_with_line_map(reachable_tgt,m_line_map,is_future_path_blocked);
+  m_d_map->dijkstra2D_with_line_map(reachable_tgt,m_line_map,is_future_path_blocked,m_safety_radius);
 
   auto end_time = std::chrono::steady_clock::now();
       std::cout << "Middle planning time: "
@@ -384,7 +386,7 @@ std::vector<float2> NF1MidPlanner::get_local_path(bool &is_future_path_blocked, 
     p.z = 0;
     exam_crd = m_d_map->pos2coord(p);
     exam_dist = m_d_map->getEdt(exam_crd,0);
-    if (exam_dist < 0.51f)
+    if (exam_dist < m_safety_radius)
     {
       is_future_path_blocked = true;
       break;

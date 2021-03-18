@@ -92,6 +92,7 @@ private:
   int m_look_ahead;
   int m_look_back;
   float m_curvature_split;
+  float m_safety_radius;
 
   // helper functions
 private:

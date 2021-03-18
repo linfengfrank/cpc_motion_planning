@@ -60,7 +60,7 @@ void Dijkstra::dijkstra2D(CUDA_GEO::coord glb_tgt)
   }
 }
 
-void Dijkstra::dijkstra2D_with_line_map(CUDA_GEO::coord glb_tgt, EDTMap* line_map, bool is_path_blocked)
+void Dijkstra::dijkstra2D_with_line_map(CUDA_GEO::coord glb_tgt, EDTMap* line_map, bool is_path_blocked, float safety_radius)
 {
   memcpy(_id_map,_init_id_map,sizeof(nodeInfo)*static_cast<size_t>(_w*_h*_d));
   //Get the local Dijkstra target
@@ -74,7 +74,7 @@ void Dijkstra::dijkstra2D_with_line_map(CUDA_GEO::coord glb_tgt, EDTMap* line_ma
 
   if (m)
   {
-    m->g = 0 + obsCostAt(mc,0);
+    m->g = 0 + obsCostAt(mc,0,safety_radius);
     _PQ.insert(m,m->g);
   }
   while (_PQ.size()>0)
@@ -100,7 +100,7 @@ void Dijkstra::dijkstra2D_with_line_map(CUDA_GEO::coord glb_tgt, EDTMap* line_ma
           if (!p->inClosed)
           {
             float new_g = sqrtf(static_cast<float>(ix*ix+iy*iy))*getGridStep() +
-                m->g + obsCostAt(pc,0);
+                m->g + obsCostAt(pc,0,safety_radius);
 
             if (!is_path_blocked)
             {
@@ -236,7 +236,7 @@ void Dijkstra::dijkstra3D(CUDA_GEO::coord glb_tgt)
   }
 }
 
-CUDA_GEO::coord Dijkstra::get_first_free_coord(CUDA_GEO::coord start)
+CUDA_GEO::coord Dijkstra::get_first_free_coord(CUDA_GEO::coord start,float safety_radius)
 {
   memcpy(_id_map,_init_id_map,sizeof(nodeInfo)*static_cast<size_t>(_w*_h*_d));
   CUDA_GEO::coord mc = start;
@@ -259,7 +259,7 @@ CUDA_GEO::coord Dijkstra::get_first_free_coord(CUDA_GEO::coord start)
     mc = m->c;
     m->inClosed = true;
 
-    obsCostAt(mc,0,occupied);
+    obsCostAt(mc,0,occupied,false,safety_radius);
     if (!occupied)
     {
       found_free = true;
@@ -307,7 +307,7 @@ void Dijkstra::update_selected_tgt(CUDA_GEO::coord& sel_tgt, float &min_h, const
   }
 }
 
-CUDA_GEO::coord Dijkstra::find_available_target_with_line(CUDA_GEO::coord start, CUDA_GEO::coord goal, EDTMap* line_map)
+CUDA_GEO::coord Dijkstra::find_available_target_with_line(CUDA_GEO::coord start, CUDA_GEO::coord goal, EDTMap* line_map, float safety_radius)
 {
   memcpy(_id_map,_init_id_map,sizeof(nodeInfo)*static_cast<size_t>(_w*_h*_d));
   float min_h = std::numeric_limits<float>::infinity();
@@ -348,7 +348,7 @@ CUDA_GEO::coord Dijkstra::find_available_target_with_line(CUDA_GEO::coord start,
 
         if (p && !p->inClosed)
         {
-          obsCostAt(pc,0,occupied);
+          obsCostAt(pc,0,occupied,false,safety_radius);
           if (!occupied)
           {
             p->inClosed = true;

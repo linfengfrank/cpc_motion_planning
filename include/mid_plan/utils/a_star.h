@@ -6,8 +6,7 @@ class Astar : public GridGraph
 {
 public:
   Astar(int maxX, int maxY, int maxZ);
-  std::vector<CUDA_GEO::coord> AStar2D(const CUDA_GEO::coord &goal, const CUDA_GEO::coord &start, bool reached_free_zone, float &length,
-                                       const CUDA_GEO::coord *crd_shift = nullptr, SeenDist *last_val_map = nullptr);
+  std::vector<CUDA_GEO::coord> AStar2D(const CUDA_GEO::coord &goal, const CUDA_GEO::coord &start, bool reached_free_zone, float &length, float safety_radius);
 
   std::vector<CUDA_GEO::coord> AStar3D(const CUDA_GEO::coord &goal, const CUDA_GEO::coord &start, bool reached_free_zone, float &length,
                                        const CUDA_GEO::coord *crd_shift = nullptr, SeenDist *last_val_map = nullptr);

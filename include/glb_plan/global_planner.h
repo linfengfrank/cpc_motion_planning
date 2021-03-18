@@ -327,6 +327,7 @@ public:
   ros::Subscriber m_glb_plan_execute_sub;
   std::vector<float2> m_curr_act_path;
   cpc_motion_planning::path m_glb_path_msg;
+  float m_safety_radius;
 };
 
 #endif // GLOBAL_PLANNER_H

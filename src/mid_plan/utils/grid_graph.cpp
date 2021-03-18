@@ -97,7 +97,7 @@ float GridGraph::obsCostAt(CUDA_GEO::coord s, float default_value, bool &occupie
   return cost;
 }
 
-float GridGraph::obsCostAt(CUDA_GEO::coord s, float default_value) const
+float GridGraph::obsCostAt(CUDA_GEO::coord s, float default_value, float obstacle_dist) const
 {
   SeenDist* map_ptr;
   map_ptr = _val_map;
@@ -115,7 +115,7 @@ float GridGraph::obsCostAt(CUDA_GEO::coord s, float default_value) const
   dist *= static_cast<float>(getGridStep());
 
   cost += expf(-9.0f*dist)*10;
-  if (dist < 0.51f)
+  if (dist < obstacle_dist)
     cost += 1000;
   return cost;
 }
