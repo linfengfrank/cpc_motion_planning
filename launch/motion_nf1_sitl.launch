@@ -1,0 +1,9 @@
+<?xml version="1.0"?>
+<launch>
+<include file="$(find cpc_reference_publisher)/launch/ref_pub.launch"/>
+<node pkg="cpc_motion_planning" type="nf1_loc_planning_node" name="nf1_loc_planning_node" output="screen">
+<remap from="/ground_truth/state" to ="/odom"/>
+</node>
+<node pkg="cpc_motion_planning" type="nf1_mid_planning_node" name="nf1_mid_planning_node" output="screen">
+</node>
+</launch>
