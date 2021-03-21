@@ -62,6 +62,20 @@ public:
     }
   }
 
+  void cal_yaw_target(const float3 &pnt)
+  {
+    float3 diff = pnt;
+    diff.z = 0;
+    float dist = sqrtf(dot(diff,diff));
+    if (dist > 0.5f)
+    {
+      m_yaw_target = atan2f(diff.y,diff.x);
+      m_yaw_target = m_yaw_target - m_yaw_state.p;
+      m_yaw_target = m_yaw_target - floorf((m_yaw_target + M_PI) / (2 * M_PI)) * 2 * M_PI;
+      m_yaw_target = m_yaw_target + m_yaw_state.p;
+    }
+  }
+
   void cal_yaw_target_from_vel(float3 vel, const UAV::UAVModel::State &s)
   {
     vel.z = 0;

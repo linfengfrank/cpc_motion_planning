@@ -150,7 +150,7 @@ void UAVNF1MotionPlanner::do_in_air()
   }
   else
   {
-    m_head_sov.cal_yaw_target(m_pso_planner->result.best_loc[0], m_curr_ref);
+    m_head_sov.cal_yaw_target(m_pso_planner->result.best_loc[0]);
     m_yaw_traj = m_head_sov.generate_yaw_traj();
     if(is_stuck(m_traj, m_yaw_traj, m_pso_planner->result.best_cost))
     {
@@ -213,7 +213,7 @@ void UAVNF1MotionPlanner::do_stuck()
 
   std::cout<<"guiding target: "<<m_pso_planner->result.best_loc[0].x<<" "<<m_pso_planner->result.best_loc[0].y<<std::endl;
   std::cout<<"yaw target: "<<m_head_sov.get_yaw_target()<<std::endl;
-  m_head_sov.cal_yaw_target(m_pso_planner->result.best_loc[0], m_curr_ref);
+  m_head_sov.cal_yaw_target(m_pso_planner->result.best_loc[0]);
   m_yaw_traj = m_head_sov.generate_yaw_traj();
   m_fly_status = UAV::IN_AIR;
 }
