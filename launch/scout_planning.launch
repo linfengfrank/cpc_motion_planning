@@ -1,11 +1,7 @@
 <?xml version="1.0"?>
 <launch>
-<include file="$(find cpc_reference_publisher)/launch/ref_pub.launch"/>
-<node pkg="cpc_motion_planning" type="cpc_motion_planning_node" name="cpc_motion_planning_node" output="screen">
-<remap from="/raw_odom" to ="/odom"/>
-<remap from="/slam_odom" to ="/groundtrue_odom"/>
+<node pkg="cpc_motion_planning" type="nf1_mid_planning_node" name="nf1_mid_planning_node" output="log">
+<remap from="/slam_odom" to ="/UgvOdomTopic"/>
+<remap from="/set_global_goal" to ="/move_base_simple/goal"/>
 </node>
-<!-- <node pkg="cpc_motion_planning" type="nf1_mid_planning_node" name="nf1_mid_planning_node" output="screen"> -->
-<!-- </node> -->
 </launch>
-
