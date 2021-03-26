@@ -33,6 +33,7 @@ NF1MidPlanner::NF1MidPlanner():
   m_pclOut->header.frame_id = "/world";
   m_glb_plan_timer = m_nh.createTimer(ros::Duration(0.333), &NF1MidPlanner::plan, this);
   m_path.request_ctt = -1;
+  m_mid_goal_orient = 0;
 }
 
 NF1MidPlanner::~NF1MidPlanner()
@@ -231,6 +232,7 @@ void NF1MidPlanner::plan(const ros::TimerEvent&)
       set_goal(CUDA_GEO::pos(local_path.back().x,local_path.back().y,0));
       prepare_line_map(local_path);
       bool is_goal_reachable = find_reachable_target(true, start, reachable_tgt);
+      update_mid_goal_orient(reachable_tgt);
 
       if(is_goal_in_view && !is_goal_reachable)
         is_goal_blocked = true;
@@ -264,7 +266,7 @@ void NF1MidPlanner::plan(const ros::TimerEvent&)
   m_nf1_msg.carrot_y = carrot.y;
   m_nf1_msg.carrot_theta = 0;
   m_nf1_pub.publish(m_nf1_msg);
-  publish_mid_goal(reachable_tgt);
+  publish_mid_goal(reachable_tgt, m_mid_goal_orient);
 
   // if the current goal is blocked, swith to the next path action
   if (is_goal_blocked && m_curr_act_id+1 < m_path.actions.size())
@@ -296,7 +298,6 @@ void NF1MidPlanner::prepare_line_map(const std::vector<float2> &path)
 
 void NF1MidPlanner::slam_odo_call_back(const nav_msgs::Odometry::ConstPtr &msg)
 {
-  m_received_odom = true;
   m_curr_pose.x = msg->pose.pose.position.x;
   m_curr_pose.y = msg->pose.pose.position.y;
 
@@ -308,6 +309,10 @@ void NF1MidPlanner::slam_odo_call_back(const nav_msgs::Odometry::ConstPtr &msg)
   tf::Matrix3x3 m(q);
   m.getRPY(phi, theta, psi);
   m_curr_pose.z = psi;
+  if (!m_received_odom)
+    m_mid_goal_orient = psi;
+
+  m_received_odom = true;
 }
 
 void NF1MidPlanner::drive_dir_call_back(const std_msgs::Int32::ConstPtr &msg)

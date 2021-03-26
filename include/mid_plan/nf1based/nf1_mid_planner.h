@@ -93,9 +93,46 @@ private:
   int m_look_back;
   float m_curvature_split;
   float m_safety_radius;
-
+  float m_mid_goal_orient;
   // helper functions
 private:
+  void update_mid_goal_orient(const CUDA_GEO::coord &reachable_tgt)
+  {
+    CUDA_GEO::pos tmp = m_d_map->coord2pos(reachable_tgt);
+    float2 mid_goal_pos = make_float2(tmp.x,tmp.y);
+    int end_idx = min(m_curr_act_path.size(),m_closest_pnt_idx+m_look_ahead);
+
+    float2 diff;
+    float min_dist = 1e6;
+    float dist;
+    int mid_goal_closest_pnt = m_closest_pnt_idx;
+
+    for (int i = m_closest_pnt_idx; i< end_idx; i++)
+    {
+      diff = mid_goal_pos - m_curr_act_path[i];
+      dist = dot(diff,diff);
+
+      if (dist < min_dist)
+      {
+        min_dist = dist;
+        mid_goal_closest_pnt = i;
+      }
+    }
+
+    // Try update the anlge by looking forward
+    for (int i = mid_goal_closest_pnt; i<m_curr_act_path.size(); i++)
+    {
+      diff = m_curr_act_path[i] - m_curr_act_path[mid_goal_closest_pnt];
+      dist = dot(diff,diff);
+
+      if (sqrtf(dist) > 0.3)
+      {
+        m_mid_goal_orient = atan2(diff.y,diff.x);
+        break;
+      }
+    }
+  }
+
   void set_nf1_task_info(unsigned char type, int path_id, int act_id, float3 goal)
   {
     m_nf1_msg.drive_type = type;
@@ -106,7 +143,7 @@ private:
     m_nf1_msg.goal_theta = goal.z;
   }
 
-  void publish_mid_goal(CUDA_GEO::coord mid_goal)
+  void publish_mid_goal(CUDA_GEO::coord mid_goal, float mid_goal_orient)
   {
     geometry_msgs::PoseStamped mid_goal_pose;
     CUDA_GEO::pos mid_goal_pos = m_d_map->coord2pos(mid_goal);
@@ -114,6 +151,7 @@ private:
     mid_goal_pose.pose.position.x = mid_goal_pos.x;
     mid_goal_pose.pose.position.y = mid_goal_pos.y;
     mid_goal_pose.pose.position.z = mid_goal_pos.z;
+    mid_goal_pose.pose.orientation = tf::createQuaternionMsgFromRollPitchYaw(0, 0, mid_goal_orient);
     m_mid_goal_pub.publish(mid_goal_pose);
   }
   void publishMap()
