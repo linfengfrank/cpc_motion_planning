@@ -3,9 +3,16 @@
 GlobalPlanner::GlobalPlanner():
   m_glb_path_id(0),
   m_map_loaded(false),
-  m_odom_received(false)
+  m_odom_received(false),
+  m_home_position(make_float2(0,0)),
+  m_auto_mission_started(false)
 {
   m_nh.param<float>("/global_safety_radius",m_safety_radius,0.51f);
+  std::vector<float> home_loc;
+  m_nh.getParam("/home_position",home_loc);
+  if(home_loc.size() == 2)
+    m_home_position = make_float2(home_loc[0], home_loc[1]);
+
   m_glb_tgt_sub = m_nh.subscribe("/set_global_goal", 1, &GlobalPlanner::goal_call_back, this);
   m_slam_odom_sub = m_nh.subscribe("/slam_odom", 1, &GlobalPlanner::slam_odo_call_back, this);
   m_glb_plan_execute_sub = m_nh.subscribe("/exe_glb_plan",1,&GlobalPlanner::exe_curr_glb_plan, this);
@@ -48,7 +55,7 @@ void GlobalPlanner::exe_curr_glb_plan(const std_msgs::Bool::ConstPtr &msg)
 {
   if (m_map_loaded && m_glb_path_msg.actions.size()>0)
   {
-    m_glb_path_pub.publish(m_glb_path_msg);
+    publish_glb_path(m_glb_path_msg);
   }
 }
 
@@ -99,7 +106,7 @@ void GlobalPlanner::goal_call_back(const geometry_msgs::PoseStamped::ConstPtr &m
     m_glb_path = m_ps->get_path();
     show_glb_path();
     prepare_glb_path();
-    m_glb_path_pub.publish(m_glb_path_msg);
+    publish_glb_path(m_glb_path_msg);
   }
 }
 

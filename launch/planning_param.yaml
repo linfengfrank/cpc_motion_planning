@@ -17,6 +17,7 @@ episode_num: 2
 global_safety_radius: 0.35
 mid_safety_radius: 0.35
 local_safety_radius: 0.35
+home_position: [5.0, -1.1]
 
 #var_s: 2.0
 #var_theta: 1.0

@@ -293,6 +293,18 @@ public:
     return AB;
   }
 
+  void publish_glb_path(const cpc_motion_planning::path &path)
+  {
+    if (!m_auto_mission_started)
+    {
+      m_auto_mission_started = true;
+      m_home_position.x = m_curr_pose.x;
+      m_home_position.y = m_curr_pose.y;
+    }
+
+    m_glb_path_pub.publish(path);
+  }
+
 public:
   int m_glb_path_id;
   std::vector<CUDA_GEO::pos> m_glb_path;
@@ -328,6 +340,8 @@ public:
   std::vector<float2> m_curr_act_path;
   cpc_motion_planning::path m_glb_path_msg;
   float m_safety_radius;
+  float2 m_home_position;
+  bool m_auto_mission_started;
 };
 
 #endif // GLOBAL_PLANNER_H
