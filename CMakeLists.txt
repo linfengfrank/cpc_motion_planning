@@ -252,16 +252,16 @@ target_link_libraries(glb_planning_node
     ${CUDA_LIBRARIES}
     ${catkin_LIBRARIES})
 
-cuda_add_executable(glb_plan_load_node
-    src/glb_plan/glb_load_plan_node.cpp
-    src/glb_plan/path_smoother.cpp
-    src/glb_plan/global_plan_loader.cpp)
+#cuda_add_executable(glb_plan_load_node
+#    src/glb_plan/glb_load_plan_node.cpp
+#    src/glb_plan/path_smoother.cpp
+#    src/glb_plan/global_plan_loader.cpp)
 
-target_link_libraries(glb_plan_load_node
-    ${CUDA_curand_LIBRARY}
-    ${CUDA_cublas_LIBRARY}
-    ${CUDA_LIBRARIES}
-    ${catkin_LIBRARIES})
+#target_link_libraries(glb_plan_load_node
+#    ${CUDA_curand_LIBRARY}
+#    ${CUDA_cublas_LIBRARY}
+#    ${CUDA_LIBRARIES}
+#    ${catkin_LIBRARIES})
 
 #cuda_add_executable(hybrid_nf1_mid_planning_node
 #    src/mid_plan/utils/grid_graph.cpp
@@ -324,7 +324,7 @@ add_dependencies(${PROJECT_NAME}_node ${${PROJECT_NAME}_EXPORTED_TARGETS} ${catk
 #add_dependencies(ref_traj_node ${${PROJECT_NAME}_EXPORTED_TARGETS} ${catkin_EXPORTED_TARGETS})
 add_dependencies(nf1_mid_planning_node ${${PROJECT_NAME}_EXPORTED_TARGETS} ${catkin_EXPORTED_TARGETS})
 add_dependencies(glb_planning_node ${${PROJECT_NAME}_EXPORTED_TARGETS} ${catkin_EXPORTED_TARGETS})
-add_dependencies(glb_plan_load_node ${${PROJECT_NAME}_EXPORTED_TARGETS} ${catkin_EXPORTED_TARGETS})
+#add_dependencies(glb_plan_load_node ${${PROJECT_NAME}_EXPORTED_TARGETS} ${catkin_EXPORTED_TARGETS})
 
 #add_dependencies(astar_mid_planning_node ${${PROJECT_NAME}_EXPORTED_TARGETS} ${catkin_EXPORTED_TARGETS})
 #add_dependencies(hybrid_astar_mid_planning_node ${${PROJECT_NAME}_EXPORTED_TARGETS} ${catkin_EXPORTED_TARGETS})
