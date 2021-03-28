@@ -16,6 +16,7 @@ GlobalPlanner::GlobalPlanner():
   m_glb_tgt_sub = m_nh.subscribe("/set_global_goal", 1, &GlobalPlanner::goal_call_back, this);
   m_slam_odom_sub = m_nh.subscribe("/slam_odom", 1, &GlobalPlanner::slam_odo_call_back, this);
   m_glb_plan_execute_sub = m_nh.subscribe("/exe_glb_plan",1,&GlobalPlanner::exe_curr_glb_plan, this);
+  m_go_home_sub = m_nh.subscribe("/return_home", 1, &GlobalPlanner::go_home, this);
 
   m_glb_path_pub = m_nh.advertise<cpc_motion_planning::path>("/global_path",1);
   m_nh.param<std::string>("/cmap_filename",m_cmap_filename,"");
@@ -252,4 +253,13 @@ bool GlobalPlanner::exe_recorded_path(cpc_motion_planning::exe_recorded_path::Re
 
   res.success = true;
   return true;
+}
+
+void GlobalPlanner::go_home(const std_msgs::Bool::ConstPtr &msg)
+{
+  geometry_msgs::PoseStamped::Ptr tgt(new geometry_msgs::PoseStamped());
+  tgt->pose.position.x = m_home_position.x;
+  tgt->pose.position.y = m_home_position.y;
+  tgt->pose.position.z = 0;
+  goal_call_back(tgt);
 }

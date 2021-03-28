@@ -176,6 +176,7 @@ private:
   void goal_call_back(const geometry_msgs::PoseStamped::ConstPtr &msg);
   void slam_odo_call_back(const nav_msgs::Odometry::ConstPtr &msg);
   void set_goal(CUDA_GEO::pos goal);
+  void go_home(const std_msgs::Bool::ConstPtr &msg);
   //---
   void prepare_glb_path()
   {
@@ -410,6 +411,7 @@ private:
   ros::NodeHandle m_nh;
   ros::Subscriber m_slam_odom_sub;
   ros::Subscriber m_glb_tgt_sub;
+  ros::Subscriber m_go_home_sub;
   ros::ServiceServer m_recorded_path_srv;
   float3 m_curr_pose;
   CUDA_GEO::pos m_goal;
