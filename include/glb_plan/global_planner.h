@@ -22,40 +22,118 @@ public:
   GlobalPlanner();
   ~GlobalPlanner();
   bool load_c_map();
-  void perform_edt();
   std::vector<CUDA_GEO::pos> plan(const CUDA_GEO::pos &goal, const CUDA_GEO::pos &start);
   bool exe_recorded_path(cpc_motion_planning::exe_recorded_path::Request &req,
                          cpc_motion_planning::exe_recorded_path::Response &res);
-public:
-  bool glb_plan_service(cpc_motion_planning::glb_plan_srv::Request &req,
-                        cpc_motion_planning::glb_plan_srv::Response &res);
-  void exe_curr_glb_plan(const std_msgs::Bool::ConstPtr &msg);
-  void goal_call_back(const geometry_msgs::PoseStamped::ConstPtr &msg);
-  void slam_odo_call_back(const nav_msgs::Odometry::ConstPtr &msg);
-  void set_goal(CUDA_GEO::pos goal);
-
-  void phase1(int x);
-  void phase2(int y);
+private:
+  //-------------------------------------------
+  // Euclidean Distance Transform related code|
+  //-------------------------------------------
   int toid(int x, int y)
   {
     return y*m_width + x;
   }
-
+  //---
   inline int f(int x,int i,int y)
   {
       return (x-i)*(x-i) + m_g[toid(i,y)]*m_g[toid(i,y)];
   }
-
+  //---
   inline int sep(int i,int u,int y)
   {
       return (u*u-i*i+ m_g[toid(u,y)]*m_g[toid(u,y)] - m_g[toid(i,y)]*m_g[toid(i,y)])/(2*(u-i));
   }
+  //---
+  void perform_edt()
+  {
+    for (int x=0;x<m_width; x++)
+    {
+      phase1(x);
+    }
 
+    for (int y=0;y<m_height; y++)
+    {
+      phase2(y);
+    }
+
+    for (int x=0; x<m_width; x++)
+    {
+      for (int y=0; y<m_height; y++)
+      {
+        m_a_map->getEdtMapPtr()[toid(x,y)].d = sqrtf(m_h[toid(x,y)]);
+      }
+    }
+  }
+  //---
+  void phase1(int x)
+  {
+    // scan 1
+    if (m_c[toid(x,0)] > 100)
+      m_g[toid(x,0)]=0;
+    else
+      m_g[toid(x,0)] = 10000;
+
+    for (int y=1; y<m_height; y++)
+    {
+      if (m_c[toid(x,y)] > 100)
+        m_g[toid(x,y)]=0;
+      else
+        m_g[toid(x,y)] = 1 + m_g[toid(x,y-1)];
+    }
+    // scan 2
+    for (int y=m_height-2; y>=0; y--)
+    {
+      if (m_g[toid(x,y+1)] < m_g[toid(x,y)])
+      {
+        m_g[toid(x,y)] = 1+m_g[toid(x,y+1)];
+      }
+    }
+  }
+  //---
+  void phase2(int y)
+  {
+    int q=0;
+    m_s[toid(0,y)] = 0;
+    m_t[toid(0,y)] = 0;
+    for (int u=1;u<m_width;u++)
+    {
+      while (q>=0 && f(m_t[toid(q,y)],m_s[toid(q,y)],y)
+             > f(m_t[toid(q,y)],u,y))
+      {
+        q--;
+      }
+      if (q<0)
+      {
+        q = 0;
+        m_s[toid(0,y)]=u;
+      }
+      else
+      {
+        int w = 1+sep(m_s[toid(q,y)],u,y);
+        if (w < m_width)
+        {
+          q++;
+          m_s[toid(q,y)]=u;
+          m_t[toid(q,y)]=w;
+        }
+      }
+    }
+    for (int u=m_width-1;u>=0;u--)
+    {
+      m_h[toid(u,y)]=f(u,m_s[toid(q,y)],y);
+      if (u == m_t[toid(q,y)])
+        q--;
+    }
+  }
+
+  //--------------------------------------
+  // Global map loading related functions|
+  //--------------------------------------
   void build_axis_aligned_map()
   {
     m_c_map.Crop(m_origin,m_width,m_height,m_step_width,m_c);
   }
-
+  //---
   void prepare_map_pcl()
   {
     CUDA_GEO::pos pnt;
@@ -89,35 +167,16 @@ public:
     }
   }
 
-  void show_glb_map(const ros::TimerEvent&)
-  {
-    if (m_map_vis_pub.getNumSubscribers() > 0)
-    {
-      pcl_conversions::toPCL(ros::Time::now(), m_map_pcl->header.stamp);
-      m_map_vis_pub.publish (m_map_pcl);
-      m_show_map_timer.stop();
-    }
-  }
-
-  void show_glb_path()
-  {
-    for (size_t i=0; i<m_glb_path.size();i++)
-    {
-      pcl::PointXYZRGB clrP;
-      clrP.x = m_glb_path[i].x;
-      clrP.y = m_glb_path[i].y;
-      clrP.z = 0;
-      clrP.r = 255;
-      clrP.g = 255;
-      clrP.b = 255;
-      clrP.a = 255;
-      m_path_pcl->points.push_back (clrP);
-    }
-    pcl_conversions::toPCL(ros::Time::now(), m_path_pcl->header.stamp);
-    m_path_vis_pub.publish (m_path_pcl);
-    m_path_pcl->clear();
-  }
-
+  //-----------------------------------
+  // Global planning related functions|
+  //-----------------------------------
+  bool glb_plan_service(cpc_motion_planning::glb_plan_srv::Request &req,
+                        cpc_motion_planning::glb_plan_srv::Response &res);
+  void exe_curr_glb_plan(const std_msgs::Bool::ConstPtr &msg);
+  void goal_call_back(const geometry_msgs::PoseStamped::ConstPtr &msg);
+  void slam_odo_call_back(const nav_msgs::Odometry::ConstPtr &msg);
+  void set_goal(CUDA_GEO::pos goal);
+  //---
   void prepare_glb_path()
   {
     cpc_motion_planning::path glb_path;
@@ -148,7 +207,7 @@ public:
       m_glb_path_msg = glb_path;
     }
   }
-
+  //---
   inline float pnt2line_dist(const float2 & c1, const float2 & c2, const float2 & c0)
   {
     float2 a = c1-c0;
@@ -163,7 +222,7 @@ public:
 
     return sqrtf(static_cast<float>(a_square*b_square - a_dot_b*a_dot_b)/static_cast<float>(b_square));
   }
-
+  //---
   bool is_curvature_too_big(const std::vector<CUDA_GEO::pos> &path, size_t start, size_t end)
   {
     float2 start_point = make_float2(path[start].x, path[start].y);
@@ -185,7 +244,7 @@ public:
     else
       return false;
   }
-
+  //---
   std::vector<float2> get_curvature_bounded_path(const std::vector<CUDA_GEO::pos> &path)
   {
     std::vector<float2> output;
@@ -202,12 +261,12 @@ public:
     }
     return output;
   }
-
+  //---
   float in_pi(float in)
   {
     return in - floor((in + M_PI) / (2 * M_PI)) * 2 * M_PI;
   }
-
+  //---
   std::vector<float2> make_straight_path(const float2 &a, const float2 &b)
   {
     std::vector<float2> path;
@@ -227,7 +286,7 @@ public:
     }
     return path;
   }
-
+  //---
   std::vector<size_t> split_merge(const std::vector<float2> &path)
   {
     std::vector<size_t> split_idx;
@@ -283,7 +342,7 @@ public:
     std::reverse(split_idx.begin(),split_idx.end());
     return split_idx;
   }
-
+  //---
   std::vector<float2> cascade_vector(const std::vector<float2> &A, const std::vector<float2> &B)
   {
     std::vector<float2> AB;
@@ -292,7 +351,7 @@ public:
     AB.insert( AB.end(), B.begin(), B.end() );
     return AB;
   }
-
+  //---
   void publish_glb_path(const cpc_motion_planning::path &path)
   {
     if (!m_auto_mission_started)
@@ -305,7 +364,39 @@ public:
     m_glb_path_pub.publish(path);
   }
 
-public:
+  //------------------------
+  // Visulization functions|
+  //------------------------
+  void show_glb_map(const ros::TimerEvent&)
+  {
+    if (m_map_vis_pub.getNumSubscribers() > 0)
+    {
+      pcl_conversions::toPCL(ros::Time::now(), m_map_pcl->header.stamp);
+      m_map_vis_pub.publish (m_map_pcl);
+      m_show_map_timer.stop();
+    }
+  }
+  //---
+  void show_glb_path()
+  {
+    for (size_t i=0; i<m_glb_path.size();i++)
+    {
+      pcl::PointXYZRGB clrP;
+      clrP.x = m_glb_path[i].x;
+      clrP.y = m_glb_path[i].y;
+      clrP.z = 0;
+      clrP.r = 255;
+      clrP.g = 255;
+      clrP.b = 255;
+      clrP.a = 255;
+      m_path_pcl->points.push_back (clrP);
+    }
+    pcl_conversions::toPCL(ros::Time::now(), m_path_pcl->header.stamp);
+    m_path_vis_pub.publish (m_path_pcl);
+    m_path_pcl->clear();
+  }
+
+private:
   int m_glb_path_id;
   std::vector<CUDA_GEO::pos> m_glb_path;
   ros::Timer m_show_map_timer;
