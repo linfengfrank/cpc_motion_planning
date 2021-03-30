@@ -24,6 +24,7 @@
 #include <tf/tf.h>
 #include <cpc_aux_mapping/nf1_task.h>
 #include <std_msgs/Int32MultiArray.h>
+#include <unordered_map>
 #define SHOWPC
 
 class NF1MidPlanner
@@ -96,39 +97,44 @@ private:
   float m_mid_goal_orient;
   // helper functions
 private:
-  void update_mid_goal_orient(const CUDA_GEO::coord &reachable_tgt)
+  std::unordered_map<int,float> assign_target_angle(const std::vector<float2> &local_path)
   {
-    CUDA_GEO::pos tmp = m_d_map->coord2pos(reachable_tgt);
-    float2 mid_goal_pos = make_float2(tmp.x,tmp.y);
-    int end_idx = min(m_curr_act_path.size(),m_closest_pnt_idx+m_look_ahead);
-
-    float2 diff;
-    float min_dist = 1e6;
+    std::unordered_map<int,float> lpta; // short for local_path_target_angle;
+    float target_angle = m_mid_goal_orient;
     float dist;
-    int mid_goal_closest_pnt = m_closest_pnt_idx;
-
-    for (int i = m_closest_pnt_idx; i< end_idx; i++)
+    float2 diff;
+    for (size_t i = 0; i<local_path.size(); i++)
     {
-      diff = mid_goal_pos - m_curr_act_path[i];
-      dist = dot(diff,diff);
-
-      if (dist < min_dist)
+      for (size_t j = i; j<local_path.size(); j++)
       {
-        min_dist = dist;
-        mid_goal_closest_pnt = i;
+        diff = local_path[j] - local_path[i];
+        dist = dot(diff,diff);
+        if (sqrtf(dist) > 0.3f)
+        {
+          target_angle = atan2f(diff.y,diff.x);
+          break;
+        }
       }
+      CUDA_GEO::pos p(local_path[i].x, local_path[i].y, 0);
+      CUDA_GEO::coord c = m_line_map->pos2coord(p);
+      int idx = m_line_map->to_id(c.x,c.y,c.z);
+      lpta[idx] = target_angle;
     }
 
-    // Try update the anlge by looking forward
-    for (int i = mid_goal_closest_pnt; i<m_curr_act_path.size(); i++)
-    {
-      diff = m_curr_act_path[i] - m_curr_act_path[mid_goal_closest_pnt];
-      dist = dot(diff,diff);
+    return lpta;
+  }
+  //---
+  void update_mid_goal_orient(const CUDA_GEO::coord &reachable_tgt, const std::unordered_map<int,float> &lpta)
+  {
+    CUDA_GEO::pos tmp = m_d_map->coord2pos(reachable_tgt);
+    CUDA_GEO::coord tmp_c = m_line_map->pos2coord(tmp);
 
-      if (sqrtf(dist) > 0.3)
+    if (m_line_map->isInside(tmp_c))
+    {
+      int idx = m_line_map->m_hst_sd_map[m_line_map->to_id(tmp_c.x,tmp_c.y,0)].rt_idx;
+      if (lpta.find(idx) != lpta.end())
       {
-        m_mid_goal_orient = atan2(diff.y,diff.x);
-        break;
+        m_mid_goal_orient = lpta.at(idx);
       }
     }
   }

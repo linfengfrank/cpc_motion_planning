@@ -229,10 +229,11 @@ void NF1MidPlanner::plan(const ros::TimerEvent&)
 
     if (local_path.size() > 0)
     {
+      std::unordered_map<int,float>ltpa = assign_target_angle(local_path);
       set_goal(CUDA_GEO::pos(local_path.back().x,local_path.back().y,0));
       prepare_line_map(local_path);
       bool is_goal_reachable = find_reachable_target(true, start, reachable_tgt);
-      update_mid_goal_orient(reachable_tgt);
+      update_mid_goal_orient(reachable_tgt,ltpa);
 
       if(is_goal_in_view && !is_goal_reachable)
         is_goal_blocked = true;
