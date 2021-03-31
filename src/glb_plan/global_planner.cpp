@@ -144,7 +144,7 @@ bool GlobalPlanner::load_c_map()
   map_info.height = 1853;
   map_info.map_id = 0;
   map_info.map_name = "temp";
-  map_info.file_name = "/home/ubuntu/ugv_ws/src/ugv_modules/comm_and_mapping/ros_map/map/temp/1.bmp";
+  map_info.file_name = "/home/ubuntu/ugv_ws/src/ugv_modules/comm_and_mapping/ros_map/map/office/1.bmp";
   map_info.map_id = 0;
   bool ok = m_c_map.Load(&map_info);
 
