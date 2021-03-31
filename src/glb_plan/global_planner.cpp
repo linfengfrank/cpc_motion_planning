@@ -134,9 +134,21 @@ void GlobalPlanner::slam_odo_call_back(const nav_msgs::Odometry::ConstPtr &msg)
 
 bool GlobalPlanner::load_c_map()
 {
-  bool ok = m_c_map.Load(m_cmap_filename.c_str());
+  // TEMPROARY MODIFICATION FOR TESTING
+  MAP_INFO map_info;
+  map_info.x0 = 1117;
+  map_info.y0 = 1606;
+  map_info.angle = 0;
+  map_info.scale = 0.025f;
+  map_info.width = 1947;
+  map_info.height = 1853;
+  map_info.map_id = 0;
+  map_info.map_name = "temp";
+  map_info.file_name = "/home/ubuntu/ugv_ws/src/ugv_modules/comm_and_mapping/ros_map/map/temp/1.bmp";
+  map_info.map_id = 0;
+  bool ok = m_c_map.Load(&map_info);
 
-  m_origin = CUDA_GEO::pos(-30,-30,0);
+  m_origin = CUDA_GEO::pos(-10,-20,0);
   m_step_width = 0.05f;
   m_width = 1000;
   m_height = 1000;
