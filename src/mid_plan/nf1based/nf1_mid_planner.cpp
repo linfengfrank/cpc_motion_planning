@@ -182,7 +182,7 @@ void NF1MidPlanner::set_goal(CUDA_GEO::pos goal)
   m_goal = goal;
 }
 
-bool NF1MidPlanner::find_reachable_target(bool use_line, CUDA_GEO::coord& start, CUDA_GEO::coord& reachable_tgt)
+bool NF1MidPlanner::find_reachable_target(CUDA_GEO::coord& start, CUDA_GEO::coord& reachable_tgt, const std::unordered_map<int, float> *lpta)
 {
   //set start
   start = CUDA_GEO::coord(m_d_map->getMaxX()/2,m_d_map->getMaxY()/2,0);
@@ -191,18 +191,7 @@ bool NF1MidPlanner::find_reachable_target(bool use_line, CUDA_GEO::coord& start,
   //transfer m_goal to grid
   CUDA_GEO::coord aimed_tgt = m_d_map->pos2coord(m_goal);
   aimed_tgt.z = 0;
-
-  if (use_line)
-  {
-    reachable_tgt = m_d_map->find_available_target_with_line(start,aimed_tgt,m_line_map,m_safety_radius);
-  }
-  else
-  {
-    aimed_tgt = m_d_map->rayCast(start,aimed_tgt).back();
-    float length = 0.0f;
-    std::vector<CUDA_GEO::coord> path = m_a_map->AStar2D(aimed_tgt,start,false,length,m_safety_radius);
-    reachable_tgt = path[0];
-  }
+  reachable_tgt = m_d_map->find_available_target_with_line(start,aimed_tgt,m_line_map,m_safety_radius,lpta);
 
   if (reachable_tgt == aimed_tgt)
     return true;
@@ -232,7 +221,7 @@ void NF1MidPlanner::plan(const ros::TimerEvent&)
       std::unordered_map<int,float>ltpa = assign_target_angle(local_path);
       set_goal(CUDA_GEO::pos(local_path.back().x,local_path.back().y,0));
       prepare_line_map(local_path);
-      bool is_goal_reachable = find_reachable_target(true, start, reachable_tgt);
+      bool is_goal_reachable = find_reachable_target(start, reachable_tgt, &ltpa);
       update_mid_goal_orient(reachable_tgt,ltpa);
 
       if(is_goal_in_view && !is_goal_reachable)
@@ -244,13 +233,13 @@ void NF1MidPlanner::plan(const ros::TimerEvent&)
       set_goal(CUDA_GEO::pos(m_curr_act_path[m_closest_pnt_idx].x,m_curr_act_path[m_closest_pnt_idx].y,0));
       is_future_path_blocked = true;
 
-      find_reachable_target(true, start, reachable_tgt);
+      find_reachable_target(start, reachable_tgt);
     }
   }
   else
   {
     m_line_map->clearOccupancy();
-    find_reachable_target(true, start, reachable_tgt);
+    find_reachable_target(start, reachable_tgt);
   }
   m_d_map->dijkstra2D_with_line_map(reachable_tgt,m_line_map,is_future_path_blocked,m_safety_radius);
 

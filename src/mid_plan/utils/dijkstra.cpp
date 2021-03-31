@@ -295,19 +295,43 @@ CUDA_GEO::coord Dijkstra::get_first_free_coord(CUDA_GEO::coord start,float safet
     return start;
 }
 
-void Dijkstra::update_selected_tgt(CUDA_GEO::coord& sel_tgt, float &min_h, const CUDA_GEO::coord &mc, const CUDA_GEO::coord &goal, EDTMap* line_map)
+void Dijkstra::update_selected_tgt(CUDA_GEO::coord& sel_tgt, float &min_h, const CUDA_GEO::coord &mc, const CUDA_GEO::coord &goal, float safety_radius,
+                                   EDTMap* line_map, const std::unordered_map<int, float> *lpta)
 {
   float d2goal = dist(mc,goal);
   CUDA_GEO::pos m_pos = coord2pos(mc);
   float d2line = line_map->getEDT(make_float2(m_pos.x,m_pos.y));
   if (min_h > d2goal && d2line < line_map->m_grid_step*10)
   {
-    min_h = d2goal;
-    sel_tgt = mc;
+    if (lpta != nullptr)
+    {
+      CUDA_GEO::pos tmp = coord2pos(mc);
+      CUDA_GEO::coord tmp_c = line_map->pos2coord(tmp);
+      if (line_map->isInside(tmp_c))
+      {
+        int idx = line_map->m_hst_sd_map[line_map->to_id(tmp_c.x,tmp_c.y,0)].rt_idx;
+        if (lpta->find(idx) != lpta->end())
+        {
+          float target_angle = lpta->at(idx);
+          CUDA_GEO::pos c_r,c_f;
+          calculate_bounding_centres(tmp,target_angle,c_r,c_f);
+          if(!two_circle_collision(c_r,c_f,safety_radius))
+          {
+            min_h = d2goal;
+            sel_tgt = mc;
+          }
+        }
+      }
+    }
+    else
+    {
+      min_h = d2goal;
+      sel_tgt = mc;
+    }
   }
 }
 
-CUDA_GEO::coord Dijkstra::find_available_target_with_line(CUDA_GEO::coord start, CUDA_GEO::coord goal, EDTMap* line_map, float safety_radius)
+CUDA_GEO::coord Dijkstra::find_available_target_with_line(CUDA_GEO::coord start, CUDA_GEO::coord goal, EDTMap* line_map, float safety_radius, const std::unordered_map<int, float> *lpta)
 {
   memcpy(_id_map,_init_id_map,sizeof(nodeInfo)*static_cast<size_t>(_w*_h*_d));
   float min_h = std::numeric_limits<float>::infinity();
@@ -322,7 +346,7 @@ CUDA_GEO::coord Dijkstra::find_available_target_with_line(CUDA_GEO::coord start,
   if (m)
   {
     _Q.push(m);
-    update_selected_tgt(selected_tgt,min_h,m->c,goal,line_map);
+    update_selected_tgt(selected_tgt,min_h,m->c,goal,safety_radius,line_map,lpta);
   }
   while (_Q.size()>0)
   {
@@ -331,7 +355,7 @@ CUDA_GEO::coord Dijkstra::find_available_target_with_line(CUDA_GEO::coord start,
     m->inClosed = true;
     mc = m->c;
 
-    update_selected_tgt(selected_tgt,min_h,mc,goal,line_map);
+    update_selected_tgt(selected_tgt,min_h,mc,goal,safety_radius,line_map,lpta);
 
     // get all neighbours
     for (int ix=-1;ix<=1;ix++)

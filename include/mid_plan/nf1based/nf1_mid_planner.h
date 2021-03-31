@@ -50,7 +50,7 @@ private:
 
   std::vector<float2> get_local_path(bool &is_future_path_blocked, bool &is_goal_in_view);
   void set_curr_act_path();
-  bool find_reachable_target(bool use_line, CUDA_GEO::coord& start, CUDA_GEO::coord& reachable_tgt);
+  bool find_reachable_target(CUDA_GEO::coord& start, CUDA_GEO::coord& reachable_tgt, const std::unordered_map<int, float> *lpta = nullptr);
 
 private:
   ros::NodeHandle m_nh;
