@@ -438,7 +438,7 @@ private:
   float m_step_width;
   int m_width;
   int m_height;
-  std::string m_cmap_filename;
+  int m_cmap_id;
   Map m_c_map;
   PathSmoother *m_ps;
   Astar *m_a_map;

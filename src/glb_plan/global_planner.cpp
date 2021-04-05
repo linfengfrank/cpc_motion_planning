@@ -25,8 +25,8 @@ GlobalPlanner::GlobalPlanner():
 
   ros::service::waitForService("/map_service");
 
-  m_nh.param<std::string>("/cmap_filename",m_cmap_filename,"");
-  m_map_loaded = read_c_map(2);
+  m_nh.param<int>("/cmap_id",m_cmap_id,0);
+  m_map_loaded = read_c_map(m_cmap_id);
   prepare_c_map();
   perform_edt();
 
