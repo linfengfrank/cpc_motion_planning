@@ -14,6 +14,7 @@ find_package(catkin REQUIRED COMPONENTS
   cpc_aux_mapping
   pcl_conversions
   pcl_ros
+  ros_map
 )
 
 ## System dependencies are found with CMake's conventions
@@ -242,7 +243,6 @@ cuda_add_executable(glb_planning_node
     src/mid_plan/utils/grid_graph.cpp
     src/mid_plan/utils/a_star.cpp
     src/glb_plan/path_smoother.cpp
-    ../cpc_aux_mapping/src/map.cpp
     src/glb_plan/glb_map_node.cpp
     src/glb_plan/global_planner.cpp)
 

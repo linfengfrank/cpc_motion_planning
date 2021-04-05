@@ -1,6 +1,5 @@
 #ifndef GLOBAL_PLANNER_H
 #define GLOBAL_PLANNER_H
-#include "edt/map.h"
 #include "mid_plan/utils/a_star.h"
 #include <string>
 #include <ros/ros.h>
@@ -14,7 +13,7 @@
 #include <std_msgs/Bool.h>
 #include <std_msgs/String.h>
 #include <cpc_motion_planning/exe_recorded_path.h>
-
+#include <comm_mapping_shared_headers/map.h>
 class GlobalPlanner
 {
   typedef pcl::PointCloud<pcl::PointXYZRGB> PointCloud;
@@ -131,7 +130,7 @@ private:
   //--------------------------------------
   void build_axis_aligned_map()
   {
-    m_c_map.Crop(m_origin,m_width,m_height,m_step_width,m_c);
+    m_c_map.crop(m_origin.x,m_origin.y,m_width,m_height,m_step_width,m_c);
   }
   //---
   void prepare_map_pcl()
@@ -420,7 +419,7 @@ private:
   int m_width;
   int m_height;
   std::string m_cmap_filename;
-  CMap m_c_map;
+  Map m_c_map;
   PathSmoother *m_ps;
   Astar *m_a_map;
   unsigned char *m_c;
