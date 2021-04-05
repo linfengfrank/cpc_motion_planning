@@ -14,13 +14,15 @@
 #include <std_msgs/String.h>
 #include <cpc_motion_planning/exe_recorded_path.h>
 #include <comm_mapping_shared_headers/map.h>
+#include <ros_map/map_service.h>
+
 class GlobalPlanner
 {
   typedef pcl::PointCloud<pcl::PointXYZRGB> PointCloud;
 public:
   GlobalPlanner();
   ~GlobalPlanner();
-  bool load_c_map();
+  void prepare_c_map();
   std::vector<CUDA_GEO::pos> plan(const CUDA_GEO::pos &goal, const CUDA_GEO::pos &start);
   bool exe_recorded_path(cpc_motion_planning::exe_recorded_path::Request &req,
                          cpc_motion_planning::exe_recorded_path::Response &res);
@@ -163,6 +165,24 @@ private:
         clrP.a = 255;
         m_map_pcl->points.push_back (clrP);
       }
+    }
+  }
+  //---
+  bool read_c_map(int map_idx)
+  {
+    ros_map::map_service srv;
+    srv.request.type = ros_map::map_service::Request::REQUEST_MAP_INFO;
+    srv.request.param = map_idx;
+    if (m_cmap_client.call(srv))
+    {
+      MAP_INFO map_info;
+      string_to_map_info(srv.response.response.c_str(), &map_info);
+      m_c_map.load(&map_info);
+      return true;
+    }
+    else
+    {
+      return false;
     }
   }
 
@@ -434,6 +454,7 @@ private:
   float m_safety_radius;
   float2 m_home_position;
   bool m_auto_mission_started;
+  ros::ServiceClient m_cmap_client;
 };
 
 #endif // GLOBAL_PLANNER_H

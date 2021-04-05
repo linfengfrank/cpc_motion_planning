@@ -19,8 +19,15 @@ GlobalPlanner::GlobalPlanner():
   m_go_home_sub = m_nh.subscribe("/return_home", 1, &GlobalPlanner::go_home, this);
 
   m_glb_path_pub = m_nh.advertise<cpc_motion_planning::path>("/global_path",1);
+
+  // Service
+  m_cmap_client = m_nh.serviceClient<ros_map::map_service>("/map_service");
+
+  ros::service::waitForService("/map_service");
+
   m_nh.param<std::string>("/cmap_filename",m_cmap_filename,"");
-  m_map_loaded = load_c_map();
+  m_map_loaded = read_c_map(2);
+  prepare_c_map();
   perform_edt();
 
   m_map_pcl = PointCloud::Ptr(new PointCloud);
@@ -132,21 +139,8 @@ void GlobalPlanner::slam_odo_call_back(const nav_msgs::Odometry::ConstPtr &msg)
   m_curr_pose.z = psi;
 }
 
-bool GlobalPlanner::load_c_map()
+void GlobalPlanner::prepare_c_map()
 {
-  MAP_INFO map_info;
-   map_info.x0 = 1117;
-   map_info.y0 = 1606;
-   map_info.angle = 0;
-   map_info.scale = 0.025f;
-   map_info.width = 1947;
-   map_info.height = 1853;
-   map_info.map_id = 0;
-   map_info.map_name = "temp";
-   map_info.file_name = "/home/sp/integrate_ws/src/ugv_modules/comm_and_mapping/ros_map/map/office/1.bmp";
-   map_info.map_id = 0;
-   bool ok = m_c_map.load(&map_info);
-
   m_origin = CUDA_GEO::pos(-30,-30,0);
   m_step_width = 0.05f;
   m_width = 1000;
@@ -162,7 +156,6 @@ bool GlobalPlanner::load_c_map()
   m_t = new int[m_width*m_height];
 
   build_axis_aligned_map();
-  return ok;
 }
 
 std::vector<CUDA_GEO::pos> GlobalPlanner::plan(const CUDA_GEO::pos &goal_pos, const CUDA_GEO::pos &start_pos)
