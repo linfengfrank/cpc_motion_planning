@@ -15,6 +15,7 @@
 #include <cpc_motion_planning/exe_recorded_path.h>
 #include <comm_mapping_shared_headers/map.h>
 #include <ros_map/map_service.h>
+#include <cpc_aux_mapping/set_c_map.h>
 
 class GlobalPlanner
 {
@@ -26,6 +27,7 @@ public:
   std::vector<CUDA_GEO::pos> plan(const CUDA_GEO::pos &goal, const CUDA_GEO::pos &start);
   bool exe_recorded_path(cpc_motion_planning::exe_recorded_path::Request &req,
                          cpc_motion_planning::exe_recorded_path::Response &res);
+  void reset_planner();
 private:
   //-------------------------------------------
   // Euclidean Distance Transform related code|
@@ -137,6 +139,7 @@ private:
   //---
   void prepare_map_pcl()
   {
+    m_map_pcl->clear();
     CUDA_GEO::pos pnt;
     for (int x=0;x<m_width;x+=4)
     {
@@ -168,7 +171,7 @@ private:
     }
   }
   //---
-  bool read_c_map(int map_idx)
+  bool read_c_map(int map_idx, std::string* map_info_str = nullptr)
   {
     ros_map::map_service srv;
     srv.request.type = ros_map::map_service::Request::REQUEST_MAP_INFO;
@@ -176,6 +179,8 @@ private:
     if (m_cmap_client.call(srv))
     {
       MAP_INFO map_info;
+      if(map_info_str)
+        *map_info_str = srv.response.response;
       string_to_map_info(srv.response.response.c_str(), &map_info);
       m_c_map.load(&map_info);
       return true;
@@ -196,6 +201,7 @@ private:
   void slam_odo_call_back(const nav_msgs::Odometry::ConstPtr &msg);
   void set_goal(CUDA_GEO::pos goal);
   void go_home(const std_msgs::Bool::ConstPtr &msg);
+  void change_map(const std_msgs::String::ConstPtr &msg);
   //---
   void prepare_glb_path()
   {
@@ -431,6 +437,7 @@ private:
   ros::Subscriber m_slam_odom_sub;
   ros::Subscriber m_glb_tgt_sub;
   ros::Subscriber m_go_home_sub;
+  ros::Subscriber m_change_map_sub;
   ros::ServiceServer m_recorded_path_srv;
   float3 m_curr_pose;
   CUDA_GEO::pos m_goal;
@@ -438,7 +445,6 @@ private:
   float m_step_width;
   int m_width;
   int m_height;
-  int m_cmap_id;
   Map m_c_map;
   PathSmoother *m_ps;
   Astar *m_a_map;
@@ -455,6 +461,7 @@ private:
   float2 m_home_position;
   bool m_auto_mission_started;
   ros::ServiceClient m_cmap_client;
+  ros::ServiceClient m_aux_map_set_cmap_client;
 };
 
 #endif // GLOBAL_PLANNER_H
