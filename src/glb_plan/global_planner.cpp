@@ -83,7 +83,6 @@ void GlobalPlanner::change_map(const std_msgs::String::ConstPtr &msg)
 
 void GlobalPlanner::reset_planner()
 {
-  m_glb_path_id = 0;
   m_glb_path.clear();
   m_show_map_timer.start();
   m_map_loaded = false;
