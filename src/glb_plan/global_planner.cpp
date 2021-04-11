@@ -203,6 +203,7 @@ std::vector<CUDA_GEO::pos> GlobalPlanner::plan(const CUDA_GEO::pos &goal_pos, co
 {
   std::vector<CUDA_GEO::pos> output;
   CUDA_GEO::coord start = m_a_map->pos2coord(start_pos);
+  start = m_a_map->get_first_free_coord(start,m_safety_radius);
   CUDA_GEO::coord goal = m_a_map->pos2coord(goal_pos);
   float length = 0.0f;
   std::vector<CUDA_GEO::coord> coord_path =  m_a_map->AStar2D(goal,start,false,length,m_safety_radius);
