@@ -63,8 +63,7 @@ TEBLocalPlanner::TEBLocalPlanner():
   m_visualization = TebVisualizationPtr(new TebVisualization(m_nh, m_cfg));
 
   // create robot footprint/contour model for optimization
-  RobotFootprintModelPtr robot_model = get_footprint_from_param(m_nh);
-  m_planner = HomotopyClassPlannerPtr(new HomotopyClassPlanner(m_cfg, nullptr, robot_model, m_visualization, nullptr));
+  m_planner = HomotopyClassPlannerPtr(new HomotopyClassPlanner(m_cfg, m_visualization));
 
 }
 
@@ -200,8 +199,7 @@ void TEBLocalPlanner::do_normal()
     return;
   }
 
-  std::vector<geometry_msgs::Point> test;
-  bool feasible = m_planner->isTrajectoryFeasible(nullptr, test, 0.4, 0.0, m_cfg.trajectory.feasibility_check_no_poses);
+  bool feasible = m_planner->isTrajectoryFeasible(0.4, m_cfg.trajectory.feasibility_check_no_poses);
   if(!feasible)
   {
     m_braking_start_cycle = m_plan_cycle;
