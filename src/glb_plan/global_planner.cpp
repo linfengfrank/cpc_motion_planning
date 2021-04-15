@@ -17,16 +17,19 @@ GlobalPlanner::GlobalPlanner():
   m_slam_odom_sub = m_nh.subscribe("/slam_odom", 1, &GlobalPlanner::slam_odo_call_back, this);
   m_glb_plan_execute_sub = m_nh.subscribe("/exe_glb_plan",1,&GlobalPlanner::exe_curr_glb_plan, this);
   m_go_home_sub = m_nh.subscribe("/return_home", 1, &GlobalPlanner::go_home, this);
+  m_change_map_sub = m_nh.subscribe("/change_map",1,&GlobalPlanner::change_map, this);
 
   m_glb_path_pub = m_nh.advertise<cpc_motion_planning::path>("/global_path",1);
 
   // Service
   m_cmap_client = m_nh.serviceClient<ros_map::map_service>("/map_service");
+  m_aux_map_set_cmap_client = m_nh.serviceClient<cpc_aux_mapping::set_c_map>("/cpc_aux_mapping/set_c_map");
 
   ros::service::waitForService("/map_service");
 
-  m_nh.param<int>("/cmap_id",m_cmap_id,0);
-  m_map_loaded = read_c_map(m_cmap_id);
+  int cmap_id;
+  m_nh.param<int>("/cmap_id",cmap_id,0);
+  m_map_loaded = read_c_map(cmap_id);
   prepare_c_map();
   perform_edt();
 
@@ -57,6 +60,44 @@ GlobalPlanner::~GlobalPlanner()
   delete [] m_h;
   delete [] m_s;
   delete [] m_t;
+}
+
+void GlobalPlanner::change_map(const std_msgs::String::ConstPtr &msg)
+{
+  // change the glb planner's map
+  reset_planner();
+  int map_id = std::stoi(msg->data);
+  std::string map_info_str;
+  m_map_loaded = read_c_map(map_id, &map_info_str);
+  prepare_c_map();
+  perform_edt();
+  prepare_map_pcl();
+  m_ps->set_map(m_a_map);
+
+  // call srv to change the map of aux_mapper
+  cpc_aux_mapping::set_c_map srv;
+  srv.request.map_info = map_info_str;
+  m_aux_map_set_cmap_client.call(srv);
+
+}
+
+void GlobalPlanner::reset_planner()
+{
+  m_glb_path.clear();
+  m_show_map_timer.start();
+  m_map_loaded = false;
+  m_odom_received = false;
+
+  delete m_a_map;
+  delete [] m_c;
+  delete [] m_g;
+  delete [] m_h;
+  delete [] m_s;
+  delete [] m_t;
+
+  m_curr_act_path.clear();
+  m_auto_mission_started = false;
+
 }
 
 void GlobalPlanner::exe_curr_glb_plan(const std_msgs::Bool::ConstPtr &msg)
@@ -162,6 +203,7 @@ std::vector<CUDA_GEO::pos> GlobalPlanner::plan(const CUDA_GEO::pos &goal_pos, co
 {
   std::vector<CUDA_GEO::pos> output;
   CUDA_GEO::coord start = m_a_map->pos2coord(start_pos);
+  start = m_a_map->get_first_free_coord(start,m_safety_radius);
   CUDA_GEO::coord goal = m_a_map->pos2coord(goal_pos);
   float length = 0.0f;
   std::vector<CUDA_GEO::coord> coord_path =  m_a_map->AStar2D(goal,start,false,length,m_safety_radius);

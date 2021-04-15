@@ -27,6 +27,11 @@ public:
 
   void smooth_path();
 
+  void set_map(GridGraph *gh)
+  {
+    m_gh = gh;
+  }
+
 private:
   GridGraph* m_gh;
   std::vector<float2> m_path;
