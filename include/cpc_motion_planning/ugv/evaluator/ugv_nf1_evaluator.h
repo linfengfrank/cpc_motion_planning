@@ -51,8 +51,8 @@ public:
   void calculate_bounding_centres(const UGVModel::State &s, float2 &c_r, float2 &c_f) const
   {
     float2 uni_dir = make_float2(cosf(s.theta),sinf(s.theta));
-    c_f = s.p + 0.25f*uni_dir;
-    c_r = s.p - 0.25f*uni_dir;
+    c_f = s.p + 0.0f*uni_dir;
+    c_r = s.p - 0.0f*uni_dir;
   }
 
   __host__ __device__
@@ -149,6 +149,8 @@ public:
     if (m_using_auto_direction)
       is_forward = data.is_forward;
 
+    is_forward= true;
+
     float rd = getMinDist(s,map);
     cost += expf(-9.5f*rd)*10;
 
@@ -176,7 +178,7 @@ public:
       {
         //either stuck or normal mode
         CUDA_GEO::coord c = m_nf1_map.pos2coord(make_float3(s.p.x,s.p.y,0));
-        float nf_cost = calculate_nf1_cost(s, 0.3f);
+        float nf_cost = calculate_nf1_cost(s, 0.0f);
         if (m_stuck)
         {
           //stuck mode, encourage random move to get out of stuck
@@ -194,6 +196,9 @@ public:
           if (gain > 1.0f)
             gain = 1.0f;
 
+          if (s.v < 0)
+            cost += 15.0f*fabsf(s.v);
+
           //normal mode
           cost += 1.0f*nf_cost + 1.0f*sqrtf(0.005f*s.v*s.v + 1.0f*s.w*s.w*gain);
           float yaw_diff;
@@ -203,7 +208,7 @@ public:
             yaw_diff = s.theta + CUDA_F_PI - getDesiredHeading(c);
 
           yaw_diff = yaw_diff - floorf((yaw_diff + CUDA_F_PI) / (2 * CUDA_F_PI)) * 2 * CUDA_F_PI;
-          cost += yaw_diff*yaw_diff*s.v*s.v;
+          cost += yaw_diff*yaw_diff*(s.v*s.v+0.01f);
         }
       }
     }
@@ -223,7 +228,7 @@ public:
 
     if(!m_pure_turning && m_nf1_received && !m_stuck)
     {
-      cost += 20.0f * calculate_nf1_cost(s,0.3f);
+      cost += 20.0f * calculate_nf1_cost(s,0.0f);
     }
 
     return  cost;

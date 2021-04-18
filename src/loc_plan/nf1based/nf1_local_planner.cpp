@@ -213,7 +213,7 @@ void NF1LocalPlanner::do_normal()
   else
     drive_dir.data = cpc_aux_mapping::nf1_task::TYPE_BACKWARD;
 
-  m_drive_dir_pub.publish(drive_dir);
+//  m_drive_dir_pub.publish(drive_dir);
 
   //Goto: Braking
   if (m_pso_planner->result.collision)
