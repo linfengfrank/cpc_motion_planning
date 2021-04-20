@@ -17,7 +17,7 @@ GlobalPlanner::GlobalPlanner():
   m_slam_odom_sub = m_nh.subscribe("/slam_odom", 1, &GlobalPlanner::slam_odo_call_back, this);
   m_glb_plan_execute_sub = m_nh.subscribe("/exe_glb_plan",1,&GlobalPlanner::exe_curr_glb_plan, this);
   m_go_home_sub = m_nh.subscribe("/return_home", 1, &GlobalPlanner::go_home, this);
-  m_change_map_sub = m_nh.subscribe("/change_map",1,&GlobalPlanner::change_map, this);
+  m_change_map_sub = m_nh.subscribe("/cpc_cmd",1,&GlobalPlanner::change_map, this);
 
   m_glb_path_pub = m_nh.advertise<cpc_motion_planning::path>("/global_path",1);
 
@@ -66,9 +66,8 @@ void GlobalPlanner::change_map(const std_msgs::String::ConstPtr &msg)
 {
   // change the glb planner's map
   reset_planner();
-  int map_id = std::stoi(msg->data);
-  std::string map_info_str;
-  m_map_loaded = read_c_map(map_id, &map_info_str);
+  std::string map_info_str = msg->data;
+  m_map_loaded = read_c_map(map_info_str);
   prepare_c_map();
   perform_edt();
   prepare_map_pcl();
