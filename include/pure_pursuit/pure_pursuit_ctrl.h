@@ -13,8 +13,8 @@ public:
   ~UGVRecMotionPlanner();
 
   void init_swarm(int step_num, float step_dt, float var_s, float var_theta, std::string file_location);
-  bool calculate_trajectory(const UGV::UGVModel::State &s, UGV::UGVModel::State g,
-                            EDTMap *edt_map, std::vector<UGV::UGVModel::State> &traj);
+  bool calculate_trajectory(const UGV::UGVModel::State &curr_s, UGV::UGVModel::State goal,
+                            UGV::UGVModel::State carrot, EDTMap *edt_map, std::vector<UGV::UGVModel::State> &traj);
 
 private:
   PSO::Planner<RECOVER_UGV> *m_pso_planner;

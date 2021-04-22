@@ -25,9 +25,15 @@ public:
   }
 
   __host__ __device__
-  void setTarget(const UGVModel::State &goal)
+  void setGoal(const UGVModel::State &goal)
   {
     m_goal = goal;
+  }
+
+  __host__ __device__
+  void setCarrot(const UGVModel::State &carrot)
+  {
+    m_carrot = carrot;
   }
 
   __host__ __device__
@@ -98,15 +104,17 @@ public:
     if (m_target_received)
     {
       // distance to goal
-      float2 dist_err = m_goal.p - s.p;
+      float2 dist_err = m_carrot.p - s.p;
       float dist_val = sqrtf(dist_err.x*dist_err.x + dist_err.y*dist_err.y);
       cost += 0.4f*dist_val;// + sqrtf(0.0f*s.v*s.v + 0.0f*s.w*s.w);
 
       // desired angle
-      float yaw_diff = s.theta - m_goal.theta;
-      yaw_diff = yaw_diff - floorf((yaw_diff + M_PI) / (2 * M_PI)) * 2 * M_PI;
-      float yaw_gain = dist_val*dist_val;
+      float2 dist_err_g = m_goal.p - s.p;
+      float dist_val_g = sqrtf(dist_err_g.x*dist_err_g.x + dist_err_g.y*dist_err_g.y);
+      float yaw_gain = dist_val_g*dist_val_g;
       if (yaw_gain > 1.0f) yaw_gain = 1.0f;
+      float yaw_diff = s.theta - m_carrot.theta;
+      yaw_diff = yaw_diff - floorf((yaw_diff + M_PI) / (2 * M_PI)) * 2 * M_PI;
       cost += (1.0f+2.0f*s.v*s.v)*yaw_gain*yaw_diff*yaw_diff;
 
       // energy cost
@@ -131,7 +139,7 @@ public:
   {
     float cost = 0;
 
-    float2 dist_err = m_goal.p - s.p;
+    float2 dist_err = m_carrot.p - s.p;
     float dist_val = sqrtf(dist_err.x*dist_err.x + dist_err.y*dist_err.y);
     cost += 20.0f*dist_val;
 
@@ -139,6 +147,7 @@ public:
   }
 
   UGVModel::State m_goal;
+  UGVModel::State m_carrot;
   bool m_target_received;
   float m_safety_radius;
 };

@@ -18,6 +18,8 @@ global_safety_radius: 0.4
 mid_safety_radius: 0.4
 local_safety_radius: 0.4
 home_position: [5.0, -1.1]
+min_carrot_dist: 0.3
+max_carrot_dist: 2.5
 
 #var_s: 2.0
 #var_theta: 1.0

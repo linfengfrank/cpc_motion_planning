@@ -28,26 +28,23 @@ UGVRecMotionPlanner::~UGVRecMotionPlanner()
   delete m_pso_planner;
 }
 
-bool UGVRecMotionPlanner::calculate_trajectory(const UGV::UGVModel::State &s, UGV::UGVModel::State g,
-                                               EDTMap *edt_map, std::vector<UGV::UGVModel::State> &traj)
+bool UGVRecMotionPlanner::calculate_trajectory(const UGV::UGVModel::State &curr_s, UGV::UGVModel::State goal,
+                                               UGV::UGVModel::State carrot, EDTMap *edt_map, std::vector<UGV::UGVModel::State> &traj)
 {
   //Update initial state
-  m_pso_planner->m_model.set_ini_state(s);
+  m_pso_planner->m_model.set_ini_state(curr_s);
 
-  float2 diff = make_float2(g.p.x - s.p.x, g.p.y - s.p.y);
+  float2 diff = make_float2(carrot.p.x - curr_s.p.x, carrot.p.y - curr_s.p.y);
   float diff_dist = sqrtf(dot(diff,diff));
 
   if (diff_dist > 0.25f)
-  {
-    g.theta = atan2f(diff.y,diff.x);
-  }
+    carrot.theta = atan2f(diff.y,diff.x);
   else
-  {
-    g.theta = s.theta;
-  }
+    carrot.theta = curr_s.theta;
 
   //Set the carrot
-  m_pso_planner->m_eva.setTarget(g);
+  m_pso_planner->m_eva.setGoal(goal);
+  m_pso_planner->m_eva.setCarrot(carrot);
   m_pso_planner->m_eva.m_target_received = true;
 
   //Do the planning
@@ -57,5 +54,4 @@ bool UGVRecMotionPlanner::calculate_trajectory(const UGV::UGVModel::State &s, UG
   traj = m_pso_planner->generate_trajectory();
 
   return true;
-
 }

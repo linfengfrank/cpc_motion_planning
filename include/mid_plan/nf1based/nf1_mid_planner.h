@@ -95,6 +95,8 @@ private:
   float m_curvature_split;
   float m_safety_radius;
   float m_mid_goal_orient;
+  float m_min_carrot_dist;
+  float m_max_carrot_dist;
   // helper functions
 private:
   std::unordered_map<int,float> assign_target_angle(const std::vector<float2> &local_path)
