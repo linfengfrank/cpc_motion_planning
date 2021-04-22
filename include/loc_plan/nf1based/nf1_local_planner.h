@@ -3,7 +3,7 @@
 #include <loc_plan/ugv_base_local_planner.h>
 #include <cpc_motion_planning/path.h>
 #include <std_msgs/Int32.h>
-#include <recover_plan/ugv_recover_planner.h>
+#include <pure_pursuit/pure_pursuit_ctrl.h>
 #include <cpc_aux_mapping/nf1_task.h>
 
 #define SIMPLE_UGV UGV::UGVModel,UGV::UGVDPControl,UGV::NF1Evaluator,UGV::UGVSwarm<8>
@@ -35,7 +35,6 @@ private:
   void plan_call_back(const ros::TimerEvent&);
   void nf1_call_back(const cpc_aux_mapping::nf1_task::ConstPtr &msg);
   void cycle_init();
-  void hybrid_path_call_back(const cpc_motion_planning::path::ConstPtr &msg);
   bool check_tgt_is_same(const UGV::NF1Evaluator::Target &t1, const UGV::NF1Evaluator::Target &t2)
   {
     if (t1.act_id == t2.act_id && t1.path_id == t2.path_id)
@@ -46,7 +45,6 @@ private:
 
 private:
   ros::Subscriber m_nf1_sub;
-  ros::Subscriber m_hybrid_path_sub;
   ros::Timer m_planning_timer;
   ros::Publisher m_ref_pub;
   ros::Publisher m_status_pub;

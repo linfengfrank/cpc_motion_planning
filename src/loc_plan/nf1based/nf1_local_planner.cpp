@@ -30,7 +30,6 @@ NF1LocalPlanner::NF1LocalPlanner():
   m_nh.param<float>("/local_safety_radius",local_safety_radius,0.401f);
 
   m_nf1_sub = m_nh.subscribe("/nf1",1,&NF1LocalPlanner::nf1_call_back, this);
-  m_hybrid_path_sub = m_nh.subscribe("/hybrid_path",1,&NF1LocalPlanner::hybrid_path_call_back,this);
 
   m_collision_check_client = m_nh.serviceClient<cpc_motion_planning::collision_check>("collision_check");
   m_ref_pub = m_nh.advertise<cpc_motion_planning::ref_data>("ref_traj",1);
@@ -176,13 +175,6 @@ void NF1LocalPlanner::plan_call_back(const ros::TimerEvent&)
   m_plan_cycle++;
 }
 
-void NF1LocalPlanner::hybrid_path_call_back(const cpc_motion_planning::path::ConstPtr &msg)
-{
-  if (msg->request_ctt != m_plan_request_cycle)
-    return;
-  m_stuck_recover_path = *msg;
-  m_recover_planner.set_path_cell(m_stuck_recover_path);
-}
 //=====================================
 void NF1LocalPlanner::do_start()
 {
@@ -279,63 +271,7 @@ void NF1LocalPlanner::do_stuck()
 //=====================================
 void NF1LocalPlanner::do_recover()
 {
-  // overall time out
-  if (m_plan_cycle - m_stuck_start_cycle >= 50)
-  {
-    m_status = UGV::NORMAL;
-  }
 
-  // have not received response yet
-  if (m_stuck_recover_path.request_ctt != m_plan_request_cycle)
-  {
-    std::cout<<"WAIT FOR HYBRID A"<<std::endl;
-    full_stop_trajectory(m_traj,m_pso_planner->m_model.get_ini_state());
-    return;
-  }
-
-  std::cout<<"RECOVER"<<std::endl;
-  if (m_stuck_recover_path.actions.size() == 0)
-  {
-    // the response is empty, go to the full stuck sub mode
-    full_stop_trajectory(m_traj,m_pso_planner->m_model.get_ini_state());
-    m_stuck_submode = STUCK_SUB_MODE::FULL_STUCK;
-    m_full_start_cycle = m_plan_cycle;
-    return;
-  }
-
-  // do the recover path following
-  bool finished = m_recover_planner.calculate_trajectory(m_pso_planner->m_model.get_ini_state(),
-                                                         m_edt_map,
-                                                         m_traj);
-
-  if (m_recover_planner.should_braking())
-  {
-    m_braking_start_cycle = m_plan_cycle;
-    m_status = UGV::BRAKING;
-    cycle_process_based_on_status();
-    return;
-  }
-
-  if(finished)
-  {
-    m_status = UGV::NORMAL;
-    return;
-  }
-
-  // if still stuck
-  if(is_stuck(m_traj,m_goal.s) || is_stuck_lowpass(m_pso_planner->m_model.get_ini_state(), m_goal.s))
-  {
-    // if the ref path has collision, just go back to the normal mode
-    if (check_collision_from_host_edt(m_recover_planner.get_collision_checking_path()))
-    {
-      m_status = UGV::NORMAL;
-    }
-    else
-    {
-      m_stuck_submode = STUCK_SUB_MODE::FULL_STUCK;
-      m_full_start_cycle = m_plan_cycle;
-    }
-  }
 }
 //=====================================
 void NF1LocalPlanner::do_full_stuck()
