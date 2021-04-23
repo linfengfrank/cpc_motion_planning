@@ -175,7 +175,7 @@ cuda_add_executable(${PROJECT_NAME}_node
     src/loc_plan/nf1based/nf1_local_planner.cpp
     src/loc_plan/nf1based/nf1_local_planner_node.cpp
     src/loc_plan/ugv_base_local_planner.cpp
-    src/recover_plan/ugv_recover_planner.cpp
+    src/pure_pursuit/pure_pursuit_ctrl.cpp
     src/kernel/pso_kernels.cu)
 
 target_link_libraries(${PROJECT_NAME}_node

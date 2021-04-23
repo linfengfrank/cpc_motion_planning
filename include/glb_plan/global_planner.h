@@ -13,7 +13,7 @@
 #include <std_msgs/Bool.h>
 #include <std_msgs/String.h>
 #include <cpc_motion_planning/exe_recorded_path.h>
-#include <comm_mapping_shared_headers/map.h>
+#include <comm_mapping/map.h>
 #include <ros_map/map_service.h>
 #include <cpc_aux_mapping/set_c_map.h>
 
@@ -189,6 +189,14 @@ private:
     {
       return false;
     }
+  }
+  //---
+  bool read_c_map(const std::string &map_info_str)
+  {
+    MAP_INFO map_info;
+    string_to_map_info(map_info_str.c_str(), &map_info);
+    m_c_map.load(&map_info);
+    return true;
   }
 
   //-----------------------------------

@@ -16,6 +16,8 @@ NF1MidPlanner::NF1MidPlanner():
   m_nh.param<int>("/look_back",m_look_back,-50);
   m_nh.param<float>("/curvature_split",m_curvature_split,0.2f);
   m_nh.param<float>("/mid_safety_radius",m_safety_radius,0.51f);
+  m_nh.param<float>("/min_carrot_dist",m_min_carrot_dist,0.30f);
+  m_nh.param<float>("/max_carrot_dist",m_max_carrot_dist,2.00f);
 
   m_map_sub = m_nh.subscribe("/edt_map", 1, &NF1MidPlanner::map_call_back,this);
   m_glb_tgt_sub = m_nh.subscribe("/set_global_goal", 1, &NF1MidPlanner::goal_call_back, this);
@@ -396,10 +398,13 @@ std::vector<float2> NF1MidPlanner::get_local_path(bool &is_future_path_blocked, 
     {
       p.x = local_path[i].x;
       p.y = local_path[i].y;
-      if(!is_curvature_too_big(local_path,0,i,m_curvature_split))
-        tmp_path.push_back(local_path[i]);
-      else
+      diff = m_curr_pos - local_path[i];
+      dist = dot(diff,diff);
+      if( dist > m_min_carrot_dist &&
+          (dist > m_max_carrot_dist || is_curvature_too_big(local_path,0,i,m_curvature_split)))
         break;
+      else
+        tmp_path.push_back(local_path[i]);
     }
     local_path = tmp_path;
   }
