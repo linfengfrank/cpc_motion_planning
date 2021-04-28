@@ -3,7 +3,7 @@
 #include <loc_plan/ugv_base_local_planner.h>
 #include <cpc_motion_planning/path.h>
 #include <std_msgs/Int32.h>
-#include <recover_plan/ugv_recover_planner.h>
+#include <pure_pursuit/pure_pursuit_ctrl.h>
 #include <cpc_aux_mapping/nf1_task.h>
 
 #include <teb_local_planner/optimal_planner.h>

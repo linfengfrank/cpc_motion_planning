@@ -189,7 +189,7 @@ cuda_add_executable(teb_node
     src/loc_plan/tebbased/teb_local_planner.cpp
     src/loc_plan/tebbased/teb_local_planner_node.cpp
     src/loc_plan/ugv_base_local_planner.cpp
-    src/recover_plan/ugv_recover_planner.cpp
+    src/pure_pursuit/pure_pursuit_ctrl.cpp
     src/kernel/pso_kernels.cu)
 
 target_link_libraries(teb_node
