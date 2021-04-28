@@ -81,6 +81,7 @@ void TEBLocalPlanner::nf1_call_back(const cpc_aux_mapping::nf1_task::ConstPtr &m
     CUDA_GEO::pos origin(msg->nf1.x_origin,msg->nf1.y_origin,msg->nf1.z_origin);
     int3 m_nf1_map_size = make_int3(msg->nf1.x_size,msg->nf1.y_size,msg->nf1.z_size);
     m_nf1_map = new NF1MapDT(origin,msg->nf1.width,m_nf1_map_size);
+    m_nf1_map->m_create_host_cpy = true;
     m_nf1_map->setup_device();
   }
   else
@@ -89,7 +90,7 @@ void TEBLocalPlanner::nf1_call_back(const cpc_aux_mapping::nf1_task::ConstPtr &m
     m_nf1_map->m_grid_step = msg->nf1.width;
   }
   CUDA_MEMCPY_H2D(m_nf1_map->m_nf1_map,msg->nf1.payload8.data(),static_cast<size_t>(m_nf1_map->m_byte_size));
-
+  memcpy(m_nf1_map->m_hst_map,msg->nf1.payload8.data(),static_cast<size_t>(m_nf1_map->m_byte_size));
 
   // setup the drive type
 
@@ -189,6 +190,9 @@ void TEBLocalPlanner::do_normal()
 
   if (!m_planner->get_edt_map())
     m_planner->set_edt_map(m_edt_map);
+
+  std::vector<double3> init = get_init_guess();
+  m_planner->set_init_plan(init);
 
   bool success = m_planner->plan(robot_pose, robot_goal, &robot_vel, m_cfg.goal_tolerance.free_goal_vel);
   if (!success)
@@ -352,4 +356,83 @@ void TEBLocalPlanner::cycle_init()
 
   full_stop_trajectory(m_traj,m_ini_state);
 
+}
+//---
+std::vector<double3> TEBLocalPlanner::get_init_guess()
+{
+  std::vector<double3> pre_guess, guess;
+  // the initial pose
+  pre_guess.push_back(make_double3(m_ini_state.p.x,
+                                m_ini_state.p.y,
+                                m_ini_state.theta));
+  CUDA_GEO::pos p;
+  p.x = m_ini_state.p.x;
+  p.y = m_ini_state.p.y;
+  CUDA_GEO::coord c = m_nf1_map->pos2coord(p);
+  CUDA_GEO::coord bc;
+  // First calculate the positions
+  while(1)
+  {
+    if(get_smallest_child(c,bc))
+    {
+      c = bc;
+      p = m_nf1_map->coord2pos(c);
+      pre_guess.push_back(make_double3(p.x,p.y,0));
+    }
+    else
+    {
+      break;
+    }
+  }
+  pre_guess.pop_back();
+
+  // the goal pose
+  pre_guess.push_back(make_double3(m_carrot.p.x,
+                                m_carrot.p.y,
+                                m_carrot.theta));
+
+   std::vector<size_t> split_idx = split_merge(pre_guess, 0.1);
+
+   for(size_t i=0; i<split_idx.size(); i++)
+   {
+     guess.push_back(pre_guess[split_idx[i]]);
+   }
+
+
+  // Then calculate the angle
+  for (int i=1; i < static_cast<int>(guess.size())-1; i++)
+  {
+    // get yaw from the orientation of the distance vector between pose_{i+1} and pose_{i}
+    double dx = guess[i+1].x - guess[i].x;
+    double dy = guess[i+1].y - guess[i].y;
+    double yaw = std::atan2(dy,dx);
+    guess[i].z = yaw;
+  }
+  return guess;
+}
+
+bool TEBLocalPlanner::get_smallest_child(const CUDA_GEO::coord &c, CUDA_GEO::coord& bc)
+{
+  CUDA_GEO::coord g;
+  bool found = false;
+  float best_cost = m_nf1_map->getCostHst(c.x,c.y,0);
+  for (int i=-1;i<=1;i++)
+  {
+    for(int j=-1;j<=1;j++)
+    {
+      if(i==0 && j==0)
+        continue;
+
+      g.x = c.x+i;
+      g.y = c.y+j;
+      float cost = m_nf1_map->getCostHst(g.x,g.y,0);
+      if (best_cost > cost)
+      {
+        found = true;
+        best_cost = cost;
+        bc = g;
+      }
+    }
+  }
+  return found;
 }

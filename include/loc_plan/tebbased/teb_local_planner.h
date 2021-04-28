@@ -42,12 +42,85 @@ private:
   void plan_call_back(const ros::TimerEvent&);
   void nf1_call_back(const cpc_aux_mapping::nf1_task::ConstPtr &msg);
   void cycle_init();
+  std::vector<double3> get_init_guess();
+  bool get_smallest_child(const CUDA_GEO::coord &c, CUDA_GEO::coord &bc);
   bool check_tgt_is_same(const UGV::NF1Evaluator::Target &t1, const UGV::NF1Evaluator::Target &t2)
   {
     if (t1.act_id == t2.act_id && t1.path_id == t2.path_id)
       return true;
     else
       return false;
+  }
+  //---
+  inline double pnt2line_dist(const double3 & c1, const double3 & c2, const double3 & c0)
+  {
+    double2 a = make_double2(c1.x-c0.x, c1.y-c0.y);
+    double2 b = make_double2(c2.x-c1.x,c2.y-c1.y);
+
+    double a_square = a.x*a.x + a.y*a.y;
+    double b_square = b.x*b.x + b.y*b.y;
+    double a_dot_b = a.x*b.x + a.y*b.y;
+
+    if (b_square < 1e-3)
+      return sqrt(a_square);
+
+    return sqrt((a_square*b_square - a_dot_b*a_dot_b)/(b_square));
+  }
+  //---
+  std::vector<size_t> split_merge(const std::vector<double3> &path, double th)
+  {
+    std::vector<size_t> split_idx;
+
+    // If there is no path, return the center point
+    if (path.size() <= 1)
+    {
+      return split_idx;
+    }
+
+    std::stack<std::pair<unsigned int,unsigned int>> task; // fist is anchor, second is target
+    task.push(std::make_pair(path.size() - 1, 0));
+
+    unsigned int check = static_cast<unsigned int>(path.size()) - 1;
+
+    split_idx.push_back(path.size() - 1);
+    while (task.size() > 0)
+    {
+      unsigned int target = task.top().second;
+      unsigned int anchor = task.top().first;
+      task.pop();
+      // find the largest distance
+      unsigned int max_id = 0;
+      double max_dist = 0;
+      for (unsigned int j = target; j< anchor; j++)
+      {
+        double dist = pnt2line_dist(path[anchor],path[target],path[j]);
+        if (dist > max_dist)
+        {
+          max_dist = dist;
+          max_id = j;
+        }
+      }
+
+      if (max_dist > th)
+      {
+        task.push(std::make_pair(max_id, target));
+        task.push(std::make_pair(anchor, max_id));
+        target = max_id;
+      }
+      else
+      {
+        split_idx.push_back(target);
+        if (target >= check)
+        {
+          std::cout<<"path size: "<<path.size()<<std::endl;
+          ROS_ERROR("Wrong split sequence");
+          exit(-1);
+        }
+        check = target;
+      }
+    }
+    std::reverse(split_idx.begin(),split_idx.end());
+    return split_idx;
   }
 
 private:
@@ -90,176 +163,6 @@ private:
   TebConfig m_cfg;
   TebVisualizationPtr m_visualization;
   UGV::UGVModel::State m_ini_state;
-
-  RobotFootprintModelPtr get_footprint_from_param(const ros::NodeHandle& nh)
-  {
-    std::string model_name;
-    if (!nh.getParam("footprint_model/type", model_name))
-    {
-      ROS_INFO("No robot footprint model specified for trajectory optimization. Using point-shaped model.");
-      return boost::make_shared<PointRobotFootprint>();
-    }
-
-    // point
-    if (model_name.compare("point") == 0)
-    {
-      ROS_INFO("Footprint model 'point' loaded for trajectory optimization.");
-      return boost::make_shared<PointRobotFootprint>();
-    }
-
-    // circular
-    if (model_name.compare("circular") == 0)
-    {
-      // get radius
-      double radius;
-      if (!nh.getParam("footprint_model/radius", radius))
-      {
-        ROS_ERROR_STREAM("Footprint model 'circular' cannot be loaded for trajectory optimization, since param '" << nh.getNamespace()
-                         << "/footprint_model/radius' does not exist. Using point-model instead.");
-        return boost::make_shared<PointRobotFootprint>();
-      }
-      ROS_INFO_STREAM("Footprint model 'circular' (radius: " << radius <<"m) loaded for trajectory optimization.");
-      return boost::make_shared<CircularRobotFootprint>(radius);
-    }
-
-    // line
-    if (model_name.compare("line") == 0)
-    {
-      // check parameters
-      if (!nh.hasParam("footprint_model/line_start") || !nh.hasParam("footprint_model/line_end"))
-      {
-        ROS_ERROR_STREAM("Footprint model 'line' cannot be loaded for trajectory optimization, since param '" << nh.getNamespace()
-                         << "/footprint_model/line_start' and/or '.../line_end' do not exist. Using point-model instead.");
-        return boost::make_shared<PointRobotFootprint>();
-      }
-      // get line coordinates
-      std::vector<double> line_start, line_end;
-      nh.getParam("footprint_model/line_start", line_start);
-      nh.getParam("footprint_model/line_end", line_end);
-      if (line_start.size() != 2 || line_end.size() != 2)
-      {
-        ROS_ERROR_STREAM("Footprint model 'line' cannot be loaded for trajectory optimization, since param '" << nh.getNamespace()
-                         << "/footprint_model/line_start' and/or '.../line_end' do not contain x and y coordinates (2D). Using point-model instead.");
-        return boost::make_shared<PointRobotFootprint>();
-      }
-
-      ROS_INFO_STREAM("Footprint model 'line' (line_start: [" << line_start[0] << "," << line_start[1] <<"]m, line_end: ["
-                       << line_end[0] << "," << line_end[1] << "]m) loaded for trajectory optimization.");
-      return boost::make_shared<LineRobotFootprint>(Eigen::Map<const Eigen::Vector2d>(line_start.data()), Eigen::Map<const Eigen::Vector2d>(line_end.data()));
-    }
-
-    // two circles
-    if (model_name.compare("two_circles") == 0)
-    {
-      // check parameters
-      if (!nh.hasParam("footprint_model/front_offset") || !nh.hasParam("footprint_model/front_radius")
-          || !nh.hasParam("footprint_model/rear_offset") || !nh.hasParam("footprint_model/rear_radius"))
-      {
-        ROS_ERROR_STREAM("Footprint model 'two_circles' cannot be loaded for trajectory optimization, since params '" << nh.getNamespace()
-                         << "/footprint_model/front_offset', '.../front_radius', '.../rear_offset' and '.../rear_radius' do not exist. Using point-model instead.");
-        return boost::make_shared<PointRobotFootprint>();
-      }
-      double front_offset, front_radius, rear_offset, rear_radius;
-      nh.getParam("footprint_model/front_offset", front_offset);
-      nh.getParam("footprint_model/front_radius", front_radius);
-      nh.getParam("footprint_model/rear_offset", rear_offset);
-      nh.getParam("footprint_model/rear_radius", rear_radius);
-      ROS_INFO_STREAM("Footprint model 'two_circles' (front_offset: " << front_offset <<"m, front_radius: " << front_radius
-                      << "m, rear_offset: " << rear_offset << "m, rear_radius: " << rear_radius << "m) loaded for trajectory optimization.");
-      return boost::make_shared<TwoCirclesRobotFootprint>(front_offset, front_radius, rear_offset, rear_radius);
-    }
-
-    // polygon
-    if (model_name.compare("polygon") == 0)
-    {
-
-      // check parameters
-      XmlRpc::XmlRpcValue footprint_xmlrpc;
-      if (!nh.getParam("footprint_model/vertices", footprint_xmlrpc) )
-      {
-        ROS_ERROR_STREAM("Footprint model 'polygon' cannot be loaded for trajectory optimization, since param '" << nh.getNamespace()
-                         << "/footprint_model/vertices' does not exist. Using point-model instead.");
-        return boost::make_shared<PointRobotFootprint>();
-      }
-      // get vertices
-      if (footprint_xmlrpc.getType() == XmlRpc::XmlRpcValue::TypeArray)
-      {
-        try
-        {
-          Point2dContainer polygon = make_footprint_from_xml(footprint_xmlrpc, "/footprint_model/vertices");
-          ROS_INFO_STREAM("Footprint model 'polygon' loaded for trajectory optimization.");
-          return boost::make_shared<PolygonRobotFootprint>(polygon);
-        }
-        catch(const std::exception& ex)
-        {
-          ROS_ERROR_STREAM("Footprint model 'polygon' cannot be loaded for trajectory optimization: " << ex.what() << ". Using point-model instead.");
-          return boost::make_shared<PointRobotFootprint>();
-        }
-      }
-      else
-      {
-        ROS_ERROR_STREAM("Footprint model 'polygon' cannot be loaded for trajectory optimization, since param '" << nh.getNamespace()
-                         << "/footprint_model/vertices' does not define an array of coordinates. Using point-model instead.");
-        return boost::make_shared<PointRobotFootprint>();
-      }
-
-    }
-
-    // otherwise
-    ROS_WARN_STREAM("Unknown robot footprint model specified with parameter '" << nh.getNamespace() << "/footprint_model/type'. Using point model instead.");
-    return boost::make_shared<PointRobotFootprint>();
-  }
-
-  Point2dContainer make_footprint_from_xml(XmlRpc::XmlRpcValue& footprint_xmlrpc, const std::string& full_param_name)
-  {
-     // Make sure we have an array of at least 3 elements.
-     if (footprint_xmlrpc.getType() != XmlRpc::XmlRpcValue::TypeArray ||
-         footprint_xmlrpc.size() < 3)
-     {
-       ROS_FATAL("The footprint must be specified as list of lists on the parameter server, %s was specified as %s",
-                  full_param_name.c_str(), std::string(footprint_xmlrpc).c_str());
-       throw std::runtime_error("The footprint must be specified as list of lists on the parameter server with at least "
-                                "3 points eg: [[x1, y1], [x2, y2], ..., [xn, yn]]");
-     }
-
-     Point2dContainer footprint;
-     Eigen::Vector2d pt;
-
-     for (int i = 0; i < footprint_xmlrpc.size(); ++i)
-     {
-       // Make sure each element of the list is an array of size 2. (x and y coordinates)
-       XmlRpc::XmlRpcValue point = footprint_xmlrpc[ i ];
-       if (point.getType() != XmlRpc::XmlRpcValue::TypeArray ||
-           point.size() != 2)
-       {
-         ROS_FATAL("The footprint (parameter %s) must be specified as list of lists on the parameter server eg: "
-                   "[[x1, y1], [x2, y2], ..., [xn, yn]], but this spec is not of that form.",
-                    full_param_name.c_str());
-         throw std::runtime_error("The footprint must be specified as list of lists on the parameter server eg: "
-                                 "[[x1, y1], [x2, y2], ..., [xn, yn]], but this spec is not of that form");
-      }
-
-      pt.x() = get_number_from_xml(point[ 0 ], full_param_name);
-      pt.y() = get_number_from_xml(point[ 1 ], full_param_name);
-
-      footprint.push_back(pt);
-    }
-    return footprint;
-  }
-
-  double get_number_from_xml(XmlRpc::XmlRpcValue& value, const std::string& full_param_name)
-  {
-    // Make sure that the value we're looking at is either a double or an int.
-    if (value.getType() != XmlRpc::XmlRpcValue::TypeInt &&
-        value.getType() != XmlRpc::XmlRpcValue::TypeDouble)
-    {
-      std::string& value_string = value;
-      ROS_FATAL("Values in the footprint specification (param %s) must be numbers. Found value %s.",
-                 full_param_name.c_str(), value_string.c_str());
-       throw std::runtime_error("Values in the footprint specification must be numbers");
-     }
-     return value.getType() == XmlRpc::XmlRpcValue::TypeInt ? (int)(value) : (double)(value);
-  }
 
 };
 }
