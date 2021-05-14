@@ -181,7 +181,7 @@ void GlobalPlanner::slam_odo_call_back(const nav_msgs::Odometry::ConstPtr &msg)
 
 void GlobalPlanner::prepare_c_map()
 {
-  m_origin = CUDA_GEO::pos(-30,-30,0);
+  m_origin = CUDA_GEO::pos(-35,-35,0);
   m_step_width = 0.05f;
   m_width = 1000;
   m_height = 1000;
