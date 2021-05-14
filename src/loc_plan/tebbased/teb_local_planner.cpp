@@ -192,6 +192,7 @@ void TEBLocalPlanner::do_normal()
     m_planner->set_edt_map(m_edt_map);
 
   std::vector<double3> init = get_init_guess();
+  //std::cout<<init.size()<<std::endl;
   m_planner->set_init_plan(init);
 
   bool success = m_planner->plan(robot_pose, robot_goal, &robot_vel, m_cfg.goal_tolerance.free_goal_vel);
@@ -384,7 +385,8 @@ std::vector<double3> TEBLocalPlanner::get_init_guess()
       break;
     }
   }
-  pre_guess.pop_back();
+  if (pre_guess.size()>1)
+    pre_guess.pop_back();
 
   // the goal pose
   pre_guess.push_back(make_double3(m_carrot.p.x,
