@@ -9,7 +9,6 @@
 #include <teb_local_planner/optimal_planner.h>
 #include <teb_local_planner/homotopy_class_planner.h>
 #include <teb_local_planner/visualization.h>
-#include <teb_local_planner/recovery_behaviors.h>
 
 #define SIMPLE_UGV UGV::UGVModel,UGV::UGVDPControl,UGV::NF1Evaluator,UGV::UGVSwarm<8>
 namespace teb_local_planner
