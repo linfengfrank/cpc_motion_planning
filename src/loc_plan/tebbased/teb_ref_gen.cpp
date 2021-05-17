@@ -33,17 +33,13 @@ TEBRefGen::TEBRefGen():
   m_nf1_sub = m_nh.subscribe("/nf1",1,&TEBRefGen::nf1_call_back, this);
 
   m_collision_check_client = m_nh.serviceClient<cpc_motion_planning::collision_check>("collision_check");
-  m_ref_pub = m_nh.advertise<cpc_motion_planning::ref_data>("ref_traj",1);
+  m_ref_pub = m_nh.advertise<cpc_motion_planning::ref_data>("pure_ref_traj",1);
   m_status_pub = m_nh.advertise<std_msgs::String>("ref_status_string",1);
   m_tgt_reached_pub = m_nh.advertise<std_msgs::Int32MultiArray>("target_reached",1);
   m_stuck_plan_request_pub = m_nh.advertise<cpc_motion_planning::plan_request>("plan_request",1);
   m_drive_dir_pub = m_nh.advertise<std_msgs::Int32>("drive_dir",1);
 
-  m_planning_timer = m_nh.createTimer(ros::Duration(PSO::PSO_REPLAN_DT), &TEBRefGen::plan_call_back, this);
-
-  m_ref_v = 0.0f;
-  m_ref_w = 0.0f;
-  m_ref_theta = 0.0f;
+  m_planning_timer = m_nh.createTimer(ros::Duration(REPLAN_DT), &TEBRefGen::plan_call_back, this);
 
   m_v_err_reset_ctt = 0;
   m_w_err_reset_ctt = 0;
@@ -126,20 +122,18 @@ void TEBRefGen::plan_call_back(const ros::TimerEvent&)
 
   int cols = 0;
   int ref_counter = m_ref_start_idx;
-  int next_ref_start_idx = (m_plan_cycle+1)*PSO::PSO_REPLAN_CYCLE+PSO::PSO_PLAN_CONSUME_CYCLE;
+  int next_ref_start_idx = (m_plan_cycle+1)*REPLAN_CYCLE+PLAN_CONSUME_CYCLE;
 
   ros::Time t_inc = curr_t;
   for (UGV::UGVModel::State traj_s : m_traj)
   {
     ref_counter++;
-    t_inc = t_inc + ros::Duration(PSO::PSO_CTRL_DT);
+    t_inc = t_inc + ros::Duration(CTRL_DT);
     add_to_ref_msg(m_ref_msg,ref_counter,traj_s,t_inc);
 
     if (ref_counter == next_ref_start_idx)
     {
-      m_ref_v = traj_s.v;
-      m_ref_w = traj_s.w;
-      m_ref_theta = traj_s.theta;
+      m_ref_state = traj_s;
     }
 
     cols++;
@@ -165,12 +159,12 @@ void TEBRefGen::do_start()
 {
   if (m_slam_odo_received && m_raw_odo_received && m_received_map && m_goal_received)
   {
+    m_ref_state.theta = get_heading(m_slam_odo);
+    m_ref_state.p.x = m_slam_odo.pose.pose.position.x;
+    m_ref_state.p.y = m_slam_odo.pose.pose.position.y;
+    m_ref_state.v = m_raw_odo.twist.twist.linear.x;
+    m_ref_state.w = m_raw_odo.twist.twist.angular.z;
     m_status = UGV::NORMAL;
-  }
-  else
-  {
-    if (m_slam_odo_received)
-      m_ref_theta = get_heading(m_slam_odo);
   }
 }
 //=====================================
@@ -214,7 +208,7 @@ void TEBRefGen::do_normal()
   }
 
   std::vector<Reference> ref;
-  if (m_planner->bestTeb() && m_planner->bestTeb()->get_reference(4,0.05, ref))
+  if (m_planner->bestTeb() && m_planner->bestTeb()->get_reference(4, CTRL_DT, ref))
   {
     m_traj.clear();
     for (Reference r : ref)
@@ -345,18 +339,12 @@ void TEBRefGen::cycle_init()
     return;
 
   cycle_initialized = true;
-  bool is_heading_ref;
-  float psi = select_mes_ref_heading(is_heading_ref,get_heading(m_slam_odo), m_ref_theta, m_tht_err_reset_ctt, 0.25f);
 
-  UGV::UGVModel::State s = predict_state(m_slam_odo,psi,m_ref_start_idx,is_heading_ref);
-
-  s.v = select_mes_ref(m_raw_odo.twist.twist.linear.x, m_ref_v, m_v_err_reset_ctt);
-  s.w = select_mes_ref(m_raw_odo.twist.twist.angular.z, m_ref_w, m_w_err_reset_ctt);
-
+  UGV::UGVModel::State s = m_ref_state;
+  s.s = 0;
   m_ini_state = s;
 
   full_stop_trajectory(m_traj,m_ini_state);
-
 }
 //---
 std::vector<double3> TEBRefGen::get_init_guess()

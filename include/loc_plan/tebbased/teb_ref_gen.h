@@ -138,7 +138,7 @@ private:
 
   UGV::NF1Evaluator::Target m_goal;
   UGV::UGVModel::State m_carrot;
-  float m_ref_v, m_ref_w, m_ref_theta;
+  UGV::UGVModel::State m_ref_state;
   cpc_motion_planning::ref_data m_ref_msg;
   int m_v_err_reset_ctt, m_w_err_reset_ctt, m_tht_err_reset_ctt;
   int m_plan_cycle;
@@ -162,6 +162,12 @@ private:
   TebConfig m_cfg;
   TebVisualizationPtr m_visualization;
   UGV::UGVModel::State m_ini_state;
+  //----------
+  const float SIM_DT = 0.1f;
+  const float CTRL_DT = 0.05f;
+  const int REPLAN_CYCLE = 20;
+  const float REPLAN_DT = REPLAN_CYCLE * CTRL_DT;
+  const int PLAN_CONSUME_CYCLE = 2;
 
 };
 }
