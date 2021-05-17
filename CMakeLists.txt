@@ -198,6 +198,19 @@ target_link_libraries(teb_node
     ${CUDA_LIBRARIES}
     ${catkin_LIBRARIES})
 
+cuda_add_executable(teb_ref_node
+    src/loc_plan/tebbased/teb_ref_gen.cpp
+    src/loc_plan/tebbased/teb_ref_gen_node.cpp
+    src/loc_plan/ugv_base_local_planner.cpp
+    src/pure_pursuit/pure_pursuit_ctrl.cpp
+    src/kernel/pso_kernels.cu)
+
+target_link_libraries(teb_ref_node
+    ${CUDA_curand_LIBRARY}
+    ${CUDA_cublas_LIBRARY}
+    ${CUDA_LIBRARIES}
+    ${catkin_LIBRARIES})
+
 cuda_add_executable(nf1_mid_planning_node
     src/mid_plan/utils/grid_graph.cpp
     src/mid_plan/utils/dijkstra.cpp
@@ -306,6 +319,7 @@ add_dependencies(${PROJECT_NAME}_node ${${PROJECT_NAME}_EXPORTED_TARGETS} ${catk
 add_dependencies(nf1_mid_planning_node ${${PROJECT_NAME}_EXPORTED_TARGETS} ${catkin_EXPORTED_TARGETS})
 add_dependencies(glb_planning_node ${${PROJECT_NAME}_EXPORTED_TARGETS} ${catkin_EXPORTED_TARGETS})
 add_dependencies(teb_node ${${PROJECT_NAME}_EXPORTED_TARGETS} ${catkin_EXPORTED_TARGETS})
+add_dependencies(teb_ref_gen ${${PROJECT_NAME}_EXPORTED_TARGETS} ${catkin_EXPORTED_TARGETS})
 
 #add_dependencies(astar_mid_planning_node ${${PROJECT_NAME}_EXPORTED_TARGETS} ${catkin_EXPORTED_TARGETS})
 #add_dependencies(hybrid_astar_mid_planning_node ${${PROJECT_NAME}_EXPORTED_TARGETS} ${catkin_EXPORTED_TARGETS})
