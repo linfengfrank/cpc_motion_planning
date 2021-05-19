@@ -184,6 +184,19 @@ target_link_libraries(${PROJECT_NAME}_node
     ${CUDA_LIBRARIES}
     ${catkin_LIBRARIES})
 
+cuda_add_executable(pso_mpc_node
+    src/loc_plan/nf1based/pso_mpc.cpp
+    src/loc_plan/nf1based/pso_mpc_node.cpp
+    src/loc_plan/ugv_base_local_planner.cpp
+    src/pure_pursuit/pure_pursuit_ctrl.cpp
+    src/kernel/pso_kernels.cu)
+
+target_link_libraries(pso_mpc_node
+    ${CUDA_curand_LIBRARY}
+    ${CUDA_cublas_LIBRARY}
+    ${CUDA_LIBRARIES}
+    ${catkin_LIBRARIES})
+
 
 cuda_add_executable(teb_node
     src/loc_plan/tebbased/teb_local_planner.cpp
@@ -314,6 +327,7 @@ target_link_libraries(glb_planning_node
 ## Add cmake target dependencies of the executable
 ## same as for the library above
 add_dependencies(${PROJECT_NAME}_node ${${PROJECT_NAME}_EXPORTED_TARGETS} ${catkin_EXPORTED_TARGETS})
+add_dependencies(pso_mpc_node ${${PROJECT_NAME}_EXPORTED_TARGETS} ${catkin_EXPORTED_TARGETS})
 #add_dependencies(corridor_node ${${PROJECT_NAME}_EXPORTED_TARGETS} ${catkin_EXPORTED_TARGETS})
 #add_dependencies(ref_traj_node ${${PROJECT_NAME}_EXPORTED_TARGETS} ${catkin_EXPORTED_TARGETS})
 add_dependencies(nf1_mid_planning_node ${${PROJECT_NAME}_EXPORTED_TARGETS} ${catkin_EXPORTED_TARGETS})

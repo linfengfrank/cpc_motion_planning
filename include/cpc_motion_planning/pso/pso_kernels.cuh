@@ -5,6 +5,7 @@
 #include <cpc_motion_planning/ugv/controller/ugv_jlt_control.h>
 #include <cpc_motion_planning/ugv/swarm/ugv_swarm.h>
 #include <cpc_motion_planning/ugv/evaluator/ugv_nf1_evaluator.h>
+#include <cpc_motion_planning/ugv/evaluator/traj_follow_evaluator.h>
 #include <cpc_motion_planning/ugv/evaluator/ugv_hybrid_evaluator.h>
 #include <cpc_motion_planning/ugv/evaluator/ugv_corridor_evaluator.h>
 #include <cpc_motion_planning/ugv/evaluator/ugv_ref_traj_evaluator.h>

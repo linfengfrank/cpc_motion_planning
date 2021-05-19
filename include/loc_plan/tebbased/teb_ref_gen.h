@@ -1,5 +1,5 @@
-#ifndef UGV_TEB_PLANNER_H
-#define UGV_TEB_PLANNER_H
+#ifndef UGV_TEB_REF_GEN_H
+#define UGV_TEB_REF_GEN_H
 #include <loc_plan/ugv_base_local_planner.h>
 #include <cpc_motion_planning/path.h>
 #include <std_msgs/Int32.h>
@@ -164,7 +164,7 @@ private:
   UGV::UGVModel::State m_ini_state;
   //----------
   const float SIM_DT = 0.1f;
-  const float CTRL_DT = 0.05f;
+  const float CTRL_DT = PSO::PSO_CTRL_DT; // Do not modify this one
   const int REPLAN_CYCLE = 20;
   const float REPLAN_DT = REPLAN_CYCLE * CTRL_DT;
   const int PLAN_CONSUME_CYCLE = 2;
@@ -172,4 +172,4 @@ private:
 };
 }
 
-#endif // UGV_TEB_PLANNER_H
+#endif // UGV_TEB_REF_GEN_H

@@ -38,6 +38,7 @@ TEBRefGen::TEBRefGen():
   m_tgt_reached_pub = m_nh.advertise<std_msgs::Int32MultiArray>("target_reached",1);
   m_stuck_plan_request_pub = m_nh.advertise<cpc_motion_planning::plan_request>("plan_request",1);
   m_drive_dir_pub = m_nh.advertise<std_msgs::Int32>("drive_dir",1);
+  m_traj_pub = m_nh.advertise<PointCloud> ("pred_traj_teb", 1);
 
   m_planning_timer = m_nh.createTimer(ros::Duration(REPLAN_DT), &TEBRefGen::plan_call_back, this);
 
@@ -120,6 +121,9 @@ void TEBRefGen::plan_call_back(const ros::TimerEvent&)
 
   cycle_process_based_on_status();
 
+  if (m_status == UGV::START)
+    return;
+
   int cols = 0;
   int ref_counter = m_ref_start_idx;
   int next_ref_start_idx = (m_plan_cycle+1)*REPLAN_CYCLE+PLAN_CONSUME_CYCLE;
@@ -165,6 +169,7 @@ void TEBRefGen::do_start()
     m_ref_state.v = m_raw_odo.twist.twist.linear.x;
     m_ref_state.w = m_raw_odo.twist.twist.angular.z;
     m_status = UGV::NORMAL;
+    cycle_process_based_on_status();
   }
 }
 //=====================================
@@ -340,9 +345,25 @@ void TEBRefGen::cycle_init()
 
   cycle_initialized = true;
 
-  UGV::UGVModel::State s = m_ref_state;
-  s.s = 0;
-  m_ini_state = s;
+  UGV::UGVModel::State ref_state = m_ref_state;
+  ref_state.s = 0;
+
+  UGV::UGVModel::State true_state;
+  true_state.theta = get_heading(m_slam_odo);
+  true_state.p.x = m_slam_odo.pose.pose.position.x;
+  true_state.p.y = m_slam_odo.pose.pose.position.y;
+  true_state.v = m_raw_odo.twist.twist.linear.x;
+  true_state.w = m_raw_odo.twist.twist.angular.z;
+
+  float2 diff = ref_state.p - true_state.p;
+  float dist = sqrtf(diff.x*diff.x + diff.y*diff.y);
+
+  float angle_diff = fabsf(in_pi(ref_state.theta- true_state.theta));
+
+  if (angle_diff > M_PI/3 || dist > 0.5f)
+    m_ini_state = true_state;
+  else
+    m_ini_state = ref_state;
 
   full_stop_trajectory(m_traj,m_ini_state);
 }

@@ -289,3 +289,7 @@ INST_iterate_particles(UGV::UGVModel, UGV::UGVDPControl, UGV::HybridEvaluator, U
 
 INST_initialize_particles(UGV::UGVModel, UGV::UGVDPControl, UGV::HybridEvaluator, UGV::UGVSwarm<3>);
 INST_iterate_particles(UGV::UGVModel, UGV::UGVDPControl, UGV::HybridEvaluator, UGV::UGVSwarm<3>);
+
+INST_initialize_particles(UGV::UGVModel, UGV::UGVDPControl, UGV::TFEvaluator, UGV::UGVSwarm<8>);
+INST_iterate_particles(UGV::UGVModel, UGV::UGVDPControl, UGV::TFEvaluator, UGV::UGVSwarm<8>);
+INST_iterate_particles_de(UGV::UGVModel, UGV::UGVDPControl, UGV::TFEvaluator, UGV::UGVSwarm<8>);
