@@ -8,7 +8,6 @@
 #include <cpc_motion_planning/ugv/evaluator/traj_follow_evaluator.h>
 #include <cpc_motion_planning/ugv/evaluator/ugv_hybrid_evaluator.h>
 #include <cpc_motion_planning/ugv/evaluator/ugv_corridor_evaluator.h>
-#include <cpc_motion_planning/ugv/evaluator/ugv_ref_traj_evaluator.h>
 #include <cpc_motion_planning/ugv/evaluator/ugv_pp_evaluator.h>
 #include <cuda_geometry/cuda_edtmap.cuh>
 #include "cublas_v2.h"

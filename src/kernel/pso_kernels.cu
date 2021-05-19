@@ -260,35 +260,8 @@ INST_iterate_particles(UGV::UGVModel, UGV::UGVJLTControl, UGV::NF1Evaluator, UGV
 INST_initialize_particles(UGV::UGVModel, UGV::UGVJLTControl, UGV::NF1Evaluator, UGV::UGVSwarm<2>);
 INST_iterate_particles(UGV::UGVModel, UGV::UGVJLTControl, UGV::NF1Evaluator, UGV::UGVSwarm<2>);
 
-INST_initialize_particles(UGV::UGVModel, UGV::UGVDPControl, UGV::CorridorEvaluator, UGV::UGVSwarm<2>);
-INST_iterate_particles(UGV::UGVModel, UGV::UGVDPControl, UGV::CorridorEvaluator, UGV::UGVSwarm<2>);
-
-INST_initialize_particles(UGV::UGVModel, UGV::UGVDPControl, UGV::RefTrajEvaluator, UGV::UGVSwarm<2>);
-INST_iterate_particles(UGV::UGVModel, UGV::UGVDPControl, UGV::RefTrajEvaluator, UGV::UGVSwarm<2>);
-
-INST_initialize_particles(UGV::UGVModel, UGV::UGVDPControl, UGV::CorridorEvaluator, UGV::UGVSwarm<3>);
-INST_iterate_particles(UGV::UGVModel, UGV::UGVDPControl, UGV::CorridorEvaluator, UGV::UGVSwarm<3>);
-
-INST_initialize_particles(UGV::UGVModel, UGV::UGVDPControl, UGV::RefTrajEvaluator, UGV::UGVSwarm<3>);
-INST_iterate_particles(UGV::UGVModel, UGV::UGVDPControl, UGV::RefTrajEvaluator, UGV::UGVSwarm<3>);
-
-INST_initialize_particles(UGV::UGVModel, UGV::UGVDPControl, UGV::RefTrajEvaluator, UGV::UGVSwarm<4>);
-INST_iterate_particles(UGV::UGVModel, UGV::UGVDPControl, UGV::RefTrajEvaluator, UGV::UGVSwarm<4>);
-
-INST_initialize_particles(UGV::UGVModel, UGV::UGVDPControl, UGV::RefTrajEvaluator, UGV::UGVSwarm<1>);
-INST_iterate_particles(UGV::UGVModel, UGV::UGVDPControl, UGV::RefTrajEvaluator, UGV::UGVSwarm<1>);
-
 INST_initialize_particles(UGV::UGVModel, UGV::UGVDPControl, UGV::PPEvaluator, UGV::UGVSwarm<8>);
 INST_iterate_particles(UGV::UGVModel, UGV::UGVDPControl, UGV::PPEvaluator, UGV::UGVSwarm<8>);
-
-INST_initialize_particles(UGV::UGVModel, UGV::UGVDPControl, UGV::HybridEvaluator, UGV::UGVSwarm<1>);
-INST_iterate_particles(UGV::UGVModel, UGV::UGVDPControl, UGV::HybridEvaluator, UGV::UGVSwarm<1>);
-
-INST_initialize_particles(UGV::UGVModel, UGV::UGVDPControl, UGV::HybridEvaluator, UGV::UGVSwarm<2>);
-INST_iterate_particles(UGV::UGVModel, UGV::UGVDPControl, UGV::HybridEvaluator, UGV::UGVSwarm<2>);
-
-INST_initialize_particles(UGV::UGVModel, UGV::UGVDPControl, UGV::HybridEvaluator, UGV::UGVSwarm<3>);
-INST_iterate_particles(UGV::UGVModel, UGV::UGVDPControl, UGV::HybridEvaluator, UGV::UGVSwarm<3>);
 
 INST_initialize_particles(UGV::UGVModel, UGV::UGVDPControl, UGV::TFEvaluator, UGV::UGVSwarm<8>);
 INST_iterate_particles(UGV::UGVModel, UGV::UGVDPControl, UGV::TFEvaluator, UGV::UGVSwarm<8>);
