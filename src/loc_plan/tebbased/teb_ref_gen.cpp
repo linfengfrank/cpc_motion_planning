@@ -34,12 +34,9 @@ TEBRefGen::TEBRefGen():
   m_nf1_sub = m_nh.subscribe("/nf1",1,&TEBRefGen::nf1_call_back, this);
   m_force_reset_sub = m_nh.subscribe("force_reset_state",1,&TEBRefGen::force_reset_callback,this);
 
-  m_collision_check_client = m_nh.serviceClient<cpc_motion_planning::collision_check>("collision_check");
   m_ref_pub = m_nh.advertise<cpc_motion_planning::ref_data>("pure_ref_traj",1);
-  m_status_pub = m_nh.advertise<std_msgs::String>("ref_status_string",1);
+  m_status_pub = m_nh.advertise<std_msgs::String>("teb_ref_status_string",1);
   m_tgt_reached_pub = m_nh.advertise<std_msgs::Int32MultiArray>("target_reached",1);
-  m_stuck_plan_request_pub = m_nh.advertise<cpc_motion_planning::plan_request>("plan_request",1);
-  m_drive_dir_pub = m_nh.advertise<std_msgs::Int32>("drive_dir",1);
   m_traj_pub = m_nh.advertise<PointCloud> ("pred_traj_teb", 1);
 
   m_planning_timer = m_nh.createTimer(ros::Duration(REPLAN_DT), &TEBRefGen::plan_call_back, this);
@@ -47,7 +44,6 @@ TEBRefGen::TEBRefGen():
   m_v_err_reset_ctt = 0;
   m_w_err_reset_ctt = 0;
   m_tht_err_reset_ctt = 0;
-  m_stuck_recover_path.request_ctt = -1;
   //Initialize the control message
   m_ref_msg.rows = 5;
   m_plan_cycle = 0;

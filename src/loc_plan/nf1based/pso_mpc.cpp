@@ -8,10 +8,8 @@
 
 PsoMpc::PsoMpc():
   m_goal_received(false),
-  m_task_is_new(false),
   cycle_initialized(false),
-  m_braking_start_cycle(0),
-  m_nf1_map(nullptr)
+  m_braking_start_cycle(0)
 {
   std::string dp_file_location;
   float var_s, var_theta, step_dt, local_safety_radius;
@@ -31,11 +29,8 @@ PsoMpc::PsoMpc():
 
   m_ref_traj_sub = m_nh.subscribe("/pure_ref_traj",1,&PsoMpc::ref_traj_callback, this);
 
-  m_collision_check_client = m_nh.serviceClient<cpc_motion_planning::collision_check>("collision_check");
   m_ref_pub = m_nh.advertise<cpc_motion_planning::ref_data>("ref_traj",1);
-  m_status_pub = m_nh.advertise<std_msgs::String>("ref_status_string",1);
-  m_tgt_reached_pub = m_nh.advertise<std_msgs::Int32MultiArray>("target_reached",1);
-  m_stuck_plan_request_pub = m_nh.advertise<cpc_motion_planning::plan_request>("plan_request",1);
+  m_status_pub = m_nh.advertise<std_msgs::String>("pso_mpc_status_string",1);
   m_force_reset_pub = m_nh.advertise<std_msgs::Int32>("force_reset_state",1);
 
   m_planning_timer = m_nh.createTimer(ros::Duration(PSO::PSO_REPLAN_DT), &PsoMpc::plan_call_back, this);
@@ -47,7 +42,6 @@ PsoMpc::PsoMpc():
   m_pso_planner->m_eva.m_safety_radius = local_safety_radius;
   m_pso_planner->m_file_location = dp_file_location;
   m_pso_planner->initialize();
-  m_recover_planner.init_swarm(step_num, step_dt, var_s, var_theta, dp_file_location);
 
   m_ref_v = 0.0f;
   m_ref_w = 0.0f;
@@ -56,7 +50,6 @@ PsoMpc::PsoMpc():
   m_v_err_reset_ctt = 0;
   m_w_err_reset_ctt = 0;
   m_tht_err_reset_ctt = 0;
-  m_stuck_recover_path.request_ctt = -1;
   //Initialize the control message
   m_ref_msg.rows = 5;
   m_plan_cycle = 0;
@@ -187,7 +180,6 @@ void PsoMpc::do_normal()
       m_status = UGV::STUCK;
       m_stuck_submode = STUCK_SUB_MODE::FULL_STUCK;
       m_stuck_start_cycle = m_plan_cycle;
-      m_plan_request_cycle = m_plan_cycle;
       m_full_start_cycle = m_plan_cycle;
     }
   }
@@ -267,41 +259,18 @@ void PsoMpc::do_pos_reached()
 {
   cycle_init();
   std::cout<<"POS_REACHED"<<std::endl;
-
-  full_stop_trajectory(m_traj,m_pso_planner->m_model.get_ini_state());
-
-  //Goto: Normal (New target)
-  if (m_task_is_new)
-  {
-    m_status = UGV::NORMAL;
-  }
 }
 //=====================================
 void PsoMpc::do_fully_reached()
 {
   cycle_init();
   std::cout<<"FULLY_REACHED"<<std::endl;
-
-  // Planing
-  full_stop_trajectory(m_traj,m_pso_planner->m_model.get_ini_state());
-
-  //Go to the dropoff state
-  m_status = UGV::DROPOFF;
 }
 //=====================================
 void PsoMpc::do_dropoff()
 {
   cycle_init();
   std::cout<<"DROPOFF"<<std::endl;
-
-  // Planing
-  full_stop_trajectory(m_traj,m_pso_planner->m_model.get_ini_state());
-
-  //Goto: Normal (New target)
-  if (m_task_is_new)
-  {
-    m_status = UGV::NORMAL;
-  }
 }
 //=====================================
 void PsoMpc::cycle_init()

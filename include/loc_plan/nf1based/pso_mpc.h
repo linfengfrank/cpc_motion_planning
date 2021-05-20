@@ -89,12 +89,9 @@ private:
   ros::Timer m_planning_timer;
   ros::Publisher m_ref_pub;
   ros::Publisher m_status_pub;
-  ros::Publisher m_tgt_reached_pub;
-  ros::Publisher m_stuck_plan_request_pub;
   ros::Publisher m_force_reset_pub;
 
   bool m_goal_received;
-  bool m_task_is_new;
   bool m_use_de;
   PSO::Planner<PSO_MPC_UGV> *m_pso_planner;
   UGV::UGVModel::State m_carrot;
@@ -108,14 +105,9 @@ private:
   int m_braking_start_cycle;
   int m_stuck_start_cycle;
   int m_full_start_cycle;
-  int m_plan_request_cycle;
   int m_swarm_size;
   int m_batch_num;
   int m_episode_num;
-  NF1MapDT *m_nf1_map;
-  cpc_motion_planning::path m_stuck_recover_path;
-  UGVRecMotionPlanner m_recover_planner;
-  ros::ServiceClient m_collision_check_client;
   STUCK_SUB_MODE m_stuck_submode;
   std::deque<ref_state> m_ref_queue;
 };

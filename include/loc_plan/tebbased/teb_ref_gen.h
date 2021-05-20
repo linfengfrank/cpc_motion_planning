@@ -126,13 +126,10 @@ private:
 private:
   ros::Subscriber m_nf1_sub;
   ros::Subscriber m_force_reset_sub;
-  ros::Subscriber m_hybrid_path_sub;
   ros::Timer m_planning_timer;
   ros::Publisher m_ref_pub;
   ros::Publisher m_status_pub;
   ros::Publisher m_tgt_reached_pub;
-  ros::Publisher m_stuck_plan_request_pub;
-  ros::Publisher m_drive_dir_pub;
 
   bool m_goal_received;
   bool m_task_is_new;
@@ -150,13 +147,10 @@ private:
   int m_braking_start_cycle;
   int m_stuck_start_cycle;
   int m_full_start_cycle;
-  int m_plan_request_cycle;
   int m_swarm_size;
   int m_batch_num;
   int m_episode_num;
   NF1MapDT *m_nf1_map;
-  cpc_motion_planning::path m_stuck_recover_path;
-  ros::ServiceClient m_collision_check_client;
   STUCK_SUB_MODE m_stuck_submode;
   bool m_force_reset;
 
@@ -166,7 +160,6 @@ private:
   TebVisualizationPtr m_visualization;
   UGV::UGVModel::State m_ini_state;
   //----------
-  const float SIM_DT = 0.1f;
   const float CTRL_DT = PSO::PSO_CTRL_DT; // Do not modify this one
   const int REPLAN_CYCLE = 20;
   const float REPLAN_DT = REPLAN_CYCLE * CTRL_DT;
