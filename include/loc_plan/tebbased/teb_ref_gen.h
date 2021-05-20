@@ -38,6 +38,7 @@ private:
   void do_recover();
   void do_full_stuck();
 private:
+  void force_reset_callback(const std_msgs::Int32::ConstPtr &msg);
   void plan_call_back(const ros::TimerEvent&);
   void nf1_call_back(const cpc_aux_mapping::nf1_task::ConstPtr &msg);
   void cycle_init();
@@ -124,6 +125,7 @@ private:
 
 private:
   ros::Subscriber m_nf1_sub;
+  ros::Subscriber m_force_reset_sub;
   ros::Subscriber m_hybrid_path_sub;
   ros::Timer m_planning_timer;
   ros::Publisher m_ref_pub;
@@ -156,6 +158,7 @@ private:
   cpc_motion_planning::path m_stuck_recover_path;
   ros::ServiceClient m_collision_check_client;
   STUCK_SUB_MODE m_stuck_submode;
+  bool m_force_reset;
 
   //----------
   HomotopyClassPlannerPtr m_planner;

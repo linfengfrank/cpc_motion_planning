@@ -12,7 +12,8 @@ TEBRefGen::TEBRefGen():
   m_task_is_new(false),
   cycle_initialized(false),
   m_braking_start_cycle(0),
-  m_nf1_map(nullptr)
+  m_nf1_map(nullptr),
+  m_force_reset(false)
 {
   std::string dp_file_location;
   float var_s, var_theta, step_dt, local_safety_radius;
@@ -31,6 +32,7 @@ TEBRefGen::TEBRefGen():
   m_nh.param<float>("/local_safety_radius",local_safety_radius,0.401f);
 
   m_nf1_sub = m_nh.subscribe("/nf1",1,&TEBRefGen::nf1_call_back, this);
+  m_force_reset_sub = m_nh.subscribe("force_reset_state",1,&TEBRefGen::force_reset_callback,this);
 
   m_collision_check_client = m_nh.serviceClient<cpc_motion_planning::collision_check>("collision_check");
   m_ref_pub = m_nh.advertise<cpc_motion_planning::ref_data>("pure_ref_traj",1);
@@ -67,6 +69,11 @@ TEBRefGen::TEBRefGen():
 TEBRefGen::~TEBRefGen()
 {
 
+}
+
+void TEBRefGen::force_reset_callback(const std_msgs::Int32::ConstPtr &msg)
+{
+  m_force_reset = true;
 }
 
 void TEBRefGen::nf1_call_back(const cpc_aux_mapping::nf1_task::ConstPtr &msg)
@@ -146,6 +153,10 @@ void TEBRefGen::plan_call_back(const ros::TimerEvent&)
   m_ref_start_idx = next_ref_start_idx;
 
   m_ref_msg.cols = cols;
+
+  m_ref_msg.carrot_x = m_carrot.p.x;
+  m_ref_msg.carrot_y = m_carrot.p.y;
+  m_ref_msg.carrot_theta = m_carrot.theta;
   m_ref_pub.publish(m_ref_msg);
   update_reference_log(m_ref_msg,curr_t);
 
@@ -364,6 +375,12 @@ void TEBRefGen::cycle_init()
     m_ini_state = true_state;
   else
     m_ini_state = ref_state;
+
+  if(m_force_reset)
+  {
+    m_force_reset = false;
+    m_ini_state = true_state;
+  }
 
   full_stop_trajectory(m_traj,m_ini_state);
 }

@@ -36,7 +36,7 @@ PsoMpc::PsoMpc():
   m_status_pub = m_nh.advertise<std_msgs::String>("ref_status_string",1);
   m_tgt_reached_pub = m_nh.advertise<std_msgs::Int32MultiArray>("target_reached",1);
   m_stuck_plan_request_pub = m_nh.advertise<cpc_motion_planning::plan_request>("plan_request",1);
-  m_drive_dir_pub = m_nh.advertise<std_msgs::Int32>("drive_dir",1);
+  m_force_reset_pub = m_nh.advertise<std_msgs::Int32>("force_reset_state",1);
 
   m_planning_timer = m_nh.createTimer(ros::Duration(PSO::PSO_REPLAN_DT), &PsoMpc::plan_call_back, this);
 
@@ -44,7 +44,6 @@ PsoMpc::PsoMpc():
   // Init swarm
   m_pso_planner->m_swarm.set_step_dt(step_num, step_dt);
   m_pso_planner->m_swarm.set_var(make_float3(var_s,var_theta,1.0f));
-  m_pso_planner->m_eva.m_using_auto_direction = use_auto_direction;
   m_pso_planner->m_eva.m_safety_radius = local_safety_radius;
   m_pso_planner->m_file_location = dp_file_location;
   m_pso_planner->initialize();
@@ -75,6 +74,9 @@ PsoMpc::~PsoMpc()
 void PsoMpc::ref_traj_callback(const cpc_motion_planning::ref_data::ConstPtr &msg)
 {
   m_goal_received = true;
+  m_carrot.p.x = msg->carrot_x;
+  m_carrot.p.y = msg->carrot_y;
+  m_carrot.theta = msg->carrot_theta;
   set_ref_to_queue(msg, m_ref_queue);
 }
 
@@ -152,13 +154,43 @@ void PsoMpc::do_normal()
       break;
   }
 
-  for (int i=0;i<40;i++)
+  //check the size of the ref_queue
+  if(m_ref_queue.size()<40)
   {
-    m_pso_planner->m_eva.m_ref[i] = make_float3(m_ref_queue[i].data[3],m_ref_queue[i].data[4],m_ref_queue[i].data[2]);
+    m_braking_start_cycle = m_plan_cycle;
+    m_status = UGV::BRAKING;
+    cycle_process_based_on_status();
+  }
+  else
+  {
+    for (int i=0;i<40;i++)
+    {
+      m_pso_planner->m_eva.m_ref[i] = make_float3(m_ref_queue[i].data[3],m_ref_queue[i].data[4],m_ref_queue[i].data[2]);
+    }
+
+  //Planning
+    calculate_trajectory<PSO_MPC_UGV>(m_pso_planner, m_traj, m_use_de);
   }
 
-//Planning
-  calculate_trajectory<PSO_MPC_UGV>(m_pso_planner, m_traj, m_use_de);
+  //Goto: Braking
+  if (m_pso_planner->result.collision)
+  {
+    m_braking_start_cycle = m_plan_cycle;
+    m_status = UGV::BRAKING;
+    cycle_process_based_on_status();
+  }
+  else
+  {
+    //Goto: Stuck
+    if(is_stuck_lowpass(m_pso_planner->m_model.get_ini_state(),m_carrot))
+    {
+      m_status = UGV::STUCK;
+      m_stuck_submode = STUCK_SUB_MODE::FULL_STUCK;
+      m_stuck_start_cycle = m_plan_cycle;
+      m_plan_request_cycle = m_plan_cycle;
+      m_full_start_cycle = m_plan_cycle;
+    }
+  }
 
 }
 //=====================================
@@ -201,6 +233,8 @@ void PsoMpc::do_full_stuck()
   //Goto: Normal
   if (m_plan_cycle - m_full_start_cycle >= 10)
   {
+    std_msgs::Int32 force_reset;
+    m_force_reset_pub.publish(force_reset);
     m_status = UGV::NORMAL;
     m_pso_planner->m_eva.m_stuck = false;
   }
@@ -274,12 +308,6 @@ void PsoMpc::cycle_init()
 {
   if (cycle_initialized)
     return;
-
-  float2 diff = m_goal.s.p - m_carrot.p;
-  if (sqrtf(dot(diff,diff)) <= 2*m_edt_map->m_grid_step)
-    m_pso_planner->m_eva.m_accurate_reaching = true;
-  else
-    m_pso_planner->m_eva.m_accurate_reaching = false;
 
   cycle_initialized = true;
   bool is_heading_ref;

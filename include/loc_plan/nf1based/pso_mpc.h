@@ -91,13 +91,12 @@ private:
   ros::Publisher m_status_pub;
   ros::Publisher m_tgt_reached_pub;
   ros::Publisher m_stuck_plan_request_pub;
-  ros::Publisher m_drive_dir_pub;
+  ros::Publisher m_force_reset_pub;
 
   bool m_goal_received;
   bool m_task_is_new;
   bool m_use_de;
   PSO::Planner<PSO_MPC_UGV> *m_pso_planner;
-  UGV::NF1Evaluator::Target m_goal;
   UGV::UGVModel::State m_carrot;
   float m_ref_v, m_ref_w, m_ref_theta;
   cpc_motion_planning::ref_data m_ref_msg;

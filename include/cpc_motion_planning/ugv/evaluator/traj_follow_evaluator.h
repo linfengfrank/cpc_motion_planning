@@ -26,24 +26,13 @@ public:
 
   TFEvaluator()
   {
-    m_accurate_reaching = false;
-    is_forward = true;
-    m_pure_turning = false;
-    m_nf1_received = false;
     m_stuck = false;
-    m_using_auto_direction = false;
     m_safety_radius = 0.401f;
   }
 
   ~TFEvaluator()
   {
 
-  }
-
-  __host__ __device__
-  void setTarget(const Target &goal)
-  {
-    m_goal = goal;
   }
 
   __host__ __device__
@@ -98,11 +87,8 @@ public:
   {
     float cost = 0;
 
-    if (m_using_auto_direction)
-      is_forward = data.is_forward;
-
     float rd = getMinDist(s,map);
-    //cost += expf(-9.5f*rd)*10;
+    cost += expf(-9.5f*rd)*10;
 
     if (rd < m_safety_radius)
       cost += (1000 + expf(-4.5f*rd)*1000);
@@ -114,22 +100,29 @@ public:
 
     data.min_dist = rd;
 
-    // Get the time
-    int idx = time/PSO::PSO_CTRL_DT;
-    if (idx <0 || idx >=40)
-      return 0;
+    if (m_stuck)
+    {
+      //stuck mode, encourage random move to get out of stuck
+      cost += 2.0f*fabsf(fabsf(s.v) - 0.3f) + 0.5f*fabsf(fabsf(s.w) - 0.2f);// + 0.02f*nf_cost;
+    }
+    else
+    {
+      // Get the time
+      int idx = time/PSO::PSO_CTRL_DT;
+      if (!(idx <0 || idx >=40))
+      {
+        float3 ref = m_ref[idx];
+        //position diff
+        cost += 1.0*((s.p.x - ref.x)*(s.p.x - ref.x) + (s.p.y - ref.y)*(s.p.y - ref.y));
 
-    float3 ref = m_ref[idx];
-    //position diff
-    cost += 1.0*((s.p.x - ref.x)*(s.p.x - ref.x) + (s.p.y - ref.y)*(s.p.y - ref.y));
-
-    //yaw angle diff
-    float yaw_diff = s.theta - ref.z;
-    yaw_diff = yaw_diff - floorf((yaw_diff + CUDA_F_PI) / (2 * CUDA_F_PI)) * 2 * CUDA_F_PI;
-    cost += 0.5f*yaw_diff*yaw_diff;
-
-    //control cost
-    cost += 0.2f*s.w*s.w;
+        //yaw angle diff
+        float yaw_diff = s.theta - ref.z;
+        yaw_diff = yaw_diff - floorf((yaw_diff + CUDA_F_PI) / (2 * CUDA_F_PI)) * 2 * CUDA_F_PI;
+        cost += 0.5f*yaw_diff*yaw_diff;
+      }
+      //control cost
+      cost += 0.2f*s.w*s.w;
+    }
 
     return  cost;
   }
@@ -142,14 +135,8 @@ public:
     return  cost;
   }
 
-  bool m_accurate_reaching;
-  Target m_goal;
-  mutable bool is_forward;
-  bool m_pure_turning;
   bool m_stuck;
   float3 m_ref[40];
-  bool m_nf1_received;
-  bool m_using_auto_direction;
   float m_safety_radius;
 };
 }
