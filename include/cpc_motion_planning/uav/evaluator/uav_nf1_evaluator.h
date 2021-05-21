@@ -81,7 +81,7 @@ public:
           float theta = atan2f(diff.y,diff.x);
           theta -= m_curr_yaw;
           theta = theta - floorf((theta + M_PI) / (2 * M_PI)) * 2 * M_PI;
-          if (fabsf(theta) > M_PI*0.25f)
+          if (fabsf(theta) > M_PI*0.2f)
               cost += 100;
       }
     }

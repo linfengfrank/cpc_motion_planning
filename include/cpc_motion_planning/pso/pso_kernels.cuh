@@ -36,8 +36,9 @@ void copy_best_values(float *best_values, const Swarm &sw);
 template<class Swarm>
 void update_glb_best(int sw_best_idx, const Swarm &sw);
 
-////---------
-//float evaluate_trajectory_wrapper(const State &s0, const Trace &tr, VoidPtrCarrier ptr_car,const UniformBinCarrier &ubc,
-//               const EDTMap &map, const Trace &last_tr);
+//---------
+template<class Model, class Controller, class Evaluator, class Swarm>
+float evaluate_particle(const typename Swarm::Particle &ptc, const EDTMap &map, const Evaluator &eva, const Model &m, const Controller &ctrl, const Swarm &sw);
+
 }
 #endif // PSO_KERNELS_CUH

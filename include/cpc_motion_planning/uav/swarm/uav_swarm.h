@@ -140,9 +140,9 @@ public:
   {
     for (int n = 0; n < STEP; n++)
     {
-      PSO::bound_between(p.curr_loc.site[n].x,  s_ini.p.x-9.0f,  s_ini.p.x+9.0f);
-      PSO::bound_between(p.curr_loc.site[n].y,  s_ini.p.y-9.0f,  s_ini.p.y+9.0f);
-      PSO::bound_between(p.curr_loc.site[n].z,  s_ini.p.z-9.0f,  s_ini.p.z+9.0f);
+      PSO::bound_between(p.curr_loc.site[n].x,  s_ini.p.x-6.0f,  s_ini.p.x+6.0f);
+      PSO::bound_between(p.curr_loc.site[n].y,  s_ini.p.y-6.0f,  s_ini.p.y+6.0f);
+      PSO::bound_between(p.curr_loc.site[n].z,  s_ini.p.z-6.0f,  s_ini.p.z+6.0f);
       PSO::bound_between(p.curr_loc.site[n].z,  1.9f,  2.01f);
     }
   }

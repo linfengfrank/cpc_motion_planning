@@ -65,6 +65,14 @@ void iterate_particles_kernel(float weight,
   }
 }
 
+//---
+template<class Model, class Controller, class Evaluator, class Swarm>
+__global__
+void evaluate_ptcl_kernel(typename Swarm::Particle ptc, float* cost, EDTMap map, Evaluator eva, Model m, Controller ctrl, Swarm sw)
+{
+  *cost = ctrl.template simulate_evaluate<Model,Evaluator,Swarm>(map,eva,m,sw,ptc.curr_loc, ptc.collision);
+}
+
 //---------
 template<class Swarm>
 __global__
@@ -126,13 +134,16 @@ void update_glb_best(int sw_best_idx, const Swarm &sw)
   update_glb_best_kernel<Swarm><<<1,1>>>(sw_best_idx,sw);
 }
 
-//float evaluate_trajectory_wrapper(const UAVModel::State &s0, const Trace &tr, VoidPtrCarrier ptr_car,const UniformBinCarrier &ubc,
-//               const EDTMap &map, const Trace &last_tr)
-//{
-//  return 0;
-////  return evaluate_trajectory(s0, goal, tr, ptr_car,ubc,
-////                             map, last_tr);
-//}
+template<class Model, class Controller, class Evaluator, class Swarm>
+float evaluate_particle(const typename Swarm::Particle &ptc, const EDTMap &map, const Evaluator &eva, const Model &m, const Controller &ctrl, const Swarm &sw)
+{
+  float *cost_dev, cost_hst;
+  CUDA_ALLOC_DEV_MEM(&cost_dev, sizeof (float));
+  evaluate_ptcl_kernel<Model,Controller,Evaluator,Swarm><<<1,1>>>(ptc,cost_dev,map,eva,m,ctrl,sw);
+  CUDA_MEMCPY_D2H(&cost_hst,cost_dev,sizeof(float));
+  CUDA_FREE_DEV_MEM(cost_dev);
+  return cost_hst;
+}
 
 }
 
@@ -140,7 +151,9 @@ void update_glb_best(int sw_best_idx, const Swarm &sw)
 (bool, const EDTMap&, const E&, const M&, const C& , const S&);
 
 #define INST_iterate_particles(M,C,E,S) template void PSO::iterate_particles< M,C,E,S > \
-(float, const EDTMap&, const E&, const M&, const C& , const S&);
+(float, const EDTMap&, const E&, const M&, const C& , const S&); \
+template float PSO::evaluate_particle< M,C,E,S > \
+(const typename S::Particle&, const EDTMap&, const E&, const M&, const C& , const S&);
 
 #define INST_setup_random_states(S) template void PSO::setup_random_states< S > \
 (const S&);

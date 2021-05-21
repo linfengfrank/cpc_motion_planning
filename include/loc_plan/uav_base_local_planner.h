@@ -36,12 +36,12 @@ public:
   UAVHeadingSolver()
   {
     m_yaw_target = 0;
-    m_yaw_limit.vMax = 1;
-    m_yaw_limit.vMin = -1;
-    m_yaw_limit.aMax = 2;
-    m_yaw_limit.aMin = -2;
-    m_yaw_limit.jMax = 2;
-    m_yaw_limit.jMin = -2;
+    m_yaw_limit.vMax = 2.0;
+    m_yaw_limit.vMin = -2.0;
+    m_yaw_limit.aMax = 6;
+    m_yaw_limit.aMin = -6;
+    m_yaw_limit.jMax = 10;
+    m_yaw_limit.jMin = -10;
   }
   ~UAVHeadingSolver()
   {
@@ -53,7 +53,7 @@ public:
     float3 diff = pnt - s.p;
     diff.z = 0;
     float dist = sqrtf(dot(diff,diff));
-    if (dist > 0.5f)
+    if (dist > 0.2f)
     {
       m_yaw_target = atan2f(diff.y,diff.x);
       m_yaw_target = m_yaw_target - m_yaw_state.p;

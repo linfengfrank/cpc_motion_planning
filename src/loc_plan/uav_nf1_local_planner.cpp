@@ -20,7 +20,7 @@ UAVNF1MotionPlanner::UAVNF1MotionPlanner():
 
   m_planning_timer = m_nh.createTimer(ros::Duration(PSO::PSO_REPLAN_DT), &UAVNF1MotionPlanner::plan_call_back, this);
 
-  m_pso_planner = new PSO::Planner<SIMPLE_UAV_NF1>(150,30,1);
+  m_pso_planner = new PSO::Planner<SIMPLE_UAV_NF1>(128,20,1);
   m_pso_planner->initialize();
 
   m_emergent_planner = new PSO::Planner<EMERGENT_UAV_NF1>(50,20,1);
@@ -141,8 +141,13 @@ void UAVNF1MotionPlanner::do_taking_off()
 
 void UAVNF1MotionPlanner::do_in_air()
 {
+
+  std::vector<UAV::UAVModel::State> t_1,t_2;
+  UAV::UAVSwarm<1>::Particle p_1, p_2;
+  float c_1, c_2, tht_1, tht_2;
   auto start = std::chrono::steady_clock::now();
-  calculate_trajectory<SIMPLE_UAV_NF1>(m_pso_planner,m_traj);
+  calculate_trajectory<SIMPLE_UAV_NF1>(m_pso_planner,t_1);
+  p_1 = m_pso_planner->result;
   if (m_pso_planner->result.collision)
   {
     m_fly_status = UAV::EMERGENT;
@@ -150,13 +155,45 @@ void UAVNF1MotionPlanner::do_in_air()
   }
   else
   {
-    m_head_sov.cal_yaw_target(m_pso_planner->result.best_loc[0], m_curr_ref);
+//    m_head_sov.cal_yaw_target(m_pso_planner->result.best_loc[0], m_curr_ref);
+//    m_yaw_traj = m_head_sov.generate_yaw_traj();
+//    if(is_stuck(m_traj, m_yaw_traj, m_pso_planner->result.best_cost))
+//    {
+//      m_fly_status = UAV::STUCK;
+//      cycle_process_based_on_status();
+//    }
+
+    bool old_redord = m_pso_planner->m_eva.m_fov;
+    m_pso_planner->m_eva.m_fov = false;
+
+    calculate_trajectory<SIMPLE_UAV_NF1>(m_pso_planner,t_2);
+    p_2 = m_pso_planner->result;
+    c_1 = m_pso_planner->evaluate_ptcl(p_1, *m_edt_map);
+    c_2 = p_2.best_cost;
+
+    m_head_sov.cal_yaw_target(t_1[20].p, m_curr_ref);
+    tht_1 = m_head_sov.get_yaw_target() - m_pso_planner->m_eva.m_curr_yaw;
+    tht_1 = tht_1 - floorf((tht_1 + M_PI) / (2 * M_PI)) * 2 * M_PI;
+
+    m_head_sov.cal_yaw_target(t_2[20].p, m_curr_ref);
+    tht_2 = m_head_sov.get_yaw_target() - m_pso_planner->m_eva.m_curr_yaw;
+    tht_2 = tht_2 - floorf((tht_2 + M_PI) / (2 * M_PI)) * 2 * M_PI;
+    m_pso_planner->m_eva.m_fov = old_redord;
+
+    //std::cout<<c_1<<" "<<fabsf(tht_1)<<" "<<c_2<<" "<<fabsf(tht_2)<<std::endl;
+    m_traj = t_1;
+    if (c_1 + 8*fabsf(tht_1) < c_2 + 8*fabsf(tht_2))
+      m_head_sov.cal_yaw_target(t_1[20].p, m_curr_ref);
+    else
+      m_head_sov.cal_yaw_target(t_2[20].p, m_curr_ref);
+
     m_yaw_traj = m_head_sov.generate_yaw_traj();
-    if(is_stuck(m_traj, m_yaw_traj, m_pso_planner->result.best_cost))
-    {
-      m_fly_status = UAV::STUCK;
-      cycle_process_based_on_status();
-    }
+
+
+//    std::cout<<"guiding target: "<<m_pso_planner->result.best_loc[0].x<<" "<<m_pso_planner->result.best_loc[0].y<<std::endl;
+//    std::cout<<"yaw target: "<<m_head_sov.get_yaw_target()<<std::endl;
+//    m_head_sov.cal_yaw_target(t_traj[20].p, m_curr_ref);
+//    m_yaw_traj = m_head_sov.generate_yaw_traj();
   }
   auto end = std::chrono::steady_clock::now();
   std::cout << "local planner: "

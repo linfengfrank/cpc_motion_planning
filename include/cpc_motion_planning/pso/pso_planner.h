@@ -110,6 +110,11 @@ public:
     cublasDestroy(m_cbls_hdl);
   }
 
+  float evaluate_ptcl(const typename Swarm::Particle &ptcl, const EDTMap &map)
+  {
+    return evaluate_particle<Model, Controller, Evaluator,Swarm>(ptcl, map, m_eva,m_model,m_ctrl_dev,m_swarm);
+  }
+
 public:
   CUDA_MAT::CudaMatrixFactory m_factory;
   float *m_best_values; // A fix to use cublas
