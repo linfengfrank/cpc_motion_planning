@@ -376,7 +376,7 @@ int main(int argc, char **argv)
 
   *pc_pub = nh.advertise<PointCloud> ("/path", 1);
   *mid_goal_pub = nh.advertise<PointCloud> ("/mid_goal", 1);
-  *point_pub = nh.advertise<geometry_msgs::PoseStamped>("/mid_layer/goal",1);
+  *point_pub = nh.advertise<geometry_msgs::PoseStamped>("mid_layer/goal",1);
 
   pclOut->header.frame_id = "/world";
   nh.param<float>("/nndp_cpp/fly_height",FLY_HEIGHT,2.0);

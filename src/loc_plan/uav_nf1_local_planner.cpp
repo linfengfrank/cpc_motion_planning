@@ -111,6 +111,8 @@ void UAVNF1MotionPlanner::goal_call_back(const cpc_aux_mapping::grid_map::ConstP
 
 void UAVNF1MotionPlanner::do_at_ground()
 {
+    std::cout <<m_pose_received<<","<<m_received_map<<","<<m_goal_received<<std::endl;
+
   if (m_pose_received && m_received_map && m_goal_received)
   {
     std_srvs::Empty::Request eReq;
