@@ -34,7 +34,7 @@ TEBRefGen::TEBRefGen():
   m_nf1_sub = m_nh.subscribe("/nf1",1,&TEBRefGen::nf1_call_back, this);
   m_force_reset_sub = m_nh.subscribe("force_reset_state",1,&TEBRefGen::force_reset_callback,this);
 
-  m_ref_pub = m_nh.advertise<cpc_motion_planning::ref_data>("pure_ref_traj",1);
+  m_ref_pub = m_nh.advertise<cpc_motion_planning::ref_data>("ref_traj",1);
   m_status_pub = m_nh.advertise<std_msgs::String>("teb_ref_status_string",1);
   m_tgt_reached_pub = m_nh.advertise<std_msgs::Int32MultiArray>("target_reached",1);
   m_traj_pub = m_nh.advertise<PointCloud> ("pred_traj_teb", 1);
