@@ -217,8 +217,9 @@ void TEBLocalPlanner::do_normal()
   if (m_planner->bestTeb() && m_planner->bestTeb()->get_reference(4,0.05, ref))
   {
     m_traj.clear();
-    for (Reference r : ref)
+    for(size_t i = 1; i<ref.size(); i++)
     {
+      Reference r = ref[i];
       UGV::UGVModel::State s;
       s.p.x = r.pose.x();
       s.p.y = r.pose.y();

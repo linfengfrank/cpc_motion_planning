@@ -163,7 +163,7 @@ private:
   const float CTRL_DT = PSO::PSO_CTRL_DT; // Do not modify this one
   const int REPLAN_CYCLE = 20;
   const float REPLAN_DT = REPLAN_CYCLE * CTRL_DT;
-  const int PLAN_CONSUME_CYCLE = 2;
+  const int PLAN_CONSUME_CYCLE = 10;
 
 };
 }

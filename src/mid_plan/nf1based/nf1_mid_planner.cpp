@@ -399,7 +399,7 @@ std::vector<float2> NF1MidPlanner::get_local_path(bool &is_future_path_blocked, 
       p.x = local_path[i].x;
       p.y = local_path[i].y;
       diff = m_curr_pos - local_path[i];
-      dist = dot(diff,diff);
+      dist = sqrtf(dot(diff,diff));
       if( dist > m_min_carrot_dist &&
           (dist > m_max_carrot_dist || is_curvature_too_big(local_path,0,i,m_curvature_split)))
         break;
