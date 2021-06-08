@@ -368,9 +368,9 @@ void TEBRefGen::cycle_init()
 
   float angle_diff = fabsf(in_pi(ref_state.theta- true_state.theta));
 
-  if (angle_diff > M_PI/3 || dist > 0.5f)
-    m_ini_state = true_state;
-  else
+//  if (angle_diff > M_PI/3 || dist > 0.5f)
+//    m_ini_state = true_state;
+//  else
     m_ini_state = ref_state;
 
   if(m_force_reset)
