@@ -192,6 +192,8 @@ void NF1LocalPlanner::do_start()
 void NF1LocalPlanner::do_normal()
 {
   cycle_init();
+
+  auto start_time = std::chrono::steady_clock::now();
   std::cout<<"NORMAL"<<std::endl;
 
   //Planning
@@ -206,6 +208,11 @@ void NF1LocalPlanner::do_normal()
     drive_dir.data = cpc_aux_mapping::nf1_task::TYPE_BACKWARD;
 
   m_drive_dir_pub.publish(drive_dir);
+
+  auto end_time = std::chrono::steady_clock::now();
+      std::cout << "Local planning time: "
+                << std::chrono::duration_cast<std::chrono::milliseconds>(end_time - start_time).count()
+                << " ms"<< std::endl;
 
   //Goto: Braking
   if (m_pso_planner->result.collision)

@@ -52,7 +52,7 @@ public:
   {
     float2 uni_dir = make_float2(cosf(s.theta),sinf(s.theta));
     c_f = s.p + 0.25f*uni_dir;
-    c_r = s.p - 0.25f*uni_dir;
+    c_r = s.p - 0.15f*uni_dir;
   }
 
   __host__ __device__
@@ -195,7 +195,7 @@ public:
             gain = 1.0f;
 
           //normal mode
-          cost += 1.0f*nf_cost + 1.0f*sqrtf(0.005f*s.v*s.v + 1.0f*s.w*s.w*gain);
+          cost += 1.0f*nf_cost + 1.0f*sqrtf(0.005f*s.v*s.v + 0.4f*s.w*s.w*gain);
           float yaw_diff;
           if (is_forward)
             yaw_diff = s.theta - getDesiredHeading(c);//bilinear_theta(s.p, m_nf1_map);//getDesiredHeading(c);

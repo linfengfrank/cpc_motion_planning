@@ -85,7 +85,7 @@ public:
       if (min_dist < PSO::MIN_DIST)
       {
         // Does not allow the situation to get worse
-        if (min_dist < initial_dist || min_dist < 0.21f)
+        if (min_dist < initial_dist || min_dist < 0.11f)
         {
           collision_state = PSO::COLLISION;
           first_collision_time = 0;
@@ -156,7 +156,7 @@ public:
     // If there is a collision in close time, OR the vehicle has not be able to
     // recover from a initial collision, OR the minimum distance on the trajectory
     // is lower than 0.2, the trajectory is deemed as collision.
-    if ((collision_state == PSO::COLLISION && first_collision_time < 0.31f) || collision_state == PSO::INIT_COLLISION || traj_min_dist < 0.21f)
+    if ((collision_state == PSO::COLLISION && first_collision_time < 0.31f) || collision_state == PSO::INIT_COLLISION || traj_min_dist < 0.11f)
       is_traj_collision = true;
     else
       is_traj_collision = false;
