@@ -16,6 +16,7 @@
 #include <comm_mapping/map.h>
 #include <ros_map/map_service.h>
 #include <cpc_aux_mapping/set_c_map.h>
+#include "nav_msgs/OccupancyGrid.h"
 
 class GlobalPlanner
 {
@@ -132,9 +133,45 @@ private:
   //--------------------------------------
   // Global map loading related functions|
   //--------------------------------------
+  void pos2pix(const nav_msgs::OccupancyGrid& map, double x, double y, int &x_idx, int &y_idx)
+  {
+    x_idx = static_cast<int>(floor(static_cast<double>((x - map.info.origin.position.x) / map.info.resolution + 0.5)));
+    y_idx = static_cast<int>(floor(static_cast<double>((y - map.info.origin.position.y) / map.info.resolution + 0.5)));
+  }
+
+  unsigned char get_grey(const nav_msgs::OccupancyGrid& map, double x, double y)
+  {
+    int x_id, y_id;
+    pos2pix(map, x, y, x_id, y_id);
+    if (x_id < 0 || x_id >= static_cast<int>(map.info.width) || y_id < 0 || y_id >= static_cast<int>(map.info.height))
+    {
+      return 100;
+    }
+    char val = map.data[y_id*static_cast<int>(map.info.width) + x_id];
+    if (val < 0)
+      return 250;
+    else
+      return val*2.5;
+  }
+
+  void crop(const nav_msgs::OccupancyGrid& map, float x_origin, float y_origin,
+                 int x_size, int y_size, float grid_step, unsigned char *occu_data)
+  {
+    double x,y;
+    for (int i=0; i<x_size; i++)
+    {
+      for (int j=0; j<y_size; j++)
+      {
+        x = x_origin + i*grid_step;
+        y = y_origin + j*grid_step;
+        occu_data[j*x_size+i] = get_grey(map, x, y);
+      }
+    }
+  }
+
   void build_axis_aligned_map()
   {
-    m_c_map.crop(m_origin.x,m_origin.y,m_width,m_height,m_step_width,m_c);
+    crop(m_c_map, m_origin.x,m_origin.y,m_width,m_height,m_step_width,m_c);
   }
   //---
   void prepare_map_pcl()
@@ -169,34 +206,6 @@ private:
         m_map_pcl->points.push_back (clrP);
       }
     }
-  }
-  //---
-  bool read_c_map(int map_idx, std::string* map_info_str = nullptr)
-  {
-    ros_map::map_service srv;
-    srv.request.type = ros_map::map_service::Request::REQUEST_MAP_INFO;
-    srv.request.param = map_idx;
-    if (m_cmap_client.call(srv))
-    {
-      MAP_INFO map_info;
-      if(map_info_str)
-        *map_info_str = srv.response.response;
-      string_to_map_info(srv.response.response.c_str(), &map_info);
-      m_c_map.load(&map_info);
-      return true;
-    }
-    else
-    {
-      return false;
-    }
-  }
-  //---
-  bool read_c_map(const std::string &map_info_str)
-  {
-    MAP_INFO map_info;
-    string_to_map_info(map_info_str.c_str(), &map_info);
-    m_c_map.load(&map_info);
-    return true;
   }
 
   //-----------------------------------
@@ -453,7 +462,7 @@ private:
   float m_step_width;
   int m_width;
   int m_height;
-  Map m_c_map;
+  nav_msgs::OccupancyGrid m_c_map;
   PathSmoother *m_ps;
   Astar *m_a_map;
   unsigned char *m_c;

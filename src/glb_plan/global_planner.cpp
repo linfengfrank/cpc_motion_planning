@@ -21,17 +21,13 @@ GlobalPlanner::GlobalPlanner():
 
   m_glb_path_pub = m_nh.advertise<cpc_motion_planning::path>("/global_path",1);
 
-  // Service
-  m_cmap_client = m_nh.serviceClient<ros_map::map_service>("/map_service");
-  m_aux_map_set_cmap_client = m_nh.serviceClient<cpc_aux_mapping::set_c_map>("/cpc_aux_mapping/set_c_map");
-
-  ros::service::waitForService("/map_service");
-
-  int cmap_id;
-  m_nh.param<int>("/cmap_id",cmap_id,0);
-  m_map_loaded = read_c_map(cmap_id);
+  // Load map for planning
+  boost::shared_ptr<nav_msgs::OccupancyGrid const> glb_map_ptr;
+  glb_map_ptr = ros::topic::waitForMessage<nav_msgs::OccupancyGrid>("/for_planning/map");
+  m_c_map = *glb_map_ptr;
   prepare_c_map();
   perform_edt();
+  m_map_loaded = true;
 
   m_map_pcl = PointCloud::Ptr(new PointCloud);
   m_map_pcl->header.frame_id = "/world";
@@ -67,7 +63,7 @@ void GlobalPlanner::change_map(const std_msgs::String::ConstPtr &msg)
   // change the glb planner's map
   reset_planner();
   std::string map_info_str = msg->data;
-  m_map_loaded = read_c_map(map_info_str);
+  //m_map_loaded = read_c_map(map_info_str);
   prepare_c_map();
   perform_edt();
   prepare_map_pcl();
