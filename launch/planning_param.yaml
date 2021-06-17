@@ -14,7 +14,7 @@ curvature_split: 0.15
 swarm_size: 120
 batch_num: 30
 episode_num: 2
-global_safety_radius: 0.4
+global_safety_radius: 0.3
 mid_safety_radius: 0.3
 local_safety_radius: 0.25
 home_position: [5.0, -1.1]
