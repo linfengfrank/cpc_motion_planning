@@ -19,7 +19,7 @@ public:
     int path_id;
     int act_id;
     float reaching_radius;
-    Target():path_id(0),act_id(0),reaching_radius(1.0f)
+    Target():path_id(-1),act_id(-1),reaching_radius(1.0f)
     {
 
     }
