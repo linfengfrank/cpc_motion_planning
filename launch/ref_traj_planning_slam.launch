@@ -1,0 +1,8 @@
+<?xml version="1.0"?>
+<launch>
+<include file="$(find cpc_reference_publisher)/launch/ref_pub.launch"/>
+<node pkg="cpc_motion_planning" type="ref_traj_node" name="ref_traj_node" output="screen">
+<remap from="/raw_odom" to ="/odom"/>
+<remap from="/slam_odom" to ="/UgvOdomTopic"/>
+</node>
+</launch>

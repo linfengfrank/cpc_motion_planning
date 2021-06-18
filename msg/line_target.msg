@@ -1,0 +1,3 @@
+geometry_msgs/PoseStamped target_pose
+bool do_turning
+float32 reaching_radius

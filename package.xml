@@ -55,12 +55,16 @@
   <build_depend>cpc_aux_mapping</build_depend>
   <build_depend>libpcl-all-dev</build_depend>
   <build_depend>message_generation</build_depend>
+  <build_depend>ros_map</build_depend>
+  <build_depend>teb_local_planner</build_depend>
 
   <build_export_depend>roscpp</build_export_depend>
   <build_export_depend>rospy</build_export_depend>
   <build_export_depend>std_msgs</build_export_depend>
   <build_export_depend>cpc_aux_mapping</build_export_depend>
   <build_export_depend>message_runtime</build_export_depend>
+  <build_export_depend>ros_map</build_export_depend>
+  <build_export_depend>teb_local_planner</build_export_depend>
 
   <exec_depend>roscpp</exec_depend>
   <exec_depend>rospy</exec_depend>
@@ -68,6 +72,8 @@
   <exec_depend>cpc_aux_mapping</exec_depend>
   <exec_depend>libpcl-all</exec_depend>
   <exec_depend>message_runtime</exec_depend>
+  <exec_depend>ros_map</exec_depend>
+  <exec_depend>teb_local_planner</exec_depend>
 
 
   <!-- The export tag contains other, unspecified, tags -->

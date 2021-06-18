@@ -1,4 +1,4 @@
-#include "mid_plan/a_star.h"
+#include "mid_plan/utils/a_star.h"
 #include <ros/console.h>
 #include <stack>
 #include <chrono>
@@ -9,7 +9,7 @@ Astar::Astar(int maxX, int maxY, int maxZ):
 }
 
 std::vector<CUDA_GEO::coord> Astar::AStar2D(const CUDA_GEO::coord &goal, const CUDA_GEO::coord &start, bool reached_free_zone,  float &length,
-                                            const CUDA_GEO::coord *crd_shift, SeenDist *last_val_map)
+                                            float safety_radius)
 {
   std::vector<CUDA_GEO::coord> output;
 
@@ -45,7 +45,7 @@ std::vector<CUDA_GEO::coord> Astar::AStar2D(const CUDA_GEO::coord &goal, const C
     ni->inClosed = true;
     my_coord = ni->c;
 
-    obsCostAt(my_coord,0,occupied);
+    obsCostAt(my_coord,0,occupied,false,safety_radius);
     if (!occupied)
       reached_free_zone = true;
 
@@ -74,7 +74,7 @@ std::vector<CUDA_GEO::coord> Astar::AStar2D(const CUDA_GEO::coord &goal, const C
         {
 
           float new_g = sqrtf(static_cast<float>(ix*ix+iy*iy))*getGridStep() +
-              ni->g + obsCostAt(child_coord,0,occupied,true);
+              ni->g + 0*obsCostAt(child_coord,0,occupied,true,safety_radius);
           if (p->g > new_g && !(occupied && reached_free_zone))
           {
             p->ptr2parent = ni;

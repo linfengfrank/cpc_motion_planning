@@ -1,17 +1,21 @@
 #ifndef GRID_GRAPH
 #define GRID_GRAPH
 #include <cuda_geometry/cuda_edtmap.cuh>
-#include <mid_plan/map_base.h>
-#include <mid_plan/SortedSet.h>
+#include <mid_plan/utils/map_base.h>
+#include <mid_plan/utils/SortedSet.h>
 #include <cpc_aux_mapping/grid_map.h>
 
-#define MID_SAFE_DIST 0.66f
+#define MID_SAFE_DIST 0.351f
 struct nodeInfo
 {
   bool inClosed;
   bool inQ;
   float g;
   float h;
+  float theta;
+  float3 pose;
+  float3 action;
+  float3 action_lead2me;
   CUDA_GEO::coord c;
   nodeInfo* ptr2parent;
   std::multiset<std::pair<float, nodeInfo*>>::iterator it;
@@ -20,6 +24,10 @@ struct nodeInfo
     inQ(false),
     g(std::numeric_limits<float>::infinity()),
     h(std::numeric_limits<float>::infinity()),
+    theta(0),
+    pose(make_float3(0,0,0)),
+    action(make_float3(0,0,0)),
+    action_lead2me(make_float3(0,0,0)),
     ptr2parent(nullptr)
   {
 
@@ -31,7 +39,9 @@ class GridGraph : public MapBase
 public:
   GridGraph(int maxX, int maxY, int maxZ);
   float obsCostAt(CUDA_GEO::coord s, float default_value, bool &occupied, bool extend=false, float obstacle_dist = MID_SAFE_DIST) const;
+  float obsCostAt(CUDA_GEO::coord s, float default_value, float obstacle_dist = MID_SAFE_DIST) const;
   bool isSeen(const CUDA_GEO::coord & s, const bool default_value) const;
+  float getEdt(const CUDA_GEO::coord & s, const float default_value) const;
 
   nodeInfo* getIdMapPtr() {return _id_map;}
   SeenDist* getEdtMapPtr() {return _val_map;}
@@ -40,6 +50,7 @@ public:
   int getMaxY() {return _h;}
   int getMaxZ() {return _d;}
   float getCost2Come(const CUDA_GEO::coord & s, const float &default_value) const;
+  float getTheta(const CUDA_GEO::coord & s, const float &default_value) const;
 
   void copyIdData(const cpc_aux_mapping::grid_map::ConstPtr &msg);
   void copyEdtData(const cpc_aux_mapping::grid_map::ConstPtr &msg);
@@ -47,6 +58,11 @@ public:
 
   int calcTgtHeightCoord(float tgt_height);
   std::vector<CUDA_GEO::coord> rayCast(const CUDA_GEO::coord &p0Index, const CUDA_GEO::coord &p1Index, float limit_radius = -1);
+
+  float getEdtValue(const CUDA_GEO::coord &c)
+  {
+    return _val_map[coord2index(c)].d;
+  }
 
 public:
   virtual ~GridGraph();

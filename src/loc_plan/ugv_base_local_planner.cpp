@@ -5,8 +5,12 @@ UGVLocalMotionPlanner::UGVLocalMotionPlanner():
   m_raw_odo_received(false),
   m_slam_odo_received(false),
   m_edt_map(nullptr),
+  m_create_host_edt(false),
   m_status(UGV::START),
-  m_stuck_pbty(0.0f)
+  m_stuck_pbty(0.0f),
+  m_lowpass_stuck_pbty(0.0f),
+  m_lowpass_v(0.0f),
+  m_lowpass_w(0.0f)
 {
   m_map_sub = m_nh.subscribe("/edt_map", 1, &UGVLocalMotionPlanner::map_call_back, this);
   m_raw_odom_sub = m_nh.subscribe("/raw_odom", 1, &UGVLocalMotionPlanner::raw_odo_call_back, this);
@@ -33,6 +37,7 @@ void UGVLocalMotionPlanner::map_call_back(const cpc_aux_mapping::grid_map::Const
     CUDA_GEO::pos origin(msg->x_origin,msg->y_origin,msg->z_origin);
     int3 edt_map_size = make_int3(msg->x_size,msg->y_size,msg->z_size);
     m_edt_map = new EDTMap(origin,msg->width,edt_map_size);
+    m_edt_map->m_create_host_cpy = m_create_host_edt;
     m_edt_map->setup_device();
   }
   else
@@ -41,6 +46,8 @@ void UGVLocalMotionPlanner::map_call_back(const cpc_aux_mapping::grid_map::Const
     m_edt_map->m_grid_step = msg->width;
   }
   CUDA_MEMCPY_H2D(m_edt_map->m_sd_map,msg->payload8.data(),static_cast<size_t>(m_edt_map->m_byte_size));
+  if (m_create_host_edt)
+    memcpy(m_edt_map->m_hst_sd_map,msg->payload8.data(),static_cast<size_t>(m_edt_map->m_byte_size));
 }
 
 void UGVLocalMotionPlanner::raw_odo_call_back(const nav_msgs::Odometry::ConstPtr &msg)
@@ -55,7 +62,7 @@ void UGVLocalMotionPlanner::slam_odo_call_back(const nav_msgs::Odometry::ConstPt
   m_slam_odo = *msg;
 }
 
-UGV::UGVModel::State UGVLocalMotionPlanner::predict_state(const nav_msgs::Odometry &odom, const double &psi, const int &ref_start_idx)
+UGV::UGVModel::State UGVLocalMotionPlanner::predict_state(const nav_msgs::Odometry &odom, const double &psi, const int &ref_start_idx, bool is_heading_ref)
 {
   UGV::UGVModel::State s;
   s.p.x = odom.pose.pose.position.x;
@@ -76,9 +83,17 @@ UGV::UGVModel::State UGVLocalMotionPlanner::predict_state(const nav_msgs::Odomet
   {
     if (tmp.id < ref_start_idx)
     {
-      s.p.x = s.p.x + tmp.v*cos(s.theta)*PSO::PSO_CTRL_DT;
-      s.p.y = s.p.y + tmp.v*sin(s.theta)*PSO::PSO_CTRL_DT;
-      s.theta = s.theta + tmp.w*PSO::PSO_CTRL_DT;
+      if (!is_heading_ref)
+      {
+        s.p.x = s.p.x + tmp.v*cos(s.theta)*PSO::PSO_CTRL_DT;
+        s.p.y = s.p.y + tmp.v*sin(s.theta)*PSO::PSO_CTRL_DT;
+        s.theta = s.theta + tmp.w*PSO::PSO_CTRL_DT;
+      }
+      else
+      {
+        s.p.x = s.p.x + tmp.v*cos(tmp.theta)*PSO::PSO_CTRL_DT;
+        s.p.y = s.p.y + tmp.v*sin(tmp.theta)*PSO::PSO_CTRL_DT;
+      }
     }
     else
     {
@@ -119,15 +134,17 @@ void UGVLocalMotionPlanner::load_into_queue(const cpc_motion_planning::ref_data 
     tmp.id = ref.ids[i];
     tmp.v = ref.data[i*ref.rows];
     tmp.w = ref.data[i*ref.rows + 1];
+    tmp.theta = ref.data[i*ref.rows + 2];
     //std::cout<<"id: "<<ref.ids[i]<<", "<<tmp.t<<std::endl;
     m_cmd_q.push_back(tmp);
   }
 }
 #endif
 
-void UGVLocalMotionPlanner::add_to_ref_msg(cpc_motion_planning::ref_data& ref_msg, int ref_counter, const UGV::UGVModel::State &traj_s)
+void UGVLocalMotionPlanner::add_to_ref_msg(cpc_motion_planning::ref_data& ref_msg, int ref_counter, const UGV::UGVModel::State &traj_s, const ros::Time &t)
 {
   ref_msg.ids.push_back(ref_counter);
+  ref_msg.time.push_back(t.toSec());
   ref_msg.data.push_back(traj_s.v);
   ref_msg.data.push_back(traj_s.w);
   ref_msg.data.push_back(traj_s.theta);
@@ -207,12 +224,13 @@ bool UGVLocalMotionPlanner::is_stuck(const std::vector<UGV::UGVModel::State> &tr
 
   if (m_stuck_pbty > 1)
   {
-      m_stuck_pbty = 0;
-      return true;
+    m_lowpass_stuck_pbty = 0;
+    m_stuck_pbty = 0;
+    return true;
   }
   else
   {
-      return false;
+    return false;
   }
 }
 
@@ -286,5 +304,29 @@ bool UGVLocalMotionPlanner::is_stuck_instant_horizon(const std::vector<UGV::UGVM
 
 
   return far_from_tgt && no_moving_intention;
+}
+
+bool UGVLocalMotionPlanner::is_stuck_lowpass(const UGV::UGVModel::State& s, const UGV::UGVModel::State &tgt_state)
+{
+  m_lowpass_v = 0.8f*m_lowpass_v + 0.2f*s.v;
+  m_lowpass_w = 0.8f*m_lowpass_w + 0.2f*s.w;
+
+  if (fabsf(m_lowpass_v) < 0.08f && fabsf(m_lowpass_w) < 0.08f && !is_pos_reached(s,tgt_state))
+    m_lowpass_stuck_pbty +=0.1f;
+  else
+    m_lowpass_stuck_pbty *=0.8f;
+
+  //std::cout<<"****"<<m_lowpass_v<<" "<<m_lowpass_w<<" "<<m_lowpass_stuck_pbty<<std::endl;
+
+  if (m_lowpass_stuck_pbty > 1)
+  {
+    m_lowpass_stuck_pbty = 0;
+    m_stuck_pbty = 0;
+    return true;
+  }
+  else
+  {
+    return false;
+  }
 }
 

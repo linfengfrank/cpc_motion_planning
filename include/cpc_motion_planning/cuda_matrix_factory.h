@@ -19,7 +19,7 @@ public:
   }
 
   template <int N, typename T>
-  void* make_cuda_matrix(size_t *dim_width, T* data_ptr = NULL)
+  void make_cuda_matrix(void ** ptr_addr, size_t *dim_width, T* data_ptr = NULL)
   {
     Matrix<N,T> mat(dim_width);
     mat.setup_device();
@@ -28,15 +28,12 @@ public:
       mat.upload_data(data_ptr);
     }
 
-    void* ptr;
-    CUDA_ALLOC_DEV_MEM(&ptr, sizeof(Matrix<N,T>));
-    CUDA_MEMCPY_H2D(ptr, &mat, sizeof(Matrix<N,T>));
-
-    return ptr;
+    CUDA_ALLOC_DEV_MEM(ptr_addr, sizeof(Matrix<N,T>));
+    CUDA_MEMCPY_H2D(*ptr_addr, &mat, sizeof(Matrix<N,T>));
   }
 
   template <int N,typename T>
-  void* load_cuda_matrix(std::string file_name, bool load_to_host=false)
+  void load_cuda_matrix(Matrix<N,T> ** ptr_addr, std::string file_name, bool load_to_host=false)
   {
     // open the file
     std::ifstream file;
@@ -46,7 +43,6 @@ public:
     {
       std::cout<<"File open failed."<<std::endl;
       file.close();
-      return NULL;
     }
 
     int Dim;
@@ -56,7 +52,6 @@ public:
     {
       std::cout<<"Matrix dimension wrong."<<std::endl;
       file.close();
-      return NULL;
     }
 
     // read the header to determine the size of the matrix
@@ -88,19 +83,16 @@ public:
     // close the file
     file.close();
 
-    void* ptr;
     if(!load_to_host)
     {
-      CUDA_ALLOC_DEV_MEM(&ptr, sizeof(Matrix<N,T>));
-      CUDA_MEMCPY_H2D(ptr, &mat, sizeof(Matrix<N,T>));
+      CUDA_ALLOC_DEV_MEM(ptr_addr, sizeof(Matrix<N,T>));
+      CUDA_MEMCPY_H2D(*ptr_addr, &mat, sizeof(Matrix<N,T>));
     }
     else
     {
-      ptr = malloc(sizeof(Matrix<N,T>));
-      memcpy(ptr,&mat,sizeof(Matrix<N,T>));
+      *ptr_addr = static_cast<Matrix<N,T> *>(malloc(sizeof(Matrix<N,T>)));
+      memcpy(*ptr_addr,&mat,sizeof(Matrix<N,T>));
     }
-
-    return ptr;
   }
 
   void load_uniform_bin(std::string file_name,  UniformBin &bin)

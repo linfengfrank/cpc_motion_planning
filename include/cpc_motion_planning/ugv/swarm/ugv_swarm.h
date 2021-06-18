@@ -115,12 +115,26 @@ public:
   UGVSwarm()
   {
     steps = STEP;
-    step_dt = PSO::PSO_TOTAL_T/static_cast<float>(steps);
+    step_dt = 0.5f;
+    total_t = steps * step_dt;
+    var = make_float3(1,1,1);
   }
 
   ~UGVSwarm()
   {
 
+  }
+
+  void set_step_dt(int steps_, float dt)
+  {
+    steps = min(steps_,STEP);
+    step_dt = dt;
+    total_t = steps * step_dt;
+  }
+
+  void set_var(float3 var_)
+  {
+    var = var_;
   }
 
   //---
@@ -129,8 +143,9 @@ public:
   {
     for (int n = 0; n < STEP; n++)
     {
-      PSO::bound_between(p.ptcl_vel.site[n].x, -0.5f, 0.5f);
-      PSO::bound_between(p.ptcl_vel.site[n].y, -0.5f, 0.5f);
+      PSO::bound_between(p.ptcl_vel.site[n].x, -0.3f, 0.3f);
+      PSO::bound_between(p.ptcl_vel.site[n].y, -0.3f, 0.3f);
+      PSO::bound_between(p.ptcl_vel.site[n].z, -0.3f, 0.3f);
     }
   }
 
@@ -140,8 +155,10 @@ public:
   {
     for (int n = 0; n < STEP; n++)
     {
-      PSO::bound_between(p.curr_loc.site[n].x,  s_ini.s-9.0f,  s_ini.s+9.0f);
-      PSO::bound_between(p.curr_loc.site[n].y,  s_ini.theta-3, s_ini.theta+3);    }
+      PSO::bound_between(p.curr_loc.site[n].x,  -var.x,  var.x);
+      PSO::bound_between(p.curr_loc.site[n].y,  -var.y,  var.y);
+      PSO::bound_between(p.curr_loc.site[n].z,  -1,  1);
+    }
   }
 
   //---
@@ -150,13 +167,13 @@ public:
   {
     for (int i=0; i< STEP; i++)
     {
-      p.curr_loc.site[i].x = PSO::rand_float_gen(&(p.rs), s_ini.s-6, s_ini.s+6); // station target
-      p.curr_loc.site[i].y = PSO::rand_float_gen(&(p.rs), s_ini.theta-3, s_ini.theta+3); // theta target
-      p.curr_loc.site[i].z = 0;
+      p.curr_loc.site[i].x = PSO::rand_float_gen(&(p.rs), -var.x,  var.x); // station target
+      p.curr_loc.site[i].y = PSO::rand_float_gen(&(p.rs), -var.y,  var.y); // theta target
+      p.curr_loc.site[i].z = PSO::rand_float_gen(&(p.rs), -1.0f, 1.0f);;
 
-      p.ptcl_vel.site[i].x = PSO::rand_float_gen(&(p.rs), -1.0f, 1.0f);
-      p.ptcl_vel.site[i].y = PSO::rand_float_gen(&(p.rs), -1.0f, 1.0f);
-      p.ptcl_vel.site[i].z = 0;
+      p.ptcl_vel.site[i].x = PSO::rand_float_gen(&(p.rs), -0.3f, 0.3f);
+      p.ptcl_vel.site[i].y = PSO::rand_float_gen(&(p.rs), -0.3f, 0.3f);
+      p.ptcl_vel.site[i].z = PSO::rand_float_gen(&(p.rs), -0.3f, 0.3f);;
     }
     bound_ptcl_velocity(p);
     bound_ptcl_location(s_ini,p);
@@ -167,9 +184,12 @@ public:
   }
 
   Particle *ptcls;
+  Particle *best_ptcl;
   int ptcl_size;
   int steps;
   float step_dt;
+  float total_t;
+  float3 var;
 };
 }
 #endif // UGV_SWARM_H

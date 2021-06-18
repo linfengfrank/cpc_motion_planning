@@ -48,19 +48,19 @@ int main(int argc, char **argv)
 
   std::cout<<"Allocating device memory"<<std::endl;
   //------
-  void * pos_bins = factory.make_cuda_matrix<1,float>(&M_pos,pos_bin_data);
-  void * vel_bins = factory.make_cuda_matrix<1,float>(&M_vel,vel_bin_data);
-  void * theta_bins = factory.make_cuda_matrix<1,float>(&M_theta,theta_bin_data);
-  void * w_bins = factory.make_cuda_matrix<1,float>(&M_w,w_bin_data);
-
-
+  void * pos_bins, * vel_bins, * theta_bins, * w_bins;
+  factory.make_cuda_matrix<1,float>(&pos_bins, &M_pos,pos_bin_data);
+  factory.make_cuda_matrix<1,float>(&vel_bins, &M_vel,vel_bin_data);
+  factory.make_cuda_matrix<1,float>(&theta_bins, &M_theta,theta_bin_data);
+  factory.make_cuda_matrix<1,float>(&w_bins, &M_w,w_bin_data);
 
   //------
   size_t M_S[4] = {M_pos,M_vel,M_theta,M_w};
 
-  void * S_1 = factory.make_cuda_matrix<4,float>(M_S);
-  void * S_2 = factory.make_cuda_matrix<4,float>(M_S);
-  void * S_A = factory.make_cuda_matrix<4,UGV::UGVModel::Input>(M_S);
+  void * S_1, * S_2, * S_A;
+  factory.make_cuda_matrix<4,float>(&S_1, M_S);
+  factory.make_cuda_matrix<4,float>(&S_2, M_S);
+  factory.make_cuda_matrix<4,UGV::UGVModel::Input>(&S_A, M_S);
 
   //------
   std::cout<<"Start dynamic programming"<<std::endl;

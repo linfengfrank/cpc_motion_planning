@@ -1,4 +1,4 @@
-#include "mid_plan/grid_graph.h"
+#include "mid_plan/utils/grid_graph.h"
 #include <string.h>
 #include <chrono>
 #include <ros/console.h>
@@ -50,6 +50,18 @@ float GridGraph::getCost2Come(const CUDA_GEO::coord & s, const float &default_va
   }
 }
 
+float GridGraph::getTheta(const CUDA_GEO::coord & s, const float &default_value) const
+{
+  if (s.x<0 || s.x>=_w || s.y<0 || s.y>=_h || s.z<0 || s.z>=_d)
+  {
+    return default_value;
+  }
+  else
+  {
+    return _id_map[coord2index(s)].theta;
+  }
+}
+
 float GridGraph::obsCostAt(CUDA_GEO::coord s, float default_value, bool &occupied, bool extend, float obstacle_dist) const
 {
   SeenDist* map_ptr;
@@ -85,6 +97,29 @@ float GridGraph::obsCostAt(CUDA_GEO::coord s, float default_value, bool &occupie
   return cost;
 }
 
+float GridGraph::obsCostAt(CUDA_GEO::coord s, float default_value, float obstacle_dist) const
+{
+  SeenDist* map_ptr;
+  map_ptr = _val_map;
+
+  float dist = 0.0f;
+  float cost = 0.0;
+  if (s.x<0 || s.x>=_w || s.y<0 || s.y>=_h || s.z<0 || s.z>=_d)
+  {
+    dist = default_value;
+  }
+  else
+  {
+    dist = map_ptr[coord2index(s)].d;
+  }
+  dist *= static_cast<float>(getGridStep());
+
+  cost += expf(-9.0f*dist)*10;
+  if (dist < obstacle_dist)
+    cost += 1000;
+  return cost;
+}
+
 nodeInfo* GridGraph::getNode(CUDA_GEO::coord s)
 {
   if (s.x<0 || s.x>=_w ||
@@ -103,6 +138,16 @@ bool GridGraph::isSeen(const CUDA_GEO::coord & s, const bool default_value) cons
     return default_value;
 
   return _val_map[coord2index(s)].s;
+}
+
+float GridGraph::getEdt(const CUDA_GEO::coord & s, const float default_value) const
+{
+  if (s.x<0 || s.x>=_w ||
+      s.y<0 || s.y>=_h ||
+      s.z<0 || s.z>=_d)
+    return default_value;
+
+  return _val_map[coord2index(s)].d * _gridstep;
 }
 
 void GridGraph::copyIdData(const cpc_aux_mapping::grid_map::ConstPtr &msg)
