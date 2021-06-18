@@ -20,7 +20,7 @@
 #include "tf/tf.h"
 #include <cpc_motion_planning/path.h>
 
-#define PRED_STATE
+//#define PRED_STATE
 #define SHOW_PC
 namespace UGV
 {
