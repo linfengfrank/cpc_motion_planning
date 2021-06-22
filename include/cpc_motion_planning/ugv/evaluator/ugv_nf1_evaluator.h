@@ -195,7 +195,7 @@ public:
             gain = 1.0f;
 
           //normal mode
-          cost += 1.0f*nf_cost + 1.0f*sqrtf(0.005f*s.v*s.v + 0.4f*s.w*s.w*gain);
+          cost += 1.0f*nf_cost + 0.005f*s.v*s.v + 0.1f*s.w*s.w;//1.0f*sqrtf(0.005f*s.v*s.v + 0.4f*s.w*s.w*(gain + 0.2f));
           float yaw_diff;
           if (is_forward)
             yaw_diff = s.theta - getDesiredHeading(c);//bilinear_theta(s.p, m_nf1_map);//getDesiredHeading(c);

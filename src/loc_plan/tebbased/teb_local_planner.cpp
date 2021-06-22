@@ -5,6 +5,7 @@
 #include <cpc_motion_planning/plan_request.h>
 #include <cpc_motion_planning/collision_check.h>
 #include <std_msgs/Int32MultiArray.h>
+#include <chrono>
 using namespace teb_local_planner;
 
 TEBLocalPlanner::TEBLocalPlanner():
@@ -176,6 +177,8 @@ void TEBLocalPlanner::do_start()
 //=====================================
 void TEBLocalPlanner::do_normal()
 {
+
+  auto start_time = std::chrono::steady_clock::now();
   cycle_init();
   std::cout<<"NORMAL"<<std::endl;
 
@@ -196,6 +199,12 @@ void TEBLocalPlanner::do_normal()
   m_planner->set_init_plan(init);
 
   bool success = m_planner->plan(robot_pose, robot_goal, &robot_vel, m_cfg.goal_tolerance.free_goal_vel);
+
+ auto end_time = std::chrono::steady_clock::now();
+      std::cout << "Local planning time: "
+                << std::chrono::duration_cast<std::chrono::milliseconds>(end_time - start_time).count()
+                << " ms"<< std::endl;
+
   if (!success)
   {
     m_braking_start_cycle = m_plan_cycle;

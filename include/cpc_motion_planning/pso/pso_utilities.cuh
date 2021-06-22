@@ -10,7 +10,7 @@ namespace PSO
 //const float PSO_TOTAL_T = 4.0f;
 const float PSO_SIM_DT = 0.1f;
 const float PSO_CTRL_DT = 0.05f;
-const float MIN_DIST = 0.15f;
+const float MIN_DIST = 0.2f;
 const int PSO_REPLAN_CYCLE = 4;
 const float PSO_REPLAN_DT = PSO_REPLAN_CYCLE * PSO_CTRL_DT;
 const int PSO_PLAN_CONSUME_CYCLE = 2;
