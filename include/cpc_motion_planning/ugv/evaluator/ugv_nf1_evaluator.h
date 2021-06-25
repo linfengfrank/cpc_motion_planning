@@ -34,6 +34,7 @@ public:
     m_stuck = false;
     m_using_auto_direction = false;
     m_safety_radius = 0.401f;
+    m_max_speed = 1.0f;
   }
 
   ~NF1Evaluator()
@@ -162,6 +163,9 @@ public:
 
     data.min_dist = rd;
 
+    if (fabsf(s.v) > m_max_speed)
+      cost += 100*(fabsf(s.v) - m_max_speed)*(fabsf(s.v) - m_max_speed);
+
     if (m_nf1_received)
     {
       if (m_pure_turning)
@@ -185,17 +189,9 @@ public:
         }
         else
         {
-          // A gain factor to adjust the angular speed cost
-          // When moving "backward" (accoring to the current moving direction)
-          // Do not add the angular speed cost
-          float gain = data.current_v * (is_forward ? 1.0f : -1.0f);
-          if (gain < 0.1f)
-            gain = 0;
-          if (gain > 1.0f)
-            gain = 1.0f;
-
           //normal mode
-          cost += 1.0f*nf_cost + 0.005f*s.v*s.v + 0.1f*s.w*s.w;//1.0f*sqrtf(0.005f*s.v*s.v + 0.4f*s.w*s.w*(gain + 0.2f));
+          cost += 1.0f*nf_cost + 0.005f*s.v*s.v + 0.005f*s.w*s.w;//1.0f*sqrtf(0.005f*s.v*s.v + 1.0f*s.w*s.w*gain);
+
           float yaw_diff;
           if (is_forward)
             yaw_diff = s.theta - getDesiredHeading(c);//bilinear_theta(s.p, m_nf1_map);//getDesiredHeading(c);
@@ -238,6 +234,7 @@ public:
   bool m_nf1_received;
   bool m_using_auto_direction;
   float m_safety_radius;
+  float m_max_speed;
 };
 }
 
