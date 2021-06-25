@@ -48,9 +48,11 @@ public:
   }
 
   __host__ __device__
-  float2 calculate_bounding_centre(const UGVModel::State &s, const float2 &uni_dir, const float &body_x) const
+  void calculate_bounding_centres(const UGVModel::State &s, float2 &c_r, float2 &c_f) const
   {
-    return s.p + body_x*uni_dir;
+    float2 uni_dir = make_float2(cosf(s.theta),sinf(s.theta));
+    c_f = s.p + 0.25f*uni_dir;
+    c_r = s.p - 0.25f*uni_dir;
   }
 
   __host__ __device__
@@ -76,41 +78,11 @@ public:
   }
 
   __host__ __device__
-  float get_min_dist_to_body(const UGVModel::State &s, const EDTMap &map, const float2 &uni_dir) const
+  float getMinDist(const UGVModel::State &s, const EDTMap &map) const
   {
-    float2 c_r = calculate_bounding_centre(s, uni_dir, -0.25f);
-    float2 c_f = calculate_bounding_centre(s, uni_dir,  0.25f);
+    float2 c_f,c_r;
+    calculate_bounding_centres(s, c_r, c_f);
     return min(getEDT(c_r,map),getEDT(c_f,map));
-  }
-
-  __host__ __device__
-  float get_min_dist_to_caution_zone(const UGVModel::State &s, const EDTMap &map, const float2 &uni_dir) const
-  {
-    float2 circles[4] = {make_float2(0.0f, 0.6f),
-                         make_float2(0.6f, 0.8f),
-                         make_float2(1.4f, 1.0f),
-                         make_float2(2.4f, 1.0f)};
-
-    float2 c;
-    float r;
-    float min_r = 1000.0f;
-    float dir;
-    if (s.v >= 0)
-      dir = 1;
-    else
-      dir = -1;
-
-    for (int i=0; i<4; i++)
-    {
-      c = calculate_bounding_centre(s, uni_dir, dir*circles[i].x);
-      r = getEDT(c, map) - circles[i].y;
-      if (r < 0.0f)
-        r = 0.0f;
-
-      if (r < min_r)
-        min_r = r;
-    }
-    return min_r;
   }
 
   __host__ __device__
@@ -177,10 +149,7 @@ public:
     if (m_using_auto_direction)
       is_forward = data.is_forward;
 
-    // handle the vehicle body collision
-    float2 uni_dir = make_float2(cosf(s.theta),sinf(s.theta));
-
-    float rd = get_min_dist_to_body(s,map,uni_dir);
+    float rd = getMinDist(s,map);
     cost += expf(-9.5f*rd)*10;
 
     if (rd < m_safety_radius)
@@ -192,12 +161,6 @@ public:
     }
 
     data.min_dist = rd;
-
-    // handle the cautios zone
-    float rs = get_min_dist_to_caution_zone(s, map, uni_dir);
-    float speed = fabsf(s.v);
-    if (rs < 0.5f && speed > 0.3f)
-      cost += 10*expf(-5*rs)*(speed-0.3f)*(speed-0.3f);
 
     if (m_nf1_received)
     {
@@ -223,7 +186,7 @@ public:
         else
         {
           //normal mode
-          cost += 1.0f*nf_cost + 0.005f*s.v*s.v + 0.005f*s.w*s.w;//1.0f*sqrtf(0.005f*s.v*s.v + 1.0f*s.w*s.w*gain);
+          cost += 1.0f*nf_cost + 0.005f*s.v*s.v + 0.1f*s.w*s.w;//1.0f*sqrtf(0.005f*s.v*s.v + 1.0f*s.w*s.w*gain);
           float yaw_diff;
           if (is_forward)
             yaw_diff = s.theta - getDesiredHeading(c);//bilinear_theta(s.p, m_nf1_map);//getDesiredHeading(c);
