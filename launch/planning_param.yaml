@@ -20,6 +20,7 @@ local_safety_radius: 0.4
 home_position: [5.0, -1.1]
 min_carrot_dist: 0.3
 max_carrot_dist: 4.5
+max_speed: 0.5
 
 #var_s: 2.0
 #var_theta: 1.0
