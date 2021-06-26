@@ -164,7 +164,7 @@ public:
     data.min_dist = rd;
 
     if (fabsf(s.v) > m_max_speed)
-      cost += 100*(fabsf(s.v) - m_max_speed)*(fabsf(s.v) - m_max_speed);
+      cost += 100*(fabsf(s.v) - m_max_speed);
 
     if (m_nf1_received)
     {

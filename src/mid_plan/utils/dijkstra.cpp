@@ -106,7 +106,8 @@ void Dijkstra::dijkstra2D_with_line_map(CUDA_GEO::coord glb_tgt, EDTMap* line_ma
             {
               pc_pos = coord2pos(pc);
               line_dist = line_map->getEDT(make_float2(pc_pos.x,pc_pos.y));
-              new_g += 0.05f*line_dist*line_dist;
+
+              new_g += 0.01f*line_dist*line_dist;
             }
 
             if (p->g > new_g)
