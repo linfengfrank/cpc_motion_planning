@@ -66,6 +66,7 @@ NF1LocalPlanner::NF1LocalPlanner():
   m_ref_start_idx = 0;
 
   m_create_host_edt = true;
+  m_min_dist = 0.0f;
 }
 
 NF1LocalPlanner::~NF1LocalPlanner()
@@ -199,8 +200,17 @@ void NF1LocalPlanner::do_normal()
   std::cout<<"NORMAL"<<std::endl;
 
   //Planning
+  float var_s = 2.0f * (m_min_dist);
+  if (var_s < 0.4f) var_s = 0.4f;
+  if (var_s > 3.0f) var_s = 3.0f;
+
+
+  m_pso_planner->m_swarm.set_var_s(var_s);
   m_task_is_new = false;
   calculate_trajectory<SIMPLE_UGV>(m_pso_planner, m_traj, m_use_de);
+
+  m_min_dist = m_pso_planner->result.best_loc.min_dist;
+
 
   //Update the drive direction
   std_msgs::Int32 drive_dir;

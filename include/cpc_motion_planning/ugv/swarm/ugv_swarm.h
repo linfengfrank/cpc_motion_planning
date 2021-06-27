@@ -13,6 +13,7 @@ public:
   struct Trace
   {
     float3 site[STEP];
+    mutable float min_dist;
 
     __device__ __host__
     Trace()
@@ -137,6 +138,11 @@ public:
     var = var_;
   }
 
+  void set_var_s(float var_s)
+  {
+    var.x = var_s;
+  }
+
   //---
   __host__ __device__
   void bound_ptcl_velocity(Particle &p)
@@ -158,6 +164,17 @@ public:
       PSO::bound_between(p.curr_loc.site[n].x,  -var.x,  var.x);
       PSO::bound_between(p.curr_loc.site[n].y,  -var.y,  var.y);
       PSO::bound_between(p.curr_loc.site[n].z,  -1,  1);
+    }
+  }
+
+  __host__ __device__
+  void bound_ptcl_best_location(const UGVModel::State &s_ini, Particle &p)
+  {
+    for (int n = 0; n < STEP; n++)
+    {
+      PSO::bound_between(p.best_loc.site[n].x,  -var.x,  var.x);
+      PSO::bound_between(p.best_loc.site[n].y,  -var.y,  var.y);
+      PSO::bound_between(p.best_loc.site[n].z,  -1,  1);
     }
   }
 

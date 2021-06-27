@@ -77,6 +77,7 @@ private:
   UGVRecMotionPlanner m_recover_planner;
   ros::ServiceClient m_collision_check_client;
   STUCK_SUB_MODE m_stuck_submode;
+  float m_min_dist;
 
 };
 
