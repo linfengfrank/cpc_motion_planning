@@ -74,8 +74,17 @@ void initialize_particles_kernel(bool first_run,
   sw.initialize_a_particle(m.get_ini_state(),sw.ptcls[idx]);
 
   // Initialize the glb_best only at first run together with the first particle
-  if (first_run && idx == 0)
-    sw.initialize_a_particle(m.get_ini_state(),*(sw.best_ptcl));
+  if (idx == 0)
+  {
+    if(first_run)
+    {
+      sw.initialize_a_particle(m.get_ini_state(),*(sw.best_ptcl));
+    }
+
+    sw.bound_ptcl_location(m.get_ini_state(), *(sw.best_ptcl));
+    sw.bound_ptcl_best_location(m.get_ini_state(), *(sw.best_ptcl));
+
+  }
 
   // Evaluate the initialized particle
   sw.ptcls[idx].best_cost = ctrl.template simulate_evaluate<Model,Evaluator,Swarm >(map,eva,m, sw, sw.ptcls[idx].best_loc, sw.ptcls[idx].collision);

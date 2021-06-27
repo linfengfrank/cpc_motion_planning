@@ -55,7 +55,7 @@ public:
       for (int i=0;i<m_num_of_epoches;i++)
       {
         weight.x = 0.95-(0.95-0.4)/static_cast<float>(m_num_of_epoches)*static_cast<float>(i);
-        weight.y = 0.3f-(0.3f-0.0)/static_cast<float>(m_num_of_epoches*m_num_of_episodes)*static_cast<float>(i+ctt*m_num_of_epoches);
+        weight.y = 0.2f-(0.2f-0.0)/static_cast<float>(m_num_of_epoches*m_num_of_episodes)*static_cast<float>(i+ctt*m_num_of_epoches);
         iterate_particles<Model, Controller, Evaluator,Swarm>(weight, map, m_eva,m_model,m_ctrl_dev,m_swarm);
         update_best_ptcl();
       }

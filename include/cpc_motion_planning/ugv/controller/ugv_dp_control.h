@@ -162,6 +162,8 @@ public:
       is_traj_collision = false;
 
     cost += eva.final_cost(s,map);
+
+    ttr.min_dist = traj_min_dist;
     return cost;
   }
 
