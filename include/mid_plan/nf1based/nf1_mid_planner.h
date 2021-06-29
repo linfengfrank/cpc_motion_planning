@@ -140,23 +140,28 @@ private:
       }
     }
 
-    // check whether we should go their backward
-    // get the desired angle of the current grid
-    tmp = CUDA_GEO::pos (m_curr_pose.x, m_curr_pose.y, 0);
-    tmp_c = m_line_map->pos2coord(tmp);
-    if (m_line_map->isInside(tmp_c))
+    if (m_nf1_msg.drive_type == cpc_motion_planning::path_action::TYPE_BACKWARD)
     {
-      int idx = m_line_map->m_hst_sd_map[m_line_map->to_id(tmp_c.x,tmp_c.y,0)].rt_idx;
-      if (lpta.find(idx) != lpta.end())
-      {
-        float current_forward_angle = lpta.at(idx);
-        float angle_diff = fabsf(in_pi(current_forward_angle-m_curr_pose.z));
-        if (angle_diff > 0.5*M_PI)
-        {
-          m_mid_goal_orient += M_PI;
-        }
-      }
+      m_mid_goal_orient += M_PI;
     }
+
+//    // check whether we should go their backward
+//    // get the desired angle of the current grid
+//    tmp = CUDA_GEO::pos (m_curr_pose.x, m_curr_pose.y, 0);
+//    tmp_c = m_line_map->pos2coord(tmp);
+//    if (m_line_map->isInside(tmp_c))
+//    {
+//      int idx = m_line_map->m_hst_sd_map[m_line_map->to_id(tmp_c.x,tmp_c.y,0)].rt_idx;
+//      if (lpta.find(idx) != lpta.end())
+//      {
+//        float current_forward_angle = lpta.at(idx);
+//        float angle_diff = fabsf(in_pi(current_forward_angle-m_curr_pose.z));
+//        if (angle_diff > 0.5*M_PI)
+//        {
+//          m_mid_goal_orient += M_PI;
+//        }
+//      }
+//    }
 
   }
 

@@ -212,10 +212,20 @@ void NF1LocalPlanner::do_normal()
 
   //Update the drive direction
   std_msgs::Int32 drive_dir;
-  if (m_pso_planner->result.best_loc[0].z > 0)
-    drive_dir.data = cpc_aux_mapping::nf1_task::TYPE_FORWARD;
+  if(m_pso_planner->m_eva.m_using_auto_direction)
+  {
+    if (m_pso_planner->result.best_loc[0].z > 0)
+      drive_dir.data = cpc_aux_mapping::nf1_task::TYPE_FORWARD;
+    else
+      drive_dir.data = cpc_aux_mapping::nf1_task::TYPE_BACKWARD;
+  }
   else
-    drive_dir.data = cpc_aux_mapping::nf1_task::TYPE_BACKWARD;
+  {
+    if (m_pso_planner->m_eva.is_forward)
+      drive_dir.data = cpc_aux_mapping::nf1_task::TYPE_FORWARD;
+    else
+      drive_dir.data = cpc_aux_mapping::nf1_task::TYPE_BACKWARD;
+  }
 
   m_drive_dir_pub.publish(drive_dir);
 

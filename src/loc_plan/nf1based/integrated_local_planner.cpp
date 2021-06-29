@@ -222,6 +222,15 @@ void IntLocalPlanner::do_normal()
   m_teb_planner->set_init_plan(init);
 
   bool success = m_teb_planner->plan(robot_pose, robot_goal, &robot_vel, m_cfg.goal_tolerance.free_goal_vel);
+
+  std_msgs::Int32 drive_dir;
+  if (m_pso_planner->m_eva.is_forward)
+    drive_dir.data = cpc_aux_mapping::nf1_task::TYPE_FORWARD;
+  else
+    drive_dir.data = cpc_aux_mapping::nf1_task::TYPE_BACKWARD;
+
+  m_drive_dir_pub.publish(drive_dir);
+
   if (!success)
   {
     m_teb_planner->clearPlanner();
