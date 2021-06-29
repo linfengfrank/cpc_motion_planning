@@ -218,7 +218,7 @@ public:
 
     if(!m_pure_turning && m_nf1_received && !m_stuck)
     {
-      cost += 20.0f * calculate_nf1_cost(s,0.3f);
+      cost += 4.0f * calculate_nf1_cost(s,0.3f);
     }
 
     return  cost;
