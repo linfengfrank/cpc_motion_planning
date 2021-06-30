@@ -37,6 +37,8 @@ protected:
 private:
   void do_recover();
   void do_full_stuck();
+  bool do_normal_teb();
+  bool do_normal_pso();
 private:
   void plan_call_back(const ros::TimerEvent&);
   void nf1_call_back(const cpc_aux_mapping::nf1_task::ConstPtr &msg);

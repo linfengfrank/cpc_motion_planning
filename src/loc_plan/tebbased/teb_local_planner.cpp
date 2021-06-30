@@ -95,6 +95,19 @@ void TEBLocalPlanner::nf1_call_back(const cpc_aux_mapping::nf1_task::ConstPtr &m
 
   // setup the drive type
 
+  // setup the drive type
+  if (msg->drive_type == cpc_aux_mapping::nf1_task::TYPE_FORWARD)
+  {
+    m_planner->m_is_forward = true;
+  }
+  else if (msg->drive_type == cpc_aux_mapping::nf1_task::TYPE_BACKWARD)
+  {
+    m_planner->m_is_forward = false;
+  }
+  else if (msg->drive_type == cpc_aux_mapping::nf1_task::TYPE_ROTATE)
+  {
+    m_planner->m_is_forward = true;
+  }
 
   // setup the goal and carrot
   UGV::NF1Evaluator::Target tmp_goal;
@@ -204,6 +217,14 @@ void TEBLocalPlanner::do_normal()
       std::cout << "Local planning time: "
                 << std::chrono::duration_cast<std::chrono::milliseconds>(end_time - start_time).count()
                 << " ms"<< std::endl;
+
+  std_msgs::Int32 drive_dir;
+  if (m_planner->m_is_forward)
+    drive_dir.data = cpc_aux_mapping::nf1_task::TYPE_FORWARD;
+  else
+    drive_dir.data = cpc_aux_mapping::nf1_task::TYPE_BACKWARD;
+
+  m_drive_dir_pub.publish(drive_dir);
 
   if (!success)
   {
