@@ -108,16 +108,19 @@ void IntLocalPlanner::nf1_call_back(const cpc_aux_mapping::nf1_task::ConstPtr &m
   {
     m_pso_planner->m_eva.m_pure_turning = false;
     m_pso_planner->m_eva.is_forward = true;
+    m_teb_planner->m_is_forward = true;
   }
   else if (msg->drive_type == cpc_aux_mapping::nf1_task::TYPE_BACKWARD)
   {
     m_pso_planner->m_eva.m_pure_turning = false;
     m_pso_planner->m_eva.is_forward = false;
+    m_teb_planner->m_is_forward = false;
   }
   else if (msg->drive_type == cpc_aux_mapping::nf1_task::TYPE_ROTATE)
   {
     m_pso_planner->m_eva.m_pure_turning = true;
     m_pso_planner->m_eva.is_forward = true;
+    m_teb_planner->m_is_forward = true;
   }
 
   // setup the goal and carrot
@@ -207,6 +210,43 @@ void IntLocalPlanner::do_normal()
 
   //Planning
   m_task_is_new = false;
+
+  UGV::UGVModel::State ini_state = m_pso_planner->m_model.get_ini_state();
+
+  if (!do_normal_teb())
+  {
+    std::cout<<"!!!emergent mode!!!"<<std::endl;
+    do_normal_pso();
+  }
+
+  //Goto: Stuck
+  if(is_stuck(m_traj,m_carrot) || is_stuck_lowpass(m_pso_planner->m_model.get_ini_state(),m_carrot))
+  {
+    m_teb_planner->clearPlanner();
+    m_status = UGV::STUCK;
+    m_stuck_submode = STUCK_SUB_MODE::FULL_STUCK;
+    m_stuck_start_cycle = m_plan_cycle;
+    m_plan_request_cycle = m_plan_cycle;
+    m_full_start_cycle = m_plan_cycle;
+  }
+
+  //Goto: Pos_reached
+  if(is_pos_reached(ini_state,m_goal.s,m_goal.reaching_radius))
+  {
+      float2 carrot_diff = ini_state.p - m_carrot.p;
+      if (sqrtf(dot(carrot_diff,carrot_diff))<m_goal.reaching_radius)
+      {
+        m_status = UGV::POS_REACHED;
+        std_msgs::Int32MultiArray reach_msg;
+        reach_msg.data.push_back(m_goal.path_id);
+        reach_msg.data.push_back(m_goal.act_id);
+        m_tgt_reached_pub.publish(reach_msg);
+      }
+  }
+
+}
+bool IntLocalPlanner::do_normal_teb()
+{
   UGV::UGVModel::State ini_state = m_pso_planner->m_model.get_ini_state();
   teb::PoseSE2 robot_pose(ini_state.p.x, ini_state.p.y, ini_state.theta);
   teb::PoseSE2 robot_goal(m_carrot.p.x, m_carrot.p.y, m_carrot.theta);
@@ -224,7 +264,7 @@ void IntLocalPlanner::do_normal()
   bool success = m_teb_planner->plan(robot_pose, robot_goal, &robot_vel, m_cfg.goal_tolerance.free_goal_vel);
 
   std_msgs::Int32 drive_dir;
-  if (m_pso_planner->m_eva.is_forward)
+  if (m_teb_planner->m_is_forward)
     drive_dir.data = cpc_aux_mapping::nf1_task::TYPE_FORWARD;
   else
     drive_dir.data = cpc_aux_mapping::nf1_task::TYPE_BACKWARD;
@@ -234,20 +274,14 @@ void IntLocalPlanner::do_normal()
   if (!success)
   {
     m_teb_planner->clearPlanner();
-    m_braking_start_cycle = m_plan_cycle;
-    m_status = UGV::BRAKING;
-    cycle_process_based_on_status();
-    return;
+    return false;
   }
 
   bool feasible = m_teb_planner->isTrajectoryFeasible(0.4, m_cfg.trajectory.feasibility_check_no_poses);
   if(!feasible)
   {
     m_teb_planner->clearPlanner();
-    m_braking_start_cycle = m_plan_cycle;
-    m_status = UGV::BRAKING;
-    cycle_process_based_on_status();
-    return;
+    return false;
   }
 
   std::vector<teb::Reference> ref;
@@ -264,31 +298,7 @@ void IntLocalPlanner::do_normal()
       s.w = r.omega;
       m_traj.push_back(s);
     }
-
-    //Goto: Stuck
-    if(is_stuck(m_traj,m_carrot) || is_stuck_lowpass(m_pso_planner->m_model.get_ini_state(),m_carrot))
-    {
-      m_teb_planner->clearPlanner();
-      m_status = UGV::STUCK;
-      m_stuck_submode = STUCK_SUB_MODE::FULL_STUCK;
-      m_stuck_start_cycle = m_plan_cycle;
-      m_plan_request_cycle = m_plan_cycle;
-      m_full_start_cycle = m_plan_cycle;
-    }
-
-    //Goto: Pos_reached
-    if(is_pos_reached(ini_state,m_goal.s,m_goal.reaching_radius))
-    {
-        float2 carrot_diff = ini_state.p - m_carrot.p;
-        if (sqrtf(dot(carrot_diff,carrot_diff))<m_goal.reaching_radius)
-        {
-          m_status = UGV::POS_REACHED;
-          std_msgs::Int32MultiArray reach_msg;
-          reach_msg.data.push_back(m_goal.path_id);
-          reach_msg.data.push_back(m_goal.act_id);
-          m_tgt_reached_pub.publish(reach_msg);
-        }
-    }
+    return true;
   }
   else
   {
@@ -296,8 +306,40 @@ void IntLocalPlanner::do_normal()
     m_braking_start_cycle = m_plan_cycle;
     m_status = UGV::BRAKING;
     cycle_process_based_on_status();
-    return;
+    return false;
   }
+}
+bool IntLocalPlanner::do_normal_pso()
+{
+  calculate_trajectory<SIMPLE_UGV>(m_pso_planner, m_traj, m_use_de);
+
+  //Update the drive direction
+  std_msgs::Int32 drive_dir;
+  if(m_pso_planner->m_eva.m_using_auto_direction)
+  {
+    if (m_pso_planner->result.best_loc[0].z > 0)
+      drive_dir.data = cpc_aux_mapping::nf1_task::TYPE_FORWARD;
+    else
+      drive_dir.data = cpc_aux_mapping::nf1_task::TYPE_BACKWARD;
+  }
+  else
+  {
+    if (m_pso_planner->m_eva.is_forward)
+      drive_dir.data = cpc_aux_mapping::nf1_task::TYPE_FORWARD;
+    else
+      drive_dir.data = cpc_aux_mapping::nf1_task::TYPE_BACKWARD;
+  }
+
+  m_drive_dir_pub.publish(drive_dir);
+
+  if (m_pso_planner->result.collision)
+  {
+    m_braking_start_cycle = m_plan_cycle;
+    m_status = UGV::BRAKING;
+    cycle_process_based_on_status();
+  }
+
+  return true;
 }
 //=====================================
 void IntLocalPlanner::do_stuck()
