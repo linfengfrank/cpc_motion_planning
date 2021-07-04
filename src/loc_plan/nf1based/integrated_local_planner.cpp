@@ -213,11 +213,17 @@ void IntLocalPlanner::do_normal()
 
   UGV::UGVModel::State ini_state = m_pso_planner->m_model.get_ini_state();
 
+  auto start_time = std::chrono::steady_clock::now();
   if (!do_normal_teb())
   {
     std::cout<<"!!!emergent mode!!!"<<std::endl;
     do_normal_pso();
   }
+
+  auto end_time = std::chrono::steady_clock::now();
+      std::cout << "Local planning time: "
+                << std::chrono::duration_cast<std::chrono::milliseconds>(end_time - start_time).count()
+                << " ms"<< std::endl;
 
   //Goto: Stuck
   if(is_stuck(m_traj,m_carrot) || is_stuck_lowpass(m_pso_planner->m_model.get_ini_state(),m_carrot))
@@ -284,6 +290,7 @@ bool IntLocalPlanner::do_normal_teb()
     return false;
   }
 
+  std::cout<<"size: "<<m_teb_planner->bestTeb()->teb().sizePoses()<<std::endl;
   std::vector<teb::Reference> ref;
   float curr_v_r = ini_state.v;
   float curr_w_r = ini_state.w;
