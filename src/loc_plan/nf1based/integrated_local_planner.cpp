@@ -285,17 +285,21 @@ bool IntLocalPlanner::do_normal_teb()
   }
 
   std::vector<teb::Reference> ref;
+  float curr_v_r = ini_state.v;
+  float curr_w_r = ini_state.w;
   if (m_teb_planner->bestTeb() && m_teb_planner->bestTeb()->get_reference(4,0.05, ref))
   {
     m_traj.clear();
     for (teb::Reference r : ref)
     {
+      curr_v_r = acc_filter(curr_v_r, r.vx,    m_cfg.robot.acc_lim_x * m_cfg.robot.acc_filter_mutiplier,     0.05f);
+      curr_w_r = acc_filter(curr_w_r, r.omega, m_cfg.robot.acc_lim_theta * m_cfg.robot.acc_filter_mutiplier, 0.05f);
       UGV::UGVModel::State s;
       s.p.x = r.pose.x();
       s.p.y = r.pose.y();
-      s.v = r.vx;
+      s.v = curr_v_r;
       s.theta = r.pose.theta();
-      s.w = r.omega;
+      s.w = curr_w_r;
       m_traj.push_back(s);
     }
     return true;

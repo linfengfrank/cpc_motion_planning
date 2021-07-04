@@ -124,6 +124,26 @@ private:
     std::reverse(split_idx.begin(),split_idx.end());
     return split_idx;
   }
+
+  //---
+  float acc_filter(float curr_v, float tgt_v, const float acc_lim, const float dt)
+  {
+    float achieved_v;
+    float desired_acc = (tgt_v - curr_v)/dt;
+
+    if(fabsf(desired_acc) < acc_lim)
+    {
+      achieved_v = tgt_v;
+    }
+    else
+    {
+      if (desired_acc > 0)
+        achieved_v = curr_v + acc_lim*dt;
+      else
+        achieved_v = curr_v - acc_lim*dt;
+    }
+    return achieved_v;
+  }
 private:
   ros::Subscriber m_nf1_sub;
   ros::Timer m_planning_timer;
