@@ -1,21 +1,19 @@
 <?xml version="1.0"?>
 <launch>
-<arg name="vehicle" default="/iris_0"/>
-
-<group ns="$(arg vehicle)">
+<arg name="vehicle" default=""/>
     <include file="$(find cpc_reference_publisher)/launch/ref_pub.launch">
         <arg name="vehicle" value="$(arg vehicle)"/>
     </include>
+
     <node pkg="cpc_motion_planning" type="nf1_mid_planning_node" name="nf1_mid_planning_node" output="screen">
-        <remap from= "/edt_map" to= "$(arg vehicle)/edt_map"/>
+        <!-- <remap from= "/edt_map" to= "$(arg vehicle)/edt_map"/> -->
         <!-- <remap from= "/ground_truth/odom" to= "$(arg vehicle)/mavros/odometry/out"/> -->
         <!-- <remap from= "/stuck" to= "$(arg vehicle)/stuck"/> -->
     </node>
     <node pkg="cpc_motion_planning" type="nf1_loc_planning_node" name="nf1_loc_planning_node" output="screen">
-        <remap from= "/ground_truth/state" to= "$(arg vehicle)/odom"/>
-        <remap from= "/mid_layer/goal" to= "$(arg vehicle)/mid_layer/goal"/>
-        <remap from= "/edt_map" to= "$(arg vehicle)/edt_map"/>
+        <remap from= "/ground_truth/state" to= "/odom"/>
+        <!-- <remap from= "/mid_layer/goal" to= "$(arg vehicle)/mid_layer/goal"/> -->
+        <!-- <remap from= "/edt_map" to= "$(arg vehicle)/edt_map"/> -->
     </node>
 
-</group>
 </launch>

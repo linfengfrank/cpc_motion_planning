@@ -125,6 +125,7 @@ void Dijkstra::bfs2D(CUDA_GEO::coord glb_tgt)
   m=getNode(mc);
 
   bool occupied=false;
+  bool self_occupied = false;
   if (m)
   {
     m->g = 0 + obsCostAt(mc,0,occupied);
@@ -137,6 +138,7 @@ void Dijkstra::bfs2D(CUDA_GEO::coord glb_tgt)
     m->inClosed = true;
     mc = m->c;
 
+    obsCostAt(pc,0,self_occupied);
     // get all neighbours
     for (int ix=-1;ix<=1;ix++)
     {
@@ -153,8 +155,12 @@ void Dijkstra::bfs2D(CUDA_GEO::coord glb_tgt)
         if (p && !p->inClosed)
         {
           obsCostAt(pc,0,occupied);
+//          if (self_occupied && !occupied)
+//            continue;
           p->inClosed = true;
           p->g = 1*getGridStep() + m->g;
+
+
           if (!occupied)
             _Q.push(p);
           else

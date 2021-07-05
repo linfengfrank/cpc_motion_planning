@@ -116,6 +116,7 @@ void UAVNF1MotionPlanner::do_at_ground()
     std_srvs::Empty::Request eReq;
     std_srvs::Empty::Response eRes;
     ros::service::call("engage", eReq, eRes);
+    printf("start!\n");
     m_fly_status = UAV::TAKING_OFF;
   }
 }

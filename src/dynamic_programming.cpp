@@ -68,10 +68,14 @@ void position_program()
   //------
   std::cout<<"Write data to files"<<std::endl;
 
-  factory.write_cuda_matrix<3,UAV::UAVModel::Input>(S_A,"/home/sp/cpc_ws/SA.dat");
-  factory.write_cuda_matrix<1,float>(pos_bins,"/home/sp/cpc_ws/pos_bin.dat");
-  factory.write_cuda_matrix<1,float>(vel_bins,"/home/sp/cpc_ws/vel_bin.dat");
-  factory.write_cuda_matrix<1,float>(acc_bins,"/home/sp/cpc_ws/acc_bin.dat");
+ // factory.write_cuda_matrix<3,UAV::UAVModel::Input>(S_A,"/home/sp/cpc_ws/SA.dat");
+  //factory.write_cuda_matrix<1,float>(pos_bins,"/home/sp/cpc_ws/pos_bin.dat");
+  //factory.write_cuda_matrix<1,float>(vel_bins,"/home/sp/cpc_ws/vel_bin.dat");
+  //factory.write_cuda_matrix<1,float>(acc_bins,"/home/sp/cpc_ws/acc_bin.dat");
+  factory.write_cuda_matrix<3,UAV::UAVModel::Input>(S_A,"/home/uas/yzchen_ws/SA.dat");
+  factory.write_cuda_matrix<1,float>(pos_bins,"/home/uas/yzchen_ws/pos_bin.dat");
+  factory.write_cuda_matrix<1,float>(vel_bins,"/home/uas/yzchen_ws/vel_bin.dat");
+  factory.write_cuda_matrix<1,float>(acc_bins,"/home/uas/yzchen_ws/acc_bin.dat");
 
   std::cout<<"Release the resources"<<std::endl;
   factory.free_cuda_matrix<1,float>(pos_bins);
@@ -141,9 +145,12 @@ void velocity_program()
   //------
   std::cout<<"Write data to files"<<std::endl;
 
-  factory.write_cuda_matrix<2,UAV::UAVModel::Input>(S_A,"/home/sp/cpc_ws/SA.dat");
-  factory.write_cuda_matrix<1,float>(vel_bins,"/home/sp/cpc_ws/vel_bin.dat");
-  factory.write_cuda_matrix<1,float>(acc_bins,"/home/sp/cpc_ws/acc_bin.dat");
+//  factory.write_cuda_matrix<2,UAV::UAVModel::Input>(S_A,"/home/sp/cpc_ws/SA.dat");
+ // factory.write_cuda_matrix<1,float>(vel_bins,"/home/sp/cpc_ws/vel_bin.dat");
+  //factory.write_cuda_matrix<1,float>(acc_bins,"/home/sp/cpc_ws/acc_bin.dat");
+    factory.write_cuda_matrix<2,UAV::UAVModel::Input>(S_A,"/home/uas/yzchen_ws/SA.dat");
+  factory.write_cuda_matrix<1,float>(vel_bins,"/home/uas/yzchen_ws/vel_bin.dat");
+  factory.write_cuda_matrix<1,float>(acc_bins,"/home/uas/yzchen_ws/acc_bin.dat");
 
   std::cout<<"Release the resources"<<std::endl;
   factory.free_cuda_matrix<1,float>(vel_bins);
