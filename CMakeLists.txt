@@ -21,6 +21,9 @@ find_package(catkin REQUIRED COMPONENTS
 ## System dependencies are found with CMake's conventions
 # find_package(Boost REQUIRED COMPONENTS system)
 FIND_PACKAGE(CUDA REQUIRED)
+find_package(osqp REQUIRED)
+find_package(OsqpEigen)
+find_package(Eigen3)
 
 if(NOT CMAKE_BUILD_TYPE AND NOT CMAKE_CONFIGURATION_TYPES)
   set(CMAKE_BUILD_TYPE Release CACHE STRING "Choose the type of build." FORCE)
@@ -203,13 +206,15 @@ cuda_add_executable(integrated_planning_node
     src/loc_plan/nf1based/integrated_local_planner_node.cpp
     src/loc_plan/ugv_base_local_planner.cpp
     src/pure_pursuit/pure_pursuit_ctrl.cpp
-    src/kernel/pso_kernels.cu)
+    src/kernel/pso_kernels.cu
+    src/linear_mpc.cpp)
 
 target_link_libraries(integrated_planning_node
     ${CUDA_curand_LIBRARY}
     ${CUDA_cublas_LIBRARY}
     ${CUDA_LIBRARIES}
-    ${catkin_LIBRARIES})
+    ${catkin_LIBRARIES}
+    OsqpEigen::OsqpEigen)
 
 cuda_add_executable(nf1_mid_planning_node
     src/mid_plan/utils/grid_graph.cpp

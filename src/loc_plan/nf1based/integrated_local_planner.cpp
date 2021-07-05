@@ -73,12 +73,50 @@ IntLocalPlanner::IntLocalPlanner():
   // create robot footprint/contour model for optimization
   m_teb_planner = teb::HomotopyClassPlannerPtr(new teb::HomotopyClassPlanner(m_cfg, m_visualization));
 
+  // setup the mpc
+  N_hor = 45;
+  m_mpc = new linear_mpc(0.05, N_hor, 0.8, 0.6, 0.6, 0.6);
+  //--init the mpc controller---
+  std::vector<double> Qd, Rd, Sd;
+  m_nh.getParam("/Qd",Qd);
+  m_nh.getParam("/Rd",Rd);
+  m_nh.getParam("/Sd",Sd);
+
+  if (Qd.size() != 3 || Rd.size()!=2 || Sd.size() != 2)
+  {
+    std::cout<<"Cost matrix dimension is wrong!"<<std::endl;
+    exit(-1);
+  }
+
+  Eigen::Matrix<double,3,3> Q;
+  Q<<Qd[0], 0,     0,
+     0,     Qd[1], 0,
+     0,     0,     Qd[2];
+
+  Eigen::Matrix<double,2,2> R;
+  R<<Rd[0], 0,
+     0,     Rd[1];
+
+  Eigen::Matrix<double,2,2> S;
+  S<<Sd[0], 0,
+      0,    Sd[1];
+
+  std::cout<<Q<<std::endl;
+  std::cout<<"----------"<<std::endl;
+  std::cout<<R<<std::endl;
+  std::cout<<"----------"<<std::endl;
+  std::cout<<S<<std::endl;
+  std::cout<<"----------"<<std::endl;
+
+  m_mpc->set_cost(Q,R,S);
 }
 
 IntLocalPlanner::~IntLocalPlanner()
 {
   m_pso_planner->release();
   delete m_pso_planner;
+
+  delete m_mpc;
 }
 
 void IntLocalPlanner::nf1_call_back(const cpc_aux_mapping::nf1_task::ConstPtr &msg)
@@ -285,24 +323,32 @@ bool IntLocalPlanner::do_normal_teb()
   }
 
   std::vector<teb::Reference> ref;
-  float curr_v_r = ini_state.v;
-  float curr_w_r = ini_state.w;
+
   if (m_teb_planner->bestTeb() && m_teb_planner->bestTeb()->get_reference(4,0.05, ref))
   {
     m_traj.clear();
+    std::vector<double> x_i,y_i,th_i,v_i,w_i;
     for (teb::Reference r : ref)
     {
-      curr_v_r = acc_filter(curr_v_r, r.vx,    m_cfg.robot.acc_lim_x * m_cfg.robot.acc_filter_mutiplier,     0.05f);
-      curr_w_r = acc_filter(curr_w_r, r.omega, m_cfg.robot.acc_lim_theta * m_cfg.robot.acc_filter_mutiplier, 0.05f);
-      UGV::UGVModel::State s;
-      s.p.x = r.pose.x();
-      s.p.y = r.pose.y();
-      s.v = curr_v_r;
-      s.theta = r.pose.theta();
-      s.w = curr_w_r;
-      m_traj.push_back(s);
+      x_i.push_back(r.pose.x());
+      y_i.push_back(r.pose.y());
+      th_i.push_back(r.pose.theta());
+      v_i.push_back(r.vx);
+      w_i.push_back(r.omega);
+//      UGV::UGVModel::State s;
+//      s.p.x = r.pose.x();
+//      s.p.y = r.pose.y();
+//      s.v = r.vx;
+//      s.theta = r.pose.theta();
+//      s.w = r.omega;
+//      m_traj.push_back(s);
     }
-    return true;
+
+    m_mpc->set_reference_and_state(x_i,y_i,th_i,v_i,w_i,ini_state.p.x,ini_state.p.y,
+                                   ini_state.theta,ini_state.v,ini_state.w);
+
+    return m_mpc->solve(m_traj);
+    //return true;
   }
   else
   {

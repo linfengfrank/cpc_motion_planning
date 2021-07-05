@@ -9,7 +9,7 @@
 #include <teb_local_planner/optimal_planner.h>
 #include <teb_local_planner/homotopy_class_planner.h>
 #include <teb_local_planner/visualization.h>
-
+#include <mpc/linear_mpc.h>
 
 #define SIMPLE_UGV UGV::UGVModel,UGV::UGVDPControl,UGV::NF1Evaluator,UGV::UGVSwarm<8>
 namespace teb = teb_local_planner;
@@ -182,6 +182,8 @@ private:
   teb::TebConfig m_cfg;
   teb::TebVisualizationPtr m_visualization;
 
+  int N_hor;
+  linear_mpc* m_mpc;
 };
 
 #endif // INTEGRATED_LOCAL_PLANNER_H
