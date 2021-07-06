@@ -144,6 +144,10 @@ private:
     }
     return achieved_v;
   }
+
+  //---
+  bool smooth_reference(const UGV::UGVModel::State &ini_state, const std::vector<teb::Reference> &raw_ref,
+                        std::vector<UGV::UGVModel::State> &final_ref, bool use_simple_filter);
 private:
   ros::Subscriber m_nf1_sub;
   ros::Timer m_planning_timer;
@@ -184,6 +188,7 @@ private:
 
   int N_hor;
   linear_mpc* m_mpc;
+  bool m_use_simple_filter;
 };
 
 #endif // INTEGRATED_LOCAL_PLANNER_H

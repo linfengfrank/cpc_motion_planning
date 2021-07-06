@@ -28,6 +28,7 @@ IntLocalPlanner::IntLocalPlanner():
   m_nh.param<int>("/batch_num",m_batch_num,40);
   m_nh.param<int>("/episode_num",m_episode_num,2);
   m_nh.param<float>("/local_safety_radius",local_safety_radius,0.401f);
+  m_nh.param<bool>("/use_simple_filter",m_use_simple_filter,true);
 
   m_nf1_sub = m_nh.subscribe("/nf1",1,&IntLocalPlanner::nf1_call_back, this);
 
@@ -73,9 +74,11 @@ IntLocalPlanner::IntLocalPlanner():
   // create robot footprint/contour model for optimization
   m_teb_planner = teb::HomotopyClassPlannerPtr(new teb::HomotopyClassPlanner(m_cfg, m_visualization));
 
+  //==========================================================
   // setup the mpc
   N_hor = 45;
-  m_mpc = new linear_mpc(0.05, N_hor, 0.8, 0.6, 0.6, 0.6);
+  m_mpc = new linear_mpc(0.05, N_hor, m_cfg.robot.max_vel_x+0.2, m_cfg.robot.max_vel_theta + 0.2,
+                         m_cfg.robot.acc_lim_x * m_cfg.robot.acc_filter_mutiplier, m_cfg.robot.acc_lim_theta * m_cfg.robot.acc_filter_mutiplier);
   //--init the mpc controller---
   std::vector<double> Qd, Rd, Sd;
   m_nh.getParam("/Qd",Qd);
@@ -326,29 +329,7 @@ bool IntLocalPlanner::do_normal_teb()
 
   if (m_teb_planner->bestTeb() && m_teb_planner->bestTeb()->get_reference(4,0.05, ref))
   {
-    m_traj.clear();
-    std::vector<double> x_i,y_i,th_i,v_i,w_i;
-    for (teb::Reference r : ref)
-    {
-      x_i.push_back(r.pose.x());
-      y_i.push_back(r.pose.y());
-      th_i.push_back(r.pose.theta());
-      v_i.push_back(r.vx);
-      w_i.push_back(r.omega);
-//      UGV::UGVModel::State s;
-//      s.p.x = r.pose.x();
-//      s.p.y = r.pose.y();
-//      s.v = r.vx;
-//      s.theta = r.pose.theta();
-//      s.w = r.omega;
-//      m_traj.push_back(s);
-    }
-
-    m_mpc->set_reference_and_state(x_i,y_i,th_i,v_i,w_i,ini_state.p.x,ini_state.p.y,
-                                   ini_state.theta,ini_state.v,ini_state.w);
-
-    return m_mpc->solve(m_traj);
-    //return true;
+    return smooth_reference(ini_state, ref, m_traj, m_use_simple_filter);
   }
   else
   {
@@ -359,6 +340,49 @@ bool IntLocalPlanner::do_normal_teb()
     return false;
   }
 }
+
+bool IntLocalPlanner::smooth_reference(const UGV::UGVModel::State &ini_state, const std::vector<teb::Reference> &raw_ref,
+                                       std::vector<UGV::UGVModel::State> &final_ref, bool use_simple_filter)
+{
+  final_ref.clear();
+  if (use_simple_filter)
+  {
+    float curr_v_r = ini_state.v;
+    float curr_w_r = ini_state.w;
+    for (teb::Reference r : raw_ref)
+    {
+      curr_v_r = acc_filter(curr_v_r, r.vx,    m_cfg.robot.acc_lim_x * m_cfg.robot.acc_filter_mutiplier,     0.05f);
+      curr_w_r = acc_filter(curr_w_r, r.omega, m_cfg.robot.acc_lim_theta * m_cfg.robot.acc_filter_mutiplier, 0.05f);
+      UGV::UGVModel::State s;
+      s.p.x = r.pose.x();
+      s.p.y = r.pose.y();
+      s.v = curr_v_r;
+      s.theta = r.pose.theta();
+      s.w = curr_w_r;
+      final_ref.push_back(s);
+    }
+    return true;
+  }
+  else
+  {
+    std::vector<double> x_i,y_i,th_i,v_i,w_i;
+    for (teb::Reference r : raw_ref)
+    {
+      x_i.push_back(r.pose.x());
+      y_i.push_back(r.pose.y());
+      th_i.push_back(r.pose.theta());
+      v_i.push_back(r.vx);
+      w_i.push_back(r.omega);
+    }
+
+    m_mpc->set_reference_and_state(x_i, y_i, th_i, v_i, w_i,
+                                   ini_state.p.x, ini_state.p.y, ini_state.theta,
+                                   ini_state.v, ini_state.w);
+
+    return m_mpc->solve(final_ref);
+  }
+}
+//---
 bool IntLocalPlanner::do_normal_pso()
 {
   calculate_trajectory<SIMPLE_UGV>(m_pso_planner, m_traj, m_use_de);
