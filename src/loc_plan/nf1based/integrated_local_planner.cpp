@@ -32,11 +32,9 @@ IntLocalPlanner::IntLocalPlanner():
 
   m_nf1_sub = m_nh.subscribe("/nf1",1,&IntLocalPlanner::nf1_call_back, this);
 
-  m_collision_check_client = m_nh.serviceClient<cpc_motion_planning::collision_check>("collision_check");
   m_ref_pub = m_nh.advertise<cpc_motion_planning::ref_data>("ref_traj",1);
   m_status_pub = m_nh.advertise<std_msgs::String>("ref_status_string",1);
   m_tgt_reached_pub = m_nh.advertise<std_msgs::Int32MultiArray>("target_reached",1);
-  m_stuck_plan_request_pub = m_nh.advertise<cpc_motion_planning::plan_request>("plan_request",1);
   m_drive_dir_pub = m_nh.advertise<std_msgs::Int32>("drive_dir",1);
 
   m_planning_timer = m_nh.createTimer(ros::Duration(PSO::PSO_REPLAN_DT), &IntLocalPlanner::plan_call_back, this);
@@ -49,7 +47,6 @@ IntLocalPlanner::IntLocalPlanner():
   m_pso_planner->m_eva.m_safety_radius = local_safety_radius;
   m_pso_planner->m_file_location = dp_file_location;
   m_pso_planner->initialize();
-  m_recover_planner.init_swarm(step_num, step_dt, var_s, var_theta, dp_file_location);
 
   m_ref_v = 0.0f;
   m_ref_w = 0.0f;
@@ -58,7 +55,7 @@ IntLocalPlanner::IntLocalPlanner():
   m_v_err_reset_ctt = 0;
   m_w_err_reset_ctt = 0;
   m_tht_err_reset_ctt = 0;
-  m_stuck_recover_path.request_ctt = -1;
+
   //Initialize the control message
   m_ref_msg.rows = 5;
   m_plan_cycle = 0;
@@ -265,10 +262,7 @@ void IntLocalPlanner::do_normal()
   {
     m_teb_planner->clearPlanner();
     m_status = UGV::STUCK;
-    m_stuck_submode = STUCK_SUB_MODE::FULL_STUCK;
     m_stuck_start_cycle = m_plan_cycle;
-    m_plan_request_cycle = m_plan_cycle;
-    m_full_start_cycle = m_plan_cycle;
   }
 
   //Goto: Pos_reached
@@ -419,26 +413,6 @@ bool IntLocalPlanner::do_normal_pso()
 void IntLocalPlanner::do_stuck()
 {
   cycle_init();
-  switch (m_stuck_submode)
-  {
-  case STUCK_SUB_MODE::RECOVER:
-    do_recover();
-    break;
-
-  case STUCK_SUB_MODE::FULL_STUCK:
-    do_full_stuck();
-    break;
-
-  }
-}
-//=====================================
-void IntLocalPlanner::do_recover()
-{
-
-}
-//=====================================
-void IntLocalPlanner::do_full_stuck()
-{
   std::cout<<"FULL STUCK"<<std::endl;
   //Planning
   m_pso_planner->m_eva.m_stuck = true;
@@ -453,7 +427,7 @@ void IntLocalPlanner::do_full_stuck()
   }
 
   //Goto: Normal
-  if (m_plan_cycle - m_full_start_cycle >= 10)
+  if (m_plan_cycle - m_stuck_start_cycle >= 10)
   {
     m_status = UGV::NORMAL;
     m_pso_planner->m_eva.m_stuck = false;
@@ -477,8 +451,7 @@ void IntLocalPlanner::do_braking()
   if (m_plan_cycle - m_braking_start_cycle >= 10)
   {
      m_status = UGV::STUCK;
-     m_stuck_submode = STUCK_SUB_MODE::FULL_STUCK;
-     m_full_start_cycle = m_plan_cycle;
+     m_stuck_start_cycle = m_plan_cycle;
   }
 
 }
@@ -529,11 +502,11 @@ void IntLocalPlanner::cycle_init()
   if (cycle_initialized)
     return;
 
-//  float2 diff = m_goal.s.p - m_carrot.p;
-//  if (sqrtf(dot(diff,diff)) <= 2*m_edt_map->m_grid_step)
-//    m_pso_planner->m_eva.m_accurate_reaching = true;
-//  else
-//    m_pso_planner->m_eva.m_accurate_reaching = false;
+  float2 diff = m_goal.s.p - m_carrot.p;
+  if (sqrtf(dot(diff,diff)) <= 2*m_edt_map->m_grid_step)
+    m_pso_planner->m_eva.m_accurate_reaching = true;
+  else
+    m_pso_planner->m_eva.m_accurate_reaching = false;
 
   cycle_initialized = true;
   bool is_heading_ref;

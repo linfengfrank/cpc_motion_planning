@@ -154,7 +154,6 @@ private:
   ros::Publisher m_ref_pub;
   ros::Publisher m_status_pub;
   ros::Publisher m_tgt_reached_pub;
-  ros::Publisher m_stuck_plan_request_pub;
   ros::Publisher m_drive_dir_pub;
 
   bool m_goal_received;
@@ -172,20 +171,17 @@ private:
   bool cycle_initialized;
   int m_braking_start_cycle;
   int m_stuck_start_cycle;
-  int m_full_start_cycle;
-  int m_plan_request_cycle;
   int m_swarm_size;
   int m_batch_num;
   int m_episode_num;
   NF1MapDT *m_nf1_map;
-  cpc_motion_planning::path m_stuck_recover_path;
-  UGVRecMotionPlanner m_recover_planner;
-  ros::ServiceClient m_collision_check_client;
-  STUCK_SUB_MODE m_stuck_submode;
+
+  //--- Teb planner
   teb::HomotopyClassPlannerPtr m_teb_planner;
   teb::TebConfig m_cfg;
   teb::TebVisualizationPtr m_visualization;
 
+  //--- LTV acceleration filter
   int N_hor;
   linear_mpc* m_mpc;
   bool m_use_simple_filter;
