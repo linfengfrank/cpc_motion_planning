@@ -207,7 +207,7 @@ cuda_add_executable(integrated_planning_node
     src/loc_plan/ugv_base_local_planner.cpp
     src/pure_pursuit/pure_pursuit_ctrl.cpp
     src/kernel/pso_kernels.cu
-    src/linear_mpc.cpp)
+    src/ltv_acc_filter.cpp)
 
 target_link_libraries(integrated_planning_node
     ${CUDA_curand_LIBRARY}

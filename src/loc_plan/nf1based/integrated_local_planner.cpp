@@ -74,7 +74,7 @@ IntLocalPlanner::IntLocalPlanner():
   //==========================================================
   // setup the mpc
   N_hor = 45;
-  m_mpc = new linear_mpc(0.05, N_hor, m_cfg.robot.max_vel_x+0.2, m_cfg.robot.max_vel_theta + 0.2,
+  m_mpc = new ltv_mpc_filter(0.05, N_hor, m_cfg.robot.max_vel_x+0.2, m_cfg.robot.max_vel_theta + 0.2,
                          m_cfg.robot.acc_lim_x * m_cfg.robot.acc_filter_mutiplier, m_cfg.robot.acc_lim_theta * m_cfg.robot.acc_filter_mutiplier);
   //--init the mpc controller---
   std::vector<double> Qd, Rd, Sd;

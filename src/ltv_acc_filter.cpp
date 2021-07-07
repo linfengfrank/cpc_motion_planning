@@ -1,6 +1,6 @@
-#include "mpc/linear_mpc.h"
+#include "mpc/ltv_mpc_filter.h"
 
-linear_mpc::linear_mpc(double dt, int N, double v_lim, double w_lim, double a_lim, double alpha_lim)
+ltv_mpc_filter::ltv_mpc_filter(double dt, int N, double v_lim, double w_lim, double a_lim, double alpha_lim)
 {
   m_dt = dt;
   m_initial_condition_set = false;
@@ -19,7 +19,7 @@ linear_mpc::linear_mpc(double dt, int N, double v_lim, double w_lim, double a_li
   m_alpha_lim = alpha_lim;
 }
 
-void linear_mpc::set_cost(const Eigen::Matrix<double,3,3> &Q, const Eigen::Matrix<double,2,2> &R, const Eigen::Matrix<double,2,2> &S)
+void ltv_mpc_filter::set_cost(const Eigen::Matrix<double,3,3> &Q, const Eigen::Matrix<double,2,2> &R, const Eigen::Matrix<double,2,2> &S)
 {
   m_Q = Q;
   m_R = R;
@@ -83,7 +83,7 @@ void linear_mpc::set_cost(const Eigen::Matrix<double,3,3> &Q, const Eigen::Matri
 }
 
 
-void linear_mpc::set_reference_and_state(const std::vector<double> &x_r, const std::vector<double> &y_r,
+void ltv_mpc_filter::set_reference_and_state(const std::vector<double> &x_r, const std::vector<double> &y_r,
                    const std::vector<double> &th_r,const std::vector<double> &v_r,
                    const std::vector<double> &w_r, double x, double y, double th,
                                          double v_last, double w_last)
@@ -103,7 +103,7 @@ void linear_mpc::set_reference_and_state(const std::vector<double> &x_r, const s
   set_state(x,y,th);
 }
 
-void linear_mpc::generate_ltv_model()
+void ltv_mpc_filter::generate_ltv_model()
 {
   m_A_ltv.clear();
   m_B_ltv.clear();
@@ -132,7 +132,7 @@ void linear_mpc::generate_ltv_model()
   }
 }
 
-void linear_mpc::generate_constraint_matrices()
+void ltv_mpc_filter::generate_constraint_matrices()
 {
   for(int i=0;i<m_N;i++)
   {
@@ -179,7 +179,7 @@ void linear_mpc::generate_constraint_matrices()
   m_b_lb(m_dim + 2*m_N - 1) = m_w_last - m_alpha_lim*m_dt;
 }
 
-void linear_mpc::set_state(double x, double y, double th)
+void ltv_mpc_filter::set_state(double x, double y, double th)
 {
   //update the error
   m_initial_condition_set = true;
@@ -191,7 +191,7 @@ void linear_mpc::set_state(double x, double y, double th)
   m_b_ub.block(3*m_N,0,3,1) = s0;
 }
 
-bool linear_mpc::solve(std::vector<UGV::UGVModel::State> &ref)
+bool ltv_mpc_filter::solve(std::vector<UGV::UGVModel::State> &ref)
 {
   if (!m_reference_set || !m_initial_condition_set)
   {

@@ -9,7 +9,7 @@
 #include <teb_local_planner/optimal_planner.h>
 #include <teb_local_planner/homotopy_class_planner.h>
 #include <teb_local_planner/visualization.h>
-#include <mpc/linear_mpc.h>
+#include <mpc/ltv_mpc_filter.h>
 
 #define SIMPLE_UGV UGV::UGVModel,UGV::UGVDPControl,UGV::NF1Evaluator,UGV::UGVSwarm<8>
 namespace teb = teb_local_planner;
@@ -183,7 +183,7 @@ private:
 
   //--- LTV acceleration filter
   int N_hor;
-  linear_mpc* m_mpc;
+  ltv_mpc_filter* m_mpc;
   bool m_use_simple_filter;
 };
 

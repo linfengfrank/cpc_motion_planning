@@ -1,13 +1,13 @@
-#ifndef LINEAR_MPC_H
-#define LINEAR_MPC_H
+#ifndef ltv_mpc_filter_H
+#define ltv_mpc_filter_H
 #include "OsqpEigen/OsqpEigen.h"
 #include <Eigen/Dense>
 #include <cpc_motion_planning/ugv/model/ugv_model.h>
 
-class linear_mpc
+class ltv_mpc_filter
 {
 public:
-  linear_mpc(double dt, int N, double v_lim, double w_lim, double a_lim, double alpha_lim);
+  ltv_mpc_filter(double dt, int N, double v_lim, double w_lim, double a_lim, double alpha_lim);
   void set_reference_and_state(const std::vector<double> &x_r, const std::vector<double> &y_r,
                      const std::vector<double> &th_r, const std::vector<double> &v_r,
                      const std::vector<double> &w_r, double x, double y, double th, double v_last, double w_last);
@@ -56,4 +56,4 @@ private:
   double m_a_lim, m_alpha_lim;
 };
 
-#endif // LINEAR_MPC_H
+#endif // ltv_mpc_filter_H
