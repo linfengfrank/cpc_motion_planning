@@ -296,7 +296,8 @@ bool IntLocalPlanner::do_normal_teb()
   //std::cout<<init.size()<<std::endl;
   m_teb_planner->set_init_plan(init);
 
-  bool success = m_teb_planner->plan(robot_pose, robot_goal, &robot_vel, m_cfg.goal_tolerance.free_goal_vel);
+  int checking_hor = m_use_simple_filter ? m_cfg.trajectory.feasibility_check_no_poses : N_hor;
+  bool success = m_teb_planner->plan(robot_pose, robot_goal, checking_hor, &robot_vel, m_cfg.goal_tolerance.free_goal_vel);
 
   std_msgs::Int32 drive_dir;
   if (m_teb_planner->m_is_forward)
@@ -312,7 +313,7 @@ bool IntLocalPlanner::do_normal_teb()
     return false;
   }
 
-  bool feasible = m_teb_planner->isTrajectoryFeasible(0.4, m_cfg.trajectory.feasibility_check_no_poses);
+  bool feasible = m_teb_planner->isTrajectoryFeasible();
   if(!feasible)
   {
     m_teb_planner->clearPlanner();
