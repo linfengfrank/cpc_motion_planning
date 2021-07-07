@@ -28,14 +28,13 @@ IntLocalPlanner::IntLocalPlanner():
   m_nh.param<int>("/batch_num",m_batch_num,40);
   m_nh.param<int>("/episode_num",m_episode_num,2);
   m_nh.param<float>("/local_safety_radius",local_safety_radius,0.401f);
+  m_nh.param<bool>("/use_simple_filter",m_use_simple_filter,true);
 
   m_nf1_sub = m_nh.subscribe("/nf1",1,&IntLocalPlanner::nf1_call_back, this);
 
-  m_collision_check_client = m_nh.serviceClient<cpc_motion_planning::collision_check>("collision_check");
   m_ref_pub = m_nh.advertise<cpc_motion_planning::ref_data>("ref_traj",1);
   m_status_pub = m_nh.advertise<std_msgs::String>("ref_status_string",1);
   m_tgt_reached_pub = m_nh.advertise<std_msgs::Int32MultiArray>("target_reached",1);
-  m_stuck_plan_request_pub = m_nh.advertise<cpc_motion_planning::plan_request>("plan_request",1);
   m_drive_dir_pub = m_nh.advertise<std_msgs::Int32>("drive_dir",1);
 
   m_planning_timer = m_nh.createTimer(ros::Duration(PSO::PSO_REPLAN_DT), &IntLocalPlanner::plan_call_back, this);
@@ -48,7 +47,6 @@ IntLocalPlanner::IntLocalPlanner():
   m_pso_planner->m_eva.m_safety_radius = local_safety_radius;
   m_pso_planner->m_file_location = dp_file_location;
   m_pso_planner->initialize();
-  m_recover_planner.init_swarm(step_num, step_dt, var_s, var_theta, dp_file_location);
 
   m_ref_v = 0.0f;
   m_ref_w = 0.0f;
@@ -57,7 +55,7 @@ IntLocalPlanner::IntLocalPlanner():
   m_v_err_reset_ctt = 0;
   m_w_err_reset_ctt = 0;
   m_tht_err_reset_ctt = 0;
-  m_stuck_recover_path.request_ctt = -1;
+
   //Initialize the control message
   m_ref_msg.rows = 5;
   m_plan_cycle = 0;
@@ -73,12 +71,52 @@ IntLocalPlanner::IntLocalPlanner():
   // create robot footprint/contour model for optimization
   m_teb_planner = teb::HomotopyClassPlannerPtr(new teb::HomotopyClassPlanner(m_cfg, m_visualization));
 
+  //==========================================================
+  // setup the mpc
+  N_hor = 45;
+  m_mpc = new ltv_mpc_filter(0.05, N_hor, m_cfg.robot.max_vel_x+0.2, m_cfg.robot.max_vel_theta + 0.2,
+                         m_cfg.robot.acc_lim_x * m_cfg.robot.acc_filter_mutiplier, m_cfg.robot.acc_lim_theta * m_cfg.robot.acc_filter_mutiplier);
+  //--init the mpc controller---
+  std::vector<double> Qd, Rd, Sd;
+  m_nh.getParam("/Qd",Qd);
+  m_nh.getParam("/Rd",Rd);
+  m_nh.getParam("/Sd",Sd);
+
+  if (Qd.size() != 3 || Rd.size()!=2 || Sd.size() != 2)
+  {
+    std::cout<<"Cost matrix dimension is wrong!"<<std::endl;
+    exit(-1);
+  }
+
+  Eigen::Matrix<double,3,3> Q;
+  Q<<Qd[0], 0,     0,
+     0,     Qd[1], 0,
+     0,     0,     Qd[2];
+
+  Eigen::Matrix<double,2,2> R;
+  R<<Rd[0], 0,
+     0,     Rd[1];
+
+  Eigen::Matrix<double,2,2> S;
+  S<<Sd[0], 0,
+      0,    Sd[1];
+
+  std::cout<<Q<<std::endl;
+  std::cout<<"----------"<<std::endl;
+  std::cout<<R<<std::endl;
+  std::cout<<"----------"<<std::endl;
+  std::cout<<S<<std::endl;
+  std::cout<<"----------"<<std::endl;
+
+  m_mpc->set_cost(Q,R,S);
 }
 
 IntLocalPlanner::~IntLocalPlanner()
 {
   m_pso_planner->release();
   delete m_pso_planner;
+
+  delete m_mpc;
 }
 
 void IntLocalPlanner::nf1_call_back(const cpc_aux_mapping::nf1_task::ConstPtr &msg)
@@ -230,10 +268,7 @@ void IntLocalPlanner::do_normal()
   {
     m_teb_planner->clearPlanner();
     m_status = UGV::STUCK;
-    m_stuck_submode = STUCK_SUB_MODE::FULL_STUCK;
     m_stuck_start_cycle = m_plan_cycle;
-    m_plan_request_cycle = m_plan_cycle;
-    m_full_start_cycle = m_plan_cycle;
   }
 
   //Goto: Pos_reached
@@ -267,7 +302,8 @@ bool IntLocalPlanner::do_normal_teb()
   //std::cout<<init.size()<<std::endl;
   m_teb_planner->set_init_plan(init);
 
-  bool success = m_teb_planner->plan(robot_pose, robot_goal, &robot_vel, m_cfg.goal_tolerance.free_goal_vel);
+  int checking_hor = m_use_simple_filter ? m_cfg.trajectory.feasibility_check_no_poses : N_hor;
+  bool success = m_teb_planner->plan(robot_pose, robot_goal, checking_hor, &robot_vel, m_cfg.goal_tolerance.free_goal_vel);
 
   std_msgs::Int32 drive_dir;
   if (m_teb_planner->m_is_forward)
@@ -283,7 +319,7 @@ bool IntLocalPlanner::do_normal_teb()
     return false;
   }
 
-  bool feasible = m_teb_planner->isTrajectoryFeasible(0.4, m_cfg.trajectory.feasibility_check_no_poses);
+  bool feasible = m_teb_planner->isTrajectoryFeasible();
   if(!feasible)
   {
     m_teb_planner->clearPlanner();
@@ -292,24 +328,10 @@ bool IntLocalPlanner::do_normal_teb()
 
   std::cout<<"size: "<<m_teb_planner->bestTeb()->teb().sizePoses()<<std::endl;
   std::vector<teb::Reference> ref;
-  float curr_v_r = ini_state.v;
-  float curr_w_r = ini_state.w;
+
   if (m_teb_planner->bestTeb() && m_teb_planner->bestTeb()->get_reference(4,0.05, ref))
   {
-    m_traj.clear();
-    for (teb::Reference r : ref)
-    {
-      curr_v_r = acc_filter(curr_v_r, r.vx,    m_cfg.robot.acc_lim_x * m_cfg.robot.acc_filter_mutiplier,     0.05f);
-      curr_w_r = acc_filter(curr_w_r, r.omega, m_cfg.robot.acc_lim_theta * m_cfg.robot.acc_filter_mutiplier, 0.05f);
-      UGV::UGVModel::State s;
-      s.p.x = r.pose.x();
-      s.p.y = r.pose.y();
-      s.v = curr_v_r;
-      s.theta = r.pose.theta();
-      s.w = curr_w_r;
-      m_traj.push_back(s);
-    }
-    return true;
+    return smooth_reference(ini_state, ref, m_traj, m_use_simple_filter);
   }
   else
   {
@@ -320,6 +342,49 @@ bool IntLocalPlanner::do_normal_teb()
     return false;
   }
 }
+
+bool IntLocalPlanner::smooth_reference(const UGV::UGVModel::State &ini_state, const std::vector<teb::Reference> &raw_ref,
+                                       std::vector<UGV::UGVModel::State> &final_ref, bool use_simple_filter)
+{
+  final_ref.clear();
+  if (use_simple_filter)
+  {
+    float curr_v_r = ini_state.v;
+    float curr_w_r = ini_state.w;
+    for (teb::Reference r : raw_ref)
+    {
+      curr_v_r = acc_filter(curr_v_r, r.vx,    m_cfg.robot.acc_lim_x * m_cfg.robot.acc_filter_mutiplier,     0.05f);
+      curr_w_r = acc_filter(curr_w_r, r.omega, m_cfg.robot.acc_lim_theta * m_cfg.robot.acc_filter_mutiplier, 0.05f);
+      UGV::UGVModel::State s;
+      s.p.x = r.pose.x();
+      s.p.y = r.pose.y();
+      s.v = curr_v_r;
+      s.theta = r.pose.theta();
+      s.w = curr_w_r;
+      final_ref.push_back(s);
+    }
+    return true;
+  }
+  else
+  {
+    std::vector<double> x_i,y_i,th_i,v_i,w_i;
+    for (teb::Reference r : raw_ref)
+    {
+      x_i.push_back(r.pose.x());
+      y_i.push_back(r.pose.y());
+      th_i.push_back(r.pose.theta());
+      v_i.push_back(r.vx);
+      w_i.push_back(r.omega);
+    }
+
+    m_mpc->set_reference_and_state(x_i, y_i, th_i, v_i, w_i,
+                                   ini_state.p.x, ini_state.p.y, ini_state.theta,
+                                   ini_state.v, ini_state.w);
+
+    return m_mpc->solve(final_ref);
+  }
+}
+//---
 bool IntLocalPlanner::do_normal_pso()
 {
   calculate_trajectory<SIMPLE_UGV>(m_pso_planner, m_traj, m_use_de);
@@ -356,26 +421,6 @@ bool IntLocalPlanner::do_normal_pso()
 void IntLocalPlanner::do_stuck()
 {
   cycle_init();
-  switch (m_stuck_submode)
-  {
-  case STUCK_SUB_MODE::RECOVER:
-    do_recover();
-    break;
-
-  case STUCK_SUB_MODE::FULL_STUCK:
-    do_full_stuck();
-    break;
-
-  }
-}
-//=====================================
-void IntLocalPlanner::do_recover()
-{
-
-}
-//=====================================
-void IntLocalPlanner::do_full_stuck()
-{
   std::cout<<"FULL STUCK"<<std::endl;
   //Planning
   m_pso_planner->m_eva.m_stuck = true;
@@ -390,7 +435,7 @@ void IntLocalPlanner::do_full_stuck()
   }
 
   //Goto: Normal
-  if (m_plan_cycle - m_full_start_cycle >= 10)
+  if (m_plan_cycle - m_stuck_start_cycle >= 10)
   {
     m_status = UGV::NORMAL;
     m_pso_planner->m_eva.m_stuck = false;
@@ -414,8 +459,7 @@ void IntLocalPlanner::do_braking()
   if (m_plan_cycle - m_braking_start_cycle >= 10)
   {
      m_status = UGV::STUCK;
-     m_stuck_submode = STUCK_SUB_MODE::FULL_STUCK;
-     m_full_start_cycle = m_plan_cycle;
+     m_stuck_start_cycle = m_plan_cycle;
   }
 
 }
