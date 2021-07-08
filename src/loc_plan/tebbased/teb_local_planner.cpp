@@ -211,7 +211,7 @@ void TEBLocalPlanner::do_normal()
   //std::cout<<init.size()<<std::endl;
   m_planner->set_init_plan(init);
 
-  bool success = m_planner->plan(robot_pose, robot_goal,m_cfg.trajectory.feasibility_check_no_poses, &robot_vel, m_cfg.goal_tolerance.free_goal_vel);
+  bool success = m_planner->plan(robot_pose, robot_goal,m_cfg.trajectory.feasibility_check_no_poses, &robot_vel, m_planner->m_is_forward);
 
  auto end_time = std::chrono::steady_clock::now();
       std::cout << "Local planning time: "
