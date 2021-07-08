@@ -297,7 +297,7 @@ bool IntLocalPlanner::do_normal_teb()
   m_teb_planner->set_init_plan(init);
 
   int checking_hor = m_use_simple_filter ? m_cfg.trajectory.feasibility_check_no_poses : N_hor;
-  bool success = m_teb_planner->plan(robot_pose, robot_goal, checking_hor, &robot_vel, m_cfg.goal_tolerance.free_goal_vel);
+  bool success = m_teb_planner->plan(robot_pose, robot_goal, checking_hor, &robot_vel, m_teb_planner->m_is_forward);
 
   std_msgs::Int32 drive_dir;
   if (m_teb_planner->m_is_forward)
