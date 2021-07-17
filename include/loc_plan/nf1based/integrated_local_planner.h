@@ -43,7 +43,7 @@ private:
   void plan_call_back(const ros::TimerEvent&);
   void nf1_call_back(const cpc_aux_mapping::nf1_task::ConstPtr &msg);
   void cycle_init();
-  std::vector<double3> get_init_guess();
+  std::vector<double2> get_init_path_guess();
   bool get_smallest_child(const CUDA_GEO::coord &c, CUDA_GEO::coord &bc);
 
   bool check_tgt_is_same(const UGV::NF1Evaluator::Target &t1, const UGV::NF1Evaluator::Target &t2)
@@ -52,77 +52,6 @@ private:
       return true;
     else
       return false;
-  }
-  //---
-  inline double pnt2line_dist(const double3 & c1, const double3 & c2, const double3 & c0)
-  {
-    double2 a = make_double2(c1.x-c0.x, c1.y-c0.y);
-    double2 b = make_double2(c2.x-c1.x,c2.y-c1.y);
-
-    double a_square = a.x*a.x + a.y*a.y;
-    double b_square = b.x*b.x + b.y*b.y;
-    double a_dot_b = a.x*b.x + a.y*b.y;
-
-    if (b_square < 1e-3)
-      return sqrt(a_square);
-
-    return sqrt((a_square*b_square - a_dot_b*a_dot_b)/(b_square));
-  }
-  //---
-  std::vector<size_t> split_merge(const std::vector<double3> &path, double th)
-  {
-    std::vector<size_t> split_idx;
-
-    // If there is no path, return the center point
-    if (path.size() <= 1)
-    {
-      return split_idx;
-    }
-
-    std::stack<std::pair<unsigned int,unsigned int>> task; // fist is anchor, second is target
-    task.push(std::make_pair(path.size() - 1, 0));
-
-    unsigned int check = static_cast<unsigned int>(path.size()) - 1;
-
-    split_idx.push_back(path.size() - 1);
-    while (task.size() > 0)
-    {
-      unsigned int target = task.top().second;
-      unsigned int anchor = task.top().first;
-      task.pop();
-      // find the largest distance
-      unsigned int max_id = 0;
-      double max_dist = 0;
-      for (unsigned int j = target; j< anchor; j++)
-      {
-        double dist = pnt2line_dist(path[anchor],path[target],path[j]);
-        if (dist > max_dist)
-        {
-          max_dist = dist;
-          max_id = j;
-        }
-      }
-
-      if (max_dist > th)
-      {
-        task.push(std::make_pair(max_id, target));
-        task.push(std::make_pair(anchor, max_id));
-        target = max_id;
-      }
-      else
-      {
-        split_idx.push_back(target);
-        if (target >= check)
-        {
-          std::cout<<"path size: "<<path.size()<<std::endl;
-          ROS_ERROR("Wrong split sequence");
-          exit(-1);
-        }
-        check = target;
-      }
-    }
-    std::reverse(split_idx.begin(),split_idx.end());
-    return split_idx;
   }
 
   //---

@@ -223,6 +223,7 @@ void IntLocalPlanner::plan_call_back(const ros::TimerEvent&)
   m_ref_msg.time.clear();
 #ifdef SHOW_PC
   plot_trajectory(m_traj);
+  m_teb_planner->visualize();
 #endif
   m_plan_cycle++;
 }
@@ -292,7 +293,7 @@ bool IntLocalPlanner::do_normal_teb()
   if (!m_teb_planner->get_edt_map())
     m_teb_planner->set_edt_map(m_edt_map);
 
-  std::vector<double3> init = get_init_guess();
+  std::vector<double2> init = get_init_path_guess();
   //std::cout<<init.size()<<std::endl;
   m_teb_planner->set_init_plan(init);
 
@@ -528,19 +529,16 @@ void IntLocalPlanner::cycle_init()
   msg.data = ss.str();
   m_status_pub.publish(msg);
 }
-
 //---
-std::vector<double3> IntLocalPlanner::get_init_guess()
+std::vector<double2> IntLocalPlanner::get_init_path_guess()
 {
-  std::vector<double3> pre_guess, guess;
-  // the initial pose
+  std::vector<double2> guess;
   UGV::UGVModel::State ini_state = m_pso_planner->m_model.get_ini_state();
-  pre_guess.push_back(make_double3(ini_state.p.x,
-                                ini_state.p.y,
-                                ini_state.theta));
+
   CUDA_GEO::pos p;
   p.x = ini_state.p.x;
   p.y = ini_state.p.y;
+  guess.push_back(make_double2(p.x, p.y));
   CUDA_GEO::coord c = m_nf1_map->pos2coord(p);
   CUDA_GEO::coord bc;
   // First calculate the positions
@@ -550,38 +548,14 @@ std::vector<double3> IntLocalPlanner::get_init_guess()
     {
       c = bc;
       p = m_nf1_map->coord2pos(c);
-      pre_guess.push_back(make_double3(p.x,p.y,0));
+      guess.push_back(make_double2(p.x, p.y));
     }
     else
     {
       break;
     }
   }
-  if (pre_guess.size()>1)
-    pre_guess.pop_back();
 
-  // the goal pose
-  pre_guess.push_back(make_double3(m_carrot.p.x,
-                                m_carrot.p.y,
-                                m_carrot.theta));
-
-   std::vector<size_t> split_idx = split_merge(pre_guess, 0.1);
-
-   for(size_t i=0; i<split_idx.size(); i++)
-   {
-     guess.push_back(pre_guess[split_idx[i]]);
-   }
-
-
-  // Then calculate the angle
-  for (int i=1; i < static_cast<int>(guess.size())-1; i++)
-  {
-    // get yaw from the orientation of the distance vector between pose_{i+1} and pose_{i}
-    double dx = guess[i+1].x - guess[i].x;
-    double dy = guess[i+1].y - guess[i].y;
-    double yaw = std::atan2(dy,dx);
-    guess[i].z = yaw;
-  }
   return guess;
 }
 

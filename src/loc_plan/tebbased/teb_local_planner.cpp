@@ -204,7 +204,7 @@ void TEBLocalPlanner::do_normal()
   if (!m_planner->get_edt_map())
     m_planner->set_edt_map(m_edt_map);
 
-  std::vector<double3> init = get_init_guess();
+  std::vector<double2> init = get_init_path_guess();
   //std::cout<<init.size()<<std::endl;
   m_planner->set_init_plan(init);
 
@@ -381,16 +381,14 @@ void TEBLocalPlanner::cycle_init()
 
 }
 //---
-std::vector<double3> TEBLocalPlanner::get_init_guess()
+std::vector<double2> TEBLocalPlanner::get_init_path_guess()
 {
-  std::vector<double3> pre_guess, guess;
-  // the initial pose
-  pre_guess.push_back(make_double3(m_ini_state.p.x,
-                                m_ini_state.p.y,
-                                m_ini_state.theta));
+  std::vector<double2> guess;
+
   CUDA_GEO::pos p;
   p.x = m_ini_state.p.x;
   p.y = m_ini_state.p.y;
+  guess.push_back(make_double2(p.x, p.y));
   CUDA_GEO::coord c = m_nf1_map->pos2coord(p);
   CUDA_GEO::coord bc;
   // First calculate the positions
@@ -400,38 +398,14 @@ std::vector<double3> TEBLocalPlanner::get_init_guess()
     {
       c = bc;
       p = m_nf1_map->coord2pos(c);
-      pre_guess.push_back(make_double3(p.x,p.y,0));
+      guess.push_back(make_double2(p.x, p.y));
     }
     else
     {
       break;
     }
   }
-  if (pre_guess.size()>1)
-    pre_guess.pop_back();
 
-  // the goal pose
-  pre_guess.push_back(make_double3(m_carrot.p.x,
-                                m_carrot.p.y,
-                                m_carrot.theta));
-
-   std::vector<size_t> split_idx = split_merge(pre_guess, 0.1);
-
-   for(size_t i=0; i<split_idx.size(); i++)
-   {
-     guess.push_back(pre_guess[split_idx[i]]);
-   }
-
-
-  // Then calculate the angle
-  for (int i=1; i < static_cast<int>(guess.size())-1; i++)
-  {
-    // get yaw from the orientation of the distance vector between pose_{i+1} and pose_{i}
-    double dx = guess[i+1].x - guess[i].x;
-    double dy = guess[i+1].y - guess[i].y;
-    double yaw = std::atan2(dy,dx);
-    guess[i].z = yaw;
-  }
   return guess;
 }
 
