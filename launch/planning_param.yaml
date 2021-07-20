@@ -10,7 +10,7 @@ clp_idx_search_start: 0
 clp_idx_serach_end: 80
 look_ahead: 120
 look_back: -50
-curvature_split: 5
+curvature_split: 0.5
 swarm_size: 100
 batch_num: 10
 episode_num: 1
