@@ -34,6 +34,12 @@ struct nodeInfo
   }
 };
 
+struct pathPntInfo
+{
+  float desired_angle;
+  int path_idx;
+};
+
 class GridGraph : public MapBase
 {
 public:
