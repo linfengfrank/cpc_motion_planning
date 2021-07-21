@@ -184,7 +184,7 @@ void NF1MidPlanner::set_goal(CUDA_GEO::pos goal)
   m_goal = goal;
 }
 
-bool NF1MidPlanner::find_reachable_target(CUDA_GEO::coord& start, CUDA_GEO::coord& reachable_tgt, const std::unordered_map<int, float> *lpta)
+bool NF1MidPlanner::find_reachable_target(CUDA_GEO::coord& start, CUDA_GEO::coord& reachable_tgt, const std::unordered_map<int, pathPntInfo> *lpta)
 {
   //set start
   start = CUDA_GEO::coord(m_d_map->getMaxX()/2,m_d_map->getMaxY()/2,0);
@@ -220,7 +220,7 @@ void NF1MidPlanner::plan(const ros::TimerEvent&)
 
     if (local_path.size() > 0)
     {
-      std::unordered_map<int,float>ltpa = assign_target_angle(local_path);
+      std::unordered_map<int,pathPntInfo>ltpa = assign_target_angle(local_path);
       set_goal(CUDA_GEO::pos(local_path.back().x,local_path.back().y,0));
       prepare_line_map(local_path);
       bool is_goal_reachable = find_reachable_target(start, reachable_tgt, &ltpa);

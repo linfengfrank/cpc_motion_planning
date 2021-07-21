@@ -50,7 +50,7 @@ private:
 
   std::vector<float2> get_local_path(bool &is_future_path_blocked, bool &is_goal_in_view);
   void set_curr_act_path();
-  bool find_reachable_target(CUDA_GEO::coord& start, CUDA_GEO::coord& reachable_tgt, const std::unordered_map<int, float> *lpta = nullptr);
+  bool find_reachable_target(CUDA_GEO::coord& start, CUDA_GEO::coord& reachable_tgt, const std::unordered_map<int, pathPntInfo> *lpta = nullptr);
 
 private:
   ros::NodeHandle m_nh;
@@ -99,9 +99,9 @@ private:
   float m_max_carrot_dist;
   // helper functions
 private:
-  std::unordered_map<int,float> assign_target_angle(const std::vector<float2> &local_path)
+  std::unordered_map<int,pathPntInfo> assign_target_angle(const std::vector<float2> &local_path)
   {
-    std::unordered_map<int,float> lpta; // short for local_path_target_angle;
+    std::unordered_map<int,pathPntInfo> lpta; // short for local_path_target_angle;
     float target_angle = m_mid_goal_orient;
     float dist;
     float2 diff;
@@ -120,13 +120,14 @@ private:
       CUDA_GEO::pos p(local_path[i].x, local_path[i].y, 0);
       CUDA_GEO::coord c = m_line_map->pos2coord(p);
       int idx = m_line_map->to_id(c.x,c.y,c.z);
-      lpta[idx] = target_angle;
+      lpta[idx].desired_angle = target_angle;
+      lpta[idx].path_idx = static_cast<int>(i);
     }
 
     return lpta;
   }
   //---
-  void update_mid_goal_orient(const CUDA_GEO::coord &reachable_tgt, const std::unordered_map<int,float> &lpta)
+  void update_mid_goal_orient(const CUDA_GEO::coord &reachable_tgt, const std::unordered_map<int,pathPntInfo> &lpta)
   {
     CUDA_GEO::pos tmp = m_d_map->coord2pos(reachable_tgt);
     CUDA_GEO::coord tmp_c = m_line_map->pos2coord(tmp);
@@ -136,7 +137,7 @@ private:
       int idx = m_line_map->m_hst_sd_map[m_line_map->to_id(tmp_c.x,tmp_c.y,0)].rt_idx;
       if (lpta.find(idx) != lpta.end())
       {
-        m_mid_goal_orient = lpta.at(idx);
+        m_mid_goal_orient = lpta.at(idx).desired_angle;
       }
     }
 
