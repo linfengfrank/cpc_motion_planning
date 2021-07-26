@@ -109,6 +109,12 @@ IntLocalPlanner::IntLocalPlanner():
   std::cout<<"----------"<<std::endl;
 
   m_mpc->set_cost(Q,R,S);
+
+#ifdef SHOW_INIT_PLAN
+  m_init_plan_pub = m_nh.advertise<PointCloud>("init_plan",1);
+  m_init_plan_cld = PointCloud::Ptr(new PointCloud);
+  m_init_plan_cld->header.frame_id = "/world";
+#endif
 }
 
 IntLocalPlanner::~IntLocalPlanner()
@@ -562,6 +568,19 @@ std::vector<double2> IntLocalPlanner::get_init_path_guess()
       break;
     }
   }
+
+#ifdef SHOW_INIT_PLAN
+  for (double2 pnt: guess)
+  {
+    pcl::PointXYZ clrP;
+    clrP.x = pnt.x;
+    clrP.y = pnt.y;
+    clrP.z = 0;
+    m_init_plan_cld->points.push_back(clrP);
+  }
+  m_init_plan_pub.publish(m_init_plan_cld);
+  m_init_plan_cld->clear();
+#endif
 
   return guess;
 }

@@ -12,6 +12,7 @@
 #include <mpc/ltv_mpc_filter.h>
 
 #define SIMPLE_UGV UGV::UGVModel,UGV::UGVDPControl,UGV::NF1Evaluator,UGV::UGVSwarm<8>
+//#define SHOW_INIT_PLAN
 namespace teb = teb_local_planner;
 class IntLocalPlanner : public UGVLocalMotionPlanner
 {
@@ -114,6 +115,11 @@ private:
   int N_hor;
   ltv_mpc_filter* m_mpc;
   bool m_use_simple_filter;
+
+#ifdef SHOW_INIT_PLAN
+  ros::Publisher m_init_plan_pub;
+  PointCloud::Ptr m_init_plan_cld;
+#endif
 };
 
 #endif // INTEGRATED_LOCAL_PLANNER_H
