@@ -160,7 +160,7 @@ void velocity_program()
 int main(int argc, char **argv)
 {
   std::cout<<"Start the dynamic programming"<<std::endl;
-  velocity_program();
+  position_program();
   std::cout<<"Finish the dynamic programming"<<std::endl;
   return 0;
 }
