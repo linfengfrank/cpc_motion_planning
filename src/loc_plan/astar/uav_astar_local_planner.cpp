@@ -66,7 +66,7 @@ void UAVAstarMotionPlanner::plan_call_back(const ros::TimerEvent&)
     if (ref_counter == next_ref_start_idx)
     {
       m_curr_ref = traj_s;
-      m_head_sov.set_yaw_state(yaw_state);
+      m_curr_yaw_ref = yaw_state;
     }
 
     cols++;
@@ -98,6 +98,12 @@ void UAVAstarMotionPlanner::do_at_ground()
 {
   if (m_pose_received && m_received_map && m_goal_received)
   {
+    //set the current state from pose
+    convert_init_pose(m_pose,m_curr_ref,m_curr_yaw_ref);
+    m_head_sov.set_yaw_target(m_curr_yaw_ref.p);
+    cycle_init();
+
+    // Egage and takeoff
     std_srvs::Empty::Request eReq;
     std_srvs::Empty::Response eRes;
     ros::service::call("engage", eReq, eRes);
@@ -185,16 +191,24 @@ void UAVAstarMotionPlanner::do_stuck()
 
 }
 
-void UAVAstarMotionPlanner::cycle_init()
+void UAVAstarMotionPlanner::set_init_state(const UAV::UAVModel::State& trans, const JLT::State &yaw)
 {
   // Set the initial states for all planners
-  m_pso_planner->m_model.set_ini_state(m_curr_ref);
-  m_pso_planner->m_eva.m_curr_yaw = m_head_sov.get_yaw();
-  m_pso_planner->m_eva.m_curr_pos = m_curr_ref.p;
+  m_pso_planner->m_model.set_ini_state(trans);
+  m_pso_planner->m_eva.m_curr_yaw = yaw.p;
+  m_pso_planner->m_eva.m_curr_pos = trans.p;
 
-  m_emergent_planner->m_model.set_ini_state(m_curr_ref);
-  m_emergent_planner->m_eva.m_curr_yaw = m_head_sov.get_yaw();
-  m_emergent_planner->m_eva.m_curr_pos = m_curr_ref.p;
+  m_emergent_planner->m_model.set_ini_state(trans);
+  m_emergent_planner->m_eva.m_curr_yaw = yaw.p;
+  m_emergent_planner->m_eva.m_curr_pos = trans.p;
+
+  m_head_sov.set_yaw_state(yaw);
+}
+
+void UAVAstarMotionPlanner::cycle_init()
+{
+  // Set the initial translation and yaw state
+  set_init_state(m_curr_ref, m_curr_yaw_ref);
 
   // Construct default trajectories for pos and yaw
   switch (m_fly_status) {
