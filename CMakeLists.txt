@@ -166,9 +166,9 @@ target_link_libraries(dynamic_programming
 ## 1: Astar (point guided) mode
 #################################################
 cuda_add_executable(astar_loc_planning_node
-    src/loc_plan/astar_loc_planner_node.cpp
+    src/loc_plan/astar/astar_loc_planner_node.cpp
     src/loc_plan/uav_base_local_planner.cpp
-    src/loc_plan/uav_astar_local_planner.cpp
+    src/loc_plan/astar/uav_astar_local_planner.cpp
     src/kernel/pso_kernels.cu
     src/kernel/repulsive_field_kernel.cu)
 
@@ -181,9 +181,9 @@ target_link_libraries(astar_loc_planning_node
 add_dependencies(astar_loc_planning_node ${${PROJECT_NAME}_EXPORTED_TARGETS} ${catkin_EXPORTED_TARGETS})
 
 cuda_add_executable(astar_mid_planning_node
-    src/mid_plan/grid_graph.cpp
-    src/mid_plan/a_star.cpp
-    src/mid_plan/astar_mid_planner_node.cpp)
+    src/mid_plan/utils/grid_graph.cpp
+    src/mid_plan/utils/a_star.cpp
+    src/mid_plan/astar/astar_mid_planner_node.cpp)
 
 target_link_libraries(astar_mid_planning_node
     ${CUDA_curand_LIBRARY}
@@ -197,9 +197,9 @@ add_dependencies(astar_mid_planning_node ${${PROJECT_NAME}_EXPORTED_TARGETS} ${c
 ## 2: NF1 mode
 #################################################
 cuda_add_executable(nf1_loc_planning_node
-    src/loc_plan/nf1_loc_planner_node.cpp
+    src/loc_plan/nf1/nf1_loc_planner_node.cpp
     src/loc_plan/uav_base_local_planner.cpp
-    src/loc_plan/uav_nf1_local_planner.cpp
+    src/loc_plan/nf1/uav_nf1_local_planner.cpp
     src/kernel/pso_kernels.cu
     src/kernel/repulsive_field_kernel.cu)
 
@@ -212,10 +212,10 @@ target_link_libraries(nf1_loc_planning_node
 add_dependencies(nf1_loc_planning_node ${${PROJECT_NAME}_EXPORTED_TARGETS} ${catkin_EXPORTED_TARGETS})
 
 cuda_add_executable(nf1_mid_planning_node
-    src/mid_plan/grid_graph.cpp
-    src/mid_plan/dijkstra.cpp
-    src/mid_plan/a_star.cpp
-    src/mid_plan/nf1_mid_planner_node.cpp)
+    src/mid_plan/utils/grid_graph.cpp
+    src/mid_plan/utils/dijkstra.cpp
+    src/mid_plan/utils/a_star.cpp
+    src/mid_plan/nf1/nf1_mid_planner_node.cpp)
 
 target_link_libraries(nf1_mid_planning_node
     ${CUDA_curand_LIBRARY}
@@ -224,40 +224,6 @@ target_link_libraries(nf1_mid_planning_node
     ${catkin_LIBRARIES})
 
 add_dependencies(nf1_mid_planning_node ${${PROJECT_NAME}_EXPORTED_TARGETS} ${catkin_EXPORTED_TARGETS})
-
-#################################################
-## 3: Velocity (with Astar mid planner) mode
-#################################################
-cuda_add_executable(velocity_loc_planning_node
-    src/loc_plan/velocity_loc_planner_node.cpp
-    src/loc_plan/uav_base_local_planner.cpp
-    src/loc_plan/uav_vel_local_planner.cpp
-    src/kernel/pso_kernels.cu
-    src/kernel/repulsive_field_kernel.cu)
-
-target_link_libraries(velocity_loc_planning_node
-    ${CUDA_curand_LIBRARY}
-    ${CUDA_cublas_LIBRARY}
-    ${CUDA_LIBRARIES}
-    ${catkin_LIBRARIES})
-
-add_dependencies(velocity_loc_planning_node ${${PROJECT_NAME}_EXPORTED_TARGETS} ${catkin_EXPORTED_TARGETS})
-
-#################################################
-## 4: Corridor mode
-#################################################
-cuda_add_executable(corridor_loc_planning_node
-    src/loc_plan/corridor_loc_planner_node.cpp
-    src/loc_plan/uav_base_local_planner.cpp
-    src/kernel/pso_kernels.cu)
-
-target_link_libraries(corridor_loc_planning_node
-    ${CUDA_curand_LIBRARY}
-    ${CUDA_cublas_LIBRARY}
-    ${CUDA_LIBRARIES}
-    ${catkin_LIBRARIES})
-
-add_dependencies(corridor_loc_planning_node ${${PROJECT_NAME}_EXPORTED_TARGETS} ${catkin_EXPORTED_TARGETS})
 
 
 
