@@ -19,6 +19,7 @@
 #include <cpc_motion_planning/uav/swarm/uav_swarm.h>
 #include <cpc_motion_planning/uav/uav_repulsive_field.h>
 #include <tf/tf.h>
+#include "mid_plan/grid_graph.h"
 
 #define SHOWPC
 namespace UAV
@@ -133,6 +134,7 @@ private:
 
 class UAVLocalMotionPlanner
 {
+public:
     typedef pcl::PointCloud<pcl::PointXYZ> PointCloud;
 public:
   UAVLocalMotionPlanner();
@@ -213,6 +215,8 @@ protected:
   bool m_pose_received;
   EDTMap *m_edt_map;
   UAV::FLY_STATUS m_fly_status;
+  GridGraph *m_hst_map;
+  bool m_use_hst_map;
 #ifdef SHOWPC
   ros::Publisher m_traj_pub;
   PointCloud::Ptr m_traj_pnt_cld;

@@ -169,6 +169,7 @@ cuda_add_executable(astar_loc_planning_node
     src/loc_plan/astar/astar_loc_planner_node.cpp
     src/loc_plan/uav_base_local_planner.cpp
     src/loc_plan/astar/uav_astar_local_planner.cpp
+    src/mid_plan/utils/grid_graph.cpp
     src/kernel/pso_kernels.cu
     src/kernel/repulsive_field_kernel.cu)
 
@@ -200,6 +201,7 @@ cuda_add_executable(nf1_loc_planning_node
     src/loc_plan/nf1/nf1_loc_planner_node.cpp
     src/loc_plan/uav_base_local_planner.cpp
     src/loc_plan/nf1/uav_nf1_local_planner.cpp
+    src/mid_plan/utils/grid_graph.cpp
     src/kernel/pso_kernels.cu
     src/kernel/repulsive_field_kernel.cu)
 
