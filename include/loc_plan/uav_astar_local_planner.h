@@ -4,7 +4,7 @@
 
 #define SIMPLE_UAV UAV::UAVModel,UAV::UAVDPControl,UAV::SingleTargetEvaluator,UAV::UAVSwarm<1>
 #define EMERGENT_UAV UAV::UAVModel,UAV::UAVJLTControl,UAV::SingleTargetEvaluator,UAV::UAVSwarm<1>
-#define CORRID_UAV UAV::UAVModel,UAV::UAVDPControl,UAV::CorridorEvaluator,UAV::UAVSwarm<1>
+
 class UAVAstarMotionPlanner : public UAVLocalMotionPlanner
 {
 public:
@@ -23,6 +23,7 @@ private:
   void plan_call_back(const ros::TimerEvent&);
   void goal_call_back(const geometry_msgs::PoseStamped::ConstPtr &msg);
   void cycle_init();
+  void set_init_state(const UAV::UAVModel::State& trans, const JLT::State &yaw);
 
 private:
   ros::Subscriber m_goal_sub;
@@ -37,6 +38,7 @@ private:
   PSO::Planner<EMERGENT_UAV> *m_emergent_planner;
   UAV::SingleTargetEvaluator::Target m_goal;
   UAV::UAVModel::State m_curr_ref;
+  JLT::State m_curr_yaw_ref;
   cpc_motion_planning::ref_data m_ref_msg;
   int m_plan_cycle;
   int m_ref_start_idx;
