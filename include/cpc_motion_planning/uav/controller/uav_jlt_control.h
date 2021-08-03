@@ -171,6 +171,15 @@ public:
     s.a.z = tmp.a;
   }
 
+  __host__ __device__
+  float3 update_site_target(const UAVModel::State &s, const float3 &site)
+  {
+    float3 output = site;
+    output.x += s.p.x;
+    output.y += s.p.y;
+    output.z += s.p.z;
+    return output;
+  }
 
   template<class Model, class Evaluator, class Swarm>
   __host__ __device__
@@ -184,18 +193,28 @@ public:
     float start_time = 0.0f;
     float3 u;
     collision = false;
+
+    int prev_i = -1;
+    float3 site_target;
     for (float t=dt; t<PSO::PSO_TOTAL_T; t+=dt)
     {
       int i = static_cast<int>(floor(t/sw.step_dt));
       if (i > sw.steps - 1)
         i = sw.steps - 1;
 
+      if (i!=prev_i || prev_i == -1)
+      {
+        //update the site target
+        site_target = update_site_target(s,ttr[i]);
+      }
+      prev_i = i;
+
       if (i > curr_site_idx)
       {
         curr_site_idx = i;
         start_time = t;
         set_ini_state(transform(s,trans));
-        jlt_generate(transform(ttr[curr_site_idx],trans));
+        jlt_generate(transform(site_target,trans));
       }
       get_trajectory(s,t+dt-start_time,u);
 
@@ -219,18 +238,28 @@ public:
     float start_time = 0.0f;
     float dt = PSO::PSO_CTRL_DT;
     float3 u;
+
+    int prev_i = -1;
+    float3 site_target;
     for (float t=0.0f; t<PSO::PSO_TOTAL_T; t+=dt)
     {
       int i = static_cast<int>(floor(t/sw.step_dt));
       if (i > sw.steps - 1)
         i = sw.steps - 1;
 
+      if (i!=prev_i || prev_i == -1)
+      {
+        //update the site target
+        site_target = update_site_target(s,ttr[i]);
+      }
+      prev_i = i;
+
       if (i > curr_site_idx)
       {
         curr_site_idx = i;
         start_time = t;
         set_ini_state(transform(s,trans));
-        jlt_generate(transform(ttr[curr_site_idx],trans));
+        jlt_generate(transform(site_target,trans));
       }
 
       get_trajectory(s,t+dt-start_time,u);

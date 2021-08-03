@@ -18,6 +18,7 @@
 #include <cpc_motion_planning/uav/controller/uav_jlt_control.h>
 #include <cpc_motion_planning/uav/swarm/uav_swarm.h>
 #include <cpc_motion_planning/uav/uav_repulsive_field.h>
+#include <tf/tf.h>
 
 #define SHOWPC
 namespace UAV
@@ -48,9 +49,28 @@ public:
 
   }
 
+  void set_yaw_target(float yaw_target)
+  {
+    m_yaw_target = yaw_target;
+  }
+
   void cal_yaw_target(const float3 &pnt, const UAV::UAVModel::State &s)
   {
     float3 diff = pnt - s.p;
+    diff.z = 0;
+    float dist = sqrtf(dot(diff,diff));
+    if (dist > 0.5f)
+    {
+      m_yaw_target = atan2f(diff.y,diff.x);
+      m_yaw_target = m_yaw_target - m_yaw_state.p;
+      m_yaw_target = m_yaw_target - floorf((m_yaw_target + M_PI) / (2 * M_PI)) * 2 * M_PI;
+      m_yaw_target = m_yaw_target + m_yaw_state.p;
+    }
+  }
+
+  void cal_yaw_target(const float3 &pnt)
+  {
+    float3 diff = pnt;
     diff.z = 0;
     float dist = sqrtf(dot(diff,diff));
     if (dist > 0.5f)
@@ -131,6 +151,19 @@ protected:
   virtual void do_stuck() = 0;
   virtual void do_emergent() = 0;
   virtual void do_braking() = 0;
+
+  void convert_init_pose(const nav_msgs::Odometry& pose, UAV::UAVModel::State &trans_ref, JLT::State &yaw_ref)
+  {
+    // Init everything to zero using the default controller
+    trans_ref =  UAV::UAVModel::State();
+    yaw_ref = JLT::State();
+
+    // Set the initial position and yaw
+    trans_ref.p.x = pose.pose.pose.position.x;
+    trans_ref.p.y = pose.pose.pose.position.y;
+    trans_ref.p.z = pose.pose.pose.position.z;
+    yaw_ref.p = tf::getYaw(pose.pose.pose.orientation);
+  }
 
   template<class Model, class Controller, class Evaluator, class Swarm>
   void calculate_trajectory(PSO::Planner<Model, Controller, Evaluator, Swarm> *planner, std::vector<UAV::UAVModel::State> &traj)

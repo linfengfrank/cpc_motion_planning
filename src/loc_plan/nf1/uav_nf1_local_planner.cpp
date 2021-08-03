@@ -69,7 +69,7 @@ void UAVNF1MotionPlanner::plan_call_back(const ros::TimerEvent&)
     if (ref_counter == next_ref_start_idx)
     {
       m_curr_ref = traj_s;
-      m_head_sov.set_yaw_state(yaw_state);
+      m_curr_yaw_ref = yaw_state;
     }
     cols++;
   }
@@ -111,8 +111,16 @@ void UAVNF1MotionPlanner::goal_call_back(const cpc_aux_mapping::grid_map::ConstP
 
 void UAVNF1MotionPlanner::do_at_ground()
 {
+    std::cout <<m_pose_received<<","<<m_received_map<<","<<m_goal_received<<std::endl;
+
   if (m_pose_received && m_received_map && m_goal_received)
   {
+    //set the current state from pose
+    convert_init_pose(m_pose,m_curr_ref,m_curr_yaw_ref);
+    m_head_sov.set_yaw_target(m_curr_yaw_ref.p);
+    cycle_init();
+
+    // Egage and takeoff
     std_srvs::Empty::Request eReq;
     std_srvs::Empty::Response eRes;
     ros::service::call("engage", eReq, eRes);
@@ -151,7 +159,7 @@ void UAVNF1MotionPlanner::do_in_air()
   }
   else
   {
-    m_head_sov.cal_yaw_target(m_pso_planner->result.best_loc[0], m_curr_ref);
+    m_head_sov.cal_yaw_target(m_pso_planner->result.best_loc[0]);
     m_yaw_traj = m_head_sov.generate_yaw_traj();
     if(is_stuck(m_traj, m_yaw_traj, m_pso_planner->result.best_cost))
     {
@@ -214,21 +222,29 @@ void UAVNF1MotionPlanner::do_stuck()
 
   std::cout<<"guiding target: "<<m_pso_planner->result.best_loc[0].x<<" "<<m_pso_planner->result.best_loc[0].y<<std::endl;
   std::cout<<"yaw target: "<<m_head_sov.get_yaw_target()<<std::endl;
-  m_head_sov.cal_yaw_target(m_pso_planner->result.best_loc[0], m_curr_ref);
+  m_head_sov.cal_yaw_target(m_pso_planner->result.best_loc[0]);
   m_yaw_traj = m_head_sov.generate_yaw_traj();
   m_fly_status = UAV::IN_AIR;
 }
 
-void UAVNF1MotionPlanner::cycle_init()
+void UAVNF1MotionPlanner::set_init_state(const UAV::UAVModel::State& trans, const JLT::State &yaw)
 {
   // Set the initial states for all planners
-  m_pso_planner->m_model.set_ini_state(m_curr_ref);
-  m_pso_planner->m_eva.m_curr_yaw = m_head_sov.get_yaw();
-  m_pso_planner->m_eva.m_curr_pos = m_curr_ref.p;
+  m_pso_planner->m_model.set_ini_state(trans);
+  m_pso_planner->m_eva.m_curr_yaw = yaw.p;
+  m_pso_planner->m_eva.m_curr_pos = trans.p;
 
-  m_emergent_planner->m_model.set_ini_state(m_curr_ref);
-  m_emergent_planner->m_eva.m_curr_yaw = m_head_sov.get_yaw();
-  m_emergent_planner->m_eva.m_curr_pos = m_curr_ref.p;
+  m_emergent_planner->m_model.set_ini_state(trans);
+  m_emergent_planner->m_eva.m_curr_yaw = yaw.p;
+  m_emergent_planner->m_eva.m_curr_pos = trans.p;
+
+  m_head_sov.set_yaw_state(yaw);
+}
+
+void UAVNF1MotionPlanner::cycle_init()
+{
+  // Set the initial translation and yaw state
+  set_init_state(m_curr_ref, m_curr_yaw_ref);
 
   // Construct default trajectories for pos and yaw
   switch (m_fly_status) {
