@@ -4,11 +4,9 @@
 #include <cpc_motion_planning/uav/controller/uav_dp_control.h>
 #include <cpc_motion_planning/uav/controller/uav_dp_vel_control.h>
 #include <cpc_motion_planning/uav/swarm/uav_swarm.h>
-#include <cpc_motion_planning/uav/swarm/uav_vel_swarm.h>
 #include <cpc_motion_planning/uav/evaluator/uav_single_target_evaluator.h>
 #include <cpc_motion_planning/uav/evaluator/uav_nf1_evaluator.h>
 #include <cpc_motion_planning/uav/evaluator/uav_corridor_nf2_evaluator.h>
-#include <cpc_motion_planning/uav/evaluator/uav_velocity_evaluator.h>
 #include <cpc_motion_planning/uav/controller/uav_jlt_control.h>
 #include <cuda_geometry/cuda_edtmap.cuh>
 #include <cuda_geometry/cuda_nf1map.cuh>
