@@ -159,6 +159,14 @@ void mapCallback(const cpc_aux_mapping::grid_map::ConstPtr& msg)
   a_map->copyEdtData(msg);
 }
 //---
+void taskGoalCallback(const geometry_msgs::PoseStamped::ConstPtr &msg)
+{
+  received_cmd = true;
+  goal.x = msg->pose.position.x;
+  goal.y = msg->pose.position.y;
+  goal.z = msg->pose.position.z;
+}
+//---
 void goalCallback(const geometry_msgs::PoseStamped::ConstPtr &msg)
 {
   received_cmd = true;
@@ -224,9 +232,10 @@ int main(int argc, char **argv)
   nf1_pub = new ros::Publisher;
   mid_goal_pub = new ros::Publisher;
   ros::NodeHandle nh;
-  ros::Subscriber map_sub = nh.subscribe("/edt_map", 1, &mapCallback);
+  ros::Subscriber map_sub = nh.subscribe("edt_map", 1, &mapCallback);
   ros::Subscriber stuck_sub = nh.subscribe("stuck", 1, &stuckCallback);
   ros::Subscriber glb_tgt_sub = nh.subscribe("/move_base_simple/goal", 1, &goalCallback);
+  ros::Subscriber task_tgt_sub = nh.subscribe("task_planner/goal", 1, &taskGoalCallback);
   ros::Subscriber  m_offset_sub= nh.subscribe("/ground_truth/odom", 1,&get_gt_odom);
 
   *pc_pub = nh.advertise<PointCloud> ("nf1", 1);
