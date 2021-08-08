@@ -106,7 +106,7 @@ void Dijkstra::dijkstra2D_with_line_map(CUDA_GEO::coord glb_tgt, EDTMap* line_ma
             {
               pc_pos = coord2pos(pc);
               line_dist = line_map->getEDT(make_float2(pc_pos.x,pc_pos.y));
-              new_g += 1.5f*line_dist*line_dist;
+              new_g += 0.01f*line_dist*line_dist;
             }
 
             if (p->g > new_g)
@@ -295,35 +295,66 @@ CUDA_GEO::coord Dijkstra::get_first_free_coord(CUDA_GEO::coord start,float safet
     return start;
 }
 
-void Dijkstra::update_selected_tgt(CUDA_GEO::coord& sel_tgt, float &min_h, const CUDA_GEO::coord &mc, const CUDA_GEO::coord &goal, float safety_radius,
-                                   EDTMap* line_map, const std::unordered_map<int, float> *lpta)
+// Given a coord mc, find the id of its EDT root from the line_map
+bool Dijkstra::get_root_idx(int &idx, const CUDA_GEO::coord &mc, EDTMap* line_map)
+{
+  // Transform the corresponding coordinate from the dijkstra map to the line_map
+  CUDA_GEO::pos tmp = coord2pos(mc);
+  CUDA_GEO::coord tmp_c = line_map->pos2coord(tmp);
+
+  if (line_map->isInside(tmp_c))
+  {
+    idx = line_map->m_hst_sd_map[line_map->to_id(tmp_c.x,tmp_c.y,0)].rt_idx;
+    return true;
+  }
+  else
+  {
+    idx = -1;
+    return false;
+  }
+}
+
+void Dijkstra::update_selected_tgt(CUDA_GEO::coord& sel_tgt, float &min_h, int& max_path_id, const CUDA_GEO::coord &mc, const CUDA_GEO::coord &goal, float safety_radius,
+                                   EDTMap* line_map, const std::unordered_map<int, pathPntInfo> *lpta)
 {
   float d2goal = dist(mc,goal);
   CUDA_GEO::pos m_pos = coord2pos(mc);
   float d2line = line_map->getEDT(make_float2(m_pos.x,m_pos.y));
-  if (min_h > d2goal && d2line < line_map->m_grid_step*10)
+
+  if(d2line >= line_map->m_grid_step*10)
+    return; // too far from the nominal line
+
+  if (lpta != nullptr)
   {
-    if (lpta != nullptr)
+    int idx;
+    if (!get_root_idx(idx, mc, line_map))
+      return; // mc not in the line_map
+
+    if (lpta->find(idx) == lpta->end())
+      return; // cannot find the idx in lpta
+
+    // get the id of the root along the path
+    int path_id = lpta->at(idx).path_idx;
+
+    // if path_id is large (closer to finishing line)
+    // or if the distance to goal is closer
+    if (path_id > max_path_id || (path_id == max_path_id && min_h > d2goal))
     {
-      CUDA_GEO::pos tmp = coord2pos(mc);
-      CUDA_GEO::coord tmp_c = line_map->pos2coord(tmp);
-      if (line_map->isInside(tmp_c))
+      // collision checking
+      float target_angle = lpta->at(idx).desired_angle;
+      CUDA_GEO::pos c_r,c_f;
+      calculate_bounding_centres(coord2pos(mc),target_angle,c_r,c_f);
+      if(!two_circle_collision(c_r,c_f,safety_radius))
       {
-        int idx = line_map->m_hst_sd_map[line_map->to_id(tmp_c.x,tmp_c.y,0)].rt_idx;
-        if (lpta->find(idx) != lpta->end())
-        {
-          float target_angle = lpta->at(idx);
-          CUDA_GEO::pos c_r,c_f;
-          calculate_bounding_centres(tmp,target_angle,c_r,c_f);
-          if(!two_circle_collision(c_r,c_f,safety_radius))
-          {
-            min_h = d2goal;
-            sel_tgt = mc;
-          }
-        }
+        max_path_id = path_id;
+        min_h = d2goal;
+        sel_tgt = mc;
       }
     }
-    else
+  }
+  else
+  {
+    if(min_h > d2goal)
     {
       min_h = d2goal;
       sel_tgt = mc;
@@ -331,7 +362,7 @@ void Dijkstra::update_selected_tgt(CUDA_GEO::coord& sel_tgt, float &min_h, const
   }
 }
 
-CUDA_GEO::coord Dijkstra::find_available_target_with_line(CUDA_GEO::coord start, CUDA_GEO::coord goal, EDTMap* line_map, float safety_radius, const std::unordered_map<int, float> *lpta)
+CUDA_GEO::coord Dijkstra::find_available_target_with_line(CUDA_GEO::coord start, CUDA_GEO::coord goal, EDTMap* line_map, float safety_radius, const std::unordered_map<int, pathPntInfo> *lpta)
 {
   memcpy(_id_map,_init_id_map,sizeof(nodeInfo)*static_cast<size_t>(_w*_h*_d));
   float min_h = std::numeric_limits<float>::infinity();
@@ -342,11 +373,12 @@ CUDA_GEO::coord Dijkstra::find_available_target_with_line(CUDA_GEO::coord start,
   // insert the root
   m=getNode(mc);
 
+  int max_path_id = -1;
   bool occupied=false;
   if (m)
   {
     _Q.push(m);
-    update_selected_tgt(selected_tgt,min_h,m->c,goal,safety_radius,line_map,lpta);
+    update_selected_tgt(selected_tgt,min_h,max_path_id,m->c,goal,safety_radius,line_map,lpta);
   }
   while (_Q.size()>0)
   {
@@ -355,7 +387,7 @@ CUDA_GEO::coord Dijkstra::find_available_target_with_line(CUDA_GEO::coord start,
     m->inClosed = true;
     mc = m->c;
 
-    update_selected_tgt(selected_tgt,min_h,mc,goal,safety_radius,line_map,lpta);
+    update_selected_tgt(selected_tgt,min_h,max_path_id,mc,goal,safety_radius,line_map,lpta);
 
     // get all neighbours
     for (int ix=-1;ix<=1;ix++)
@@ -382,6 +414,8 @@ CUDA_GEO::coord Dijkstra::find_available_target_with_line(CUDA_GEO::coord start,
       }
     }
   }
+
+  std::cout<<"max_path_id: "<<max_path_id<<std::endl;
 
   if (std::isinf(min_h))
     selected_tgt = start;

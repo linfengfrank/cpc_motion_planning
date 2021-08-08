@@ -14,7 +14,7 @@ NF1LocalPlanner::NF1LocalPlanner():
   m_nf1_map(nullptr)
 {
   std::string dp_file_location;
-  float var_s, var_theta, step_dt, local_safety_radius;
+  float var_s, var_theta, step_dt, local_safety_radius, max_speed;
   int step_num;
   bool use_auto_direction;
   m_nh.param<std::string>("/dp_file_location",dp_file_location,"");
@@ -28,6 +28,7 @@ NF1LocalPlanner::NF1LocalPlanner():
   m_nh.param<int>("/batch_num",m_batch_num,40);
   m_nh.param<int>("/episode_num",m_episode_num,2);
   m_nh.param<float>("/local_safety_radius",local_safety_radius,0.401f);
+  m_nh.param<float>("/max_speed", max_speed, 1.0f);
 
   m_nf1_sub = m_nh.subscribe("/nf1",1,&NF1LocalPlanner::nf1_call_back, this);
 
@@ -46,6 +47,7 @@ NF1LocalPlanner::NF1LocalPlanner():
   m_pso_planner->m_swarm.set_var(make_float3(var_s,var_theta,1.0f));
   m_pso_planner->m_eva.m_using_auto_direction = use_auto_direction;
   m_pso_planner->m_eva.m_safety_radius = local_safety_radius;
+  m_pso_planner->m_eva.m_max_speed = max_speed;
   m_pso_planner->m_file_location = dp_file_location;
   m_pso_planner->initialize();
   m_recover_planner.init_swarm(step_num, step_dt, var_s, var_theta, dp_file_location);
@@ -64,6 +66,7 @@ NF1LocalPlanner::NF1LocalPlanner():
   m_ref_start_idx = 0;
 
   m_create_host_edt = true;
+  m_min_dist = 0.0f;
 }
 
 NF1LocalPlanner::~NF1LocalPlanner()
@@ -195,15 +198,34 @@ void NF1LocalPlanner::do_normal()
   std::cout<<"NORMAL"<<std::endl;
 
   //Planning
+  float var_s = 2.0f * (m_min_dist);
+  if (var_s < 0.4f) var_s = 0.4f;
+  if (var_s > 3.0f) var_s = 3.0f;
+
+
+  m_pso_planner->m_swarm.set_var_s(var_s);
   m_task_is_new = false;
   calculate_trajectory<SIMPLE_UGV>(m_pso_planner, m_traj, m_use_de);
 
+  m_min_dist = m_pso_planner->result.best_loc.min_dist;
+
+
   //Update the drive direction
   std_msgs::Int32 drive_dir;
-  if (m_pso_planner->result.best_loc[0].z > 0)
-    drive_dir.data = cpc_aux_mapping::nf1_task::TYPE_FORWARD;
+  if(m_pso_planner->m_eva.m_using_auto_direction)
+  {
+    if (m_pso_planner->result.best_loc[0].z > 0)
+      drive_dir.data = cpc_aux_mapping::nf1_task::TYPE_FORWARD;
+    else
+      drive_dir.data = cpc_aux_mapping::nf1_task::TYPE_BACKWARD;
+  }
   else
-    drive_dir.data = cpc_aux_mapping::nf1_task::TYPE_BACKWARD;
+  {
+    if (m_pso_planner->m_eva.is_forward)
+      drive_dir.data = cpc_aux_mapping::nf1_task::TYPE_FORWARD;
+    else
+      drive_dir.data = cpc_aux_mapping::nf1_task::TYPE_BACKWARD;
+  }
 
   m_drive_dir_pub.publish(drive_dir);
 
@@ -366,11 +388,11 @@ void NF1LocalPlanner::cycle_init()
   if (cycle_initialized)
     return;
 
-  float2 diff = m_goal.s.p - m_carrot.p;
-  if (sqrtf(dot(diff,diff)) <= 2*m_edt_map->m_grid_step)
-    m_pso_planner->m_eva.m_accurate_reaching = true;
-  else
-    m_pso_planner->m_eva.m_accurate_reaching = false;
+//  float2 diff = m_goal.s.p - m_carrot.p;
+//  if (sqrtf(dot(diff,diff)) <= 2*m_edt_map->m_grid_step)
+//    m_pso_planner->m_eva.m_accurate_reaching = true;
+//  else
+//    m_pso_planner->m_eva.m_accurate_reaching = false;
 
   cycle_initialized = true;
   bool is_heading_ref;

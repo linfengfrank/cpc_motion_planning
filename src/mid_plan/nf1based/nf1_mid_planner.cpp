@@ -184,7 +184,7 @@ void NF1MidPlanner::set_goal(CUDA_GEO::pos goal)
   m_goal = goal;
 }
 
-bool NF1MidPlanner::find_reachable_target(CUDA_GEO::coord& start, CUDA_GEO::coord& reachable_tgt, const std::unordered_map<int, float> *lpta)
+bool NF1MidPlanner::find_reachable_target(CUDA_GEO::coord& start, CUDA_GEO::coord& reachable_tgt, const std::unordered_map<int, pathPntInfo> *lpta)
 {
   //set start
   start = CUDA_GEO::coord(m_d_map->getMaxX()/2,m_d_map->getMaxY()/2,0);
@@ -220,7 +220,7 @@ void NF1MidPlanner::plan(const ros::TimerEvent&)
 
     if (local_path.size() > 0)
     {
-      std::unordered_map<int,float>ltpa = assign_target_angle(local_path);
+      std::unordered_map<int,pathPntInfo>ltpa = assign_target_angle(local_path);
       set_goal(CUDA_GEO::pos(local_path.back().x,local_path.back().y,0));
       prepare_line_map(local_path);
       bool is_goal_reachable = find_reachable_target(start, reachable_tgt, &ltpa);
@@ -399,7 +399,7 @@ std::vector<float2> NF1MidPlanner::get_local_path(bool &is_future_path_blocked, 
       p.x = local_path[i].x;
       p.y = local_path[i].y;
       diff = m_curr_pos - local_path[i];
-      dist = dot(diff,diff);
+      dist = sqrtf(dot(diff,diff));
       if( dist > m_min_carrot_dist &&
           (dist > m_max_carrot_dist || is_curvature_too_big(local_path,0,i,m_curvature_split)))
         break;

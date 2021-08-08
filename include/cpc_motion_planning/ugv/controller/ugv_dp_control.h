@@ -144,7 +144,7 @@ public:
       float3 u = dp_control(s, site_target);
       m.model_forward(s,u,dt);
 
-      //cost += 0.1f*sqrtf(u.x*u.x + 0.5f*u.y*u.y + u.z*u.z);
+      cost += 0.5f*u.y*u.y + 1.0f*u.x*u.x;
       cost += eva.process_cost(s,map,t,data);
 
       update_collision_state(collision_state, data.min_dist, initial_dist, first_collision_time, t);
@@ -162,6 +162,8 @@ public:
       is_traj_collision = false;
 
     cost += eva.final_cost(s,map);
+
+    ttr.min_dist = traj_min_dist;
     return cost;
   }
 

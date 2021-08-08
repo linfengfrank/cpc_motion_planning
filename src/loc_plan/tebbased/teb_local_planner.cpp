@@ -94,6 +94,19 @@ void TEBLocalPlanner::nf1_call_back(const cpc_aux_mapping::nf1_task::ConstPtr &m
 
   // setup the drive type
 
+  // setup the drive type
+  if (msg->drive_type == cpc_aux_mapping::nf1_task::TYPE_FORWARD)
+  {
+    m_planner->m_is_forward = true;
+  }
+  else if (msg->drive_type == cpc_aux_mapping::nf1_task::TYPE_BACKWARD)
+  {
+    m_planner->m_is_forward = false;
+  }
+  else if (msg->drive_type == cpc_aux_mapping::nf1_task::TYPE_ROTATE)
+  {
+    m_planner->m_is_forward = true;
+  }
 
   // setup the goal and carrot
   UGV::NF1Evaluator::Target tmp_goal;
@@ -191,11 +204,20 @@ void TEBLocalPlanner::do_normal()
   if (!m_planner->get_edt_map())
     m_planner->set_edt_map(m_edt_map);
 
-  std::vector<double3> init = get_init_guess();
+  std::vector<double2> init = get_init_path_guess();
   //std::cout<<init.size()<<std::endl;
   m_planner->set_init_plan(init);
 
-  bool success = m_planner->plan(robot_pose, robot_goal, &robot_vel, m_cfg.goal_tolerance.free_goal_vel);
+  bool success = m_planner->plan(robot_pose, robot_goal,m_cfg.trajectory.feasibility_check_no_poses, &robot_vel, m_planner->m_is_forward);
+
+  std_msgs::Int32 drive_dir;
+  if (m_planner->m_is_forward)
+    drive_dir.data = cpc_aux_mapping::nf1_task::TYPE_FORWARD;
+  else
+    drive_dir.data = cpc_aux_mapping::nf1_task::TYPE_BACKWARD;
+
+  m_drive_dir_pub.publish(drive_dir);
+
   if (!success)
   {
     m_braking_start_cycle = m_plan_cycle;
@@ -204,7 +226,7 @@ void TEBLocalPlanner::do_normal()
     return;
   }
 
-  bool feasible = m_planner->isTrajectoryFeasible(0.4, m_cfg.trajectory.feasibility_check_no_poses);
+  bool feasible = m_planner->isTrajectoryFeasible();
   if(!feasible)
   {
     m_braking_start_cycle = m_plan_cycle;
@@ -359,16 +381,14 @@ void TEBLocalPlanner::cycle_init()
 
 }
 //---
-std::vector<double3> TEBLocalPlanner::get_init_guess()
+std::vector<double2> TEBLocalPlanner::get_init_path_guess()
 {
-  std::vector<double3> pre_guess, guess;
-  // the initial pose
-  pre_guess.push_back(make_double3(m_ini_state.p.x,
-                                m_ini_state.p.y,
-                                m_ini_state.theta));
+  std::vector<double2> guess;
+
   CUDA_GEO::pos p;
   p.x = m_ini_state.p.x;
   p.y = m_ini_state.p.y;
+  guess.push_back(make_double2(p.x, p.y));
   CUDA_GEO::coord c = m_nf1_map->pos2coord(p);
   CUDA_GEO::coord bc;
   // First calculate the positions
@@ -378,38 +398,14 @@ std::vector<double3> TEBLocalPlanner::get_init_guess()
     {
       c = bc;
       p = m_nf1_map->coord2pos(c);
-      pre_guess.push_back(make_double3(p.x,p.y,0));
+      guess.push_back(make_double2(p.x, p.y));
     }
     else
     {
       break;
     }
   }
-  if (pre_guess.size()>1)
-    pre_guess.pop_back();
 
-  // the goal pose
-  pre_guess.push_back(make_double3(m_carrot.p.x,
-                                m_carrot.p.y,
-                                m_carrot.theta));
-
-   std::vector<size_t> split_idx = split_merge(pre_guess, 0.1);
-
-   for(size_t i=0; i<split_idx.size(); i++)
-   {
-     guess.push_back(pre_guess[split_idx[i]]);
-   }
-
-
-  // Then calculate the angle
-  for (int i=1; i < static_cast<int>(guess.size())-1; i++)
-  {
-    // get yaw from the orientation of the distance vector between pose_{i+1} and pose_{i}
-    double dx = guess[i+1].x - guess[i].x;
-    double dy = guess[i+1].y - guess[i].y;
-    double yaw = std::atan2(dy,dx);
-    guess[i].z = yaw;
-  }
   return guess;
 }
 
