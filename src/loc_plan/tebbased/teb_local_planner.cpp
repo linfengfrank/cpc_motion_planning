@@ -213,7 +213,7 @@ void TEBLocalPlanner::do_normal()
 
   bool success = m_planner->plan(robot_pose, robot_goal,m_cfg.trajectory.feasibility_check_no_poses, &robot_vel, m_planner->m_is_forward);
 
- auto end_time = std::chrono::steady_clock::now();
+  auto end_time = std::chrono::steady_clock::now();
       std::cout << "Local planning time: "
                 << std::chrono::duration_cast<std::chrono::milliseconds>(end_time - start_time).count()
                 << " ms"<< std::endl;
