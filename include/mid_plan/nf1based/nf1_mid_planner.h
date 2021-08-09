@@ -353,7 +353,8 @@ private:
     float2 curr_pos = make_float2(m_curr_pose.x, m_curr_pose.y);
     if (m_drive_dir >=0)
     {
-      float l = (m_drive_dir == cpc_aux_mapping::nf1_task::TYPE_FORWARD) ? 0.3f : -0.3f;
+      float l = (m_drive_dir == cpc_aux_mapping::nf1_task::TYPE_FORWARD ||
+                 m_drive_dir == cpc_aux_mapping::nf1_task::TYPE_ROTATE) ? 0.3f : -0.3f;
       curr_pos += make_float2(cosf(m_curr_pose.z),sinf(m_curr_pose.z))*l;
     }
     return curr_pos;

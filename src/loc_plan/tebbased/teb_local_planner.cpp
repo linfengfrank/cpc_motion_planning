@@ -218,14 +218,6 @@ void TEBLocalPlanner::do_normal()
                 << std::chrono::duration_cast<std::chrono::milliseconds>(end_time - start_time).count()
                 << " ms"<< std::endl;
 
-  std_msgs::Int32 drive_dir;
-  if (m_planner->m_is_forward)
-    drive_dir.data = cpc_aux_mapping::nf1_task::TYPE_FORWARD;
-  else
-    drive_dir.data = cpc_aux_mapping::nf1_task::TYPE_BACKWARD;
-
-  m_drive_dir_pub.publish(drive_dir);
-
   if (!success)
   {
     m_braking_start_cycle = m_plan_cycle;
@@ -246,6 +238,16 @@ void TEBLocalPlanner::do_normal()
   std::vector<Reference> ref;
   if (m_planner->bestTeb() && m_planner->bestTeb()->get_reference(4,0.05, ref))
   {
+    // The planner successfully generated a usable trajectory,
+    // now also publish the driving direction
+    std_msgs::Int32 drive_dir;
+    if (m_planner->m_is_forward)
+      drive_dir.data = cpc_aux_mapping::nf1_task::TYPE_FORWARD;
+    else
+      drive_dir.data = cpc_aux_mapping::nf1_task::TYPE_BACKWARD;
+
+    m_drive_dir_pub.publish(drive_dir);
+
     m_traj.clear();
     for (Reference r : ref)
     {

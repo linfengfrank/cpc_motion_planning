@@ -416,7 +416,7 @@ CUDA_GEO::coord Dijkstra::find_available_target_with_line(CUDA_GEO::coord start,
     }
   }
 
-  std::cout<<"max_path_id: "<<max_path_id<<std::endl;
+  //std::cout<<"max_path_id: "<<max_path_id<<std::endl;
 
   if (std::isinf(min_h))
     selected_tgt = start;
