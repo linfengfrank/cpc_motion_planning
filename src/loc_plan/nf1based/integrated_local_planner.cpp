@@ -258,7 +258,18 @@ void IntLocalPlanner::do_normal()
 
   UGV::UGVModel::State ini_state = m_pso_planner->m_model.get_ini_state();
 
-  if (!do_normal_teb())
+  if (do_normal_teb())
+  {
+    // TEB planning success, publish its driving direction
+    std_msgs::Int32 drive_dir;
+    if (m_teb_planner->m_is_forward)
+      drive_dir.data = cpc_aux_mapping::nf1_task::TYPE_FORWARD;
+    else
+      drive_dir.data = cpc_aux_mapping::nf1_task::TYPE_BACKWARD;
+
+    m_drive_dir_pub.publish(drive_dir);
+  }
+  else
   {
     std::cout<<"!!!emergent mode!!!"<<std::endl;
     do_normal_pso();
@@ -306,14 +317,6 @@ bool IntLocalPlanner::do_normal_teb()
   int checking_hor = m_use_simple_filter ? m_cfg.trajectory.feasibility_check_no_poses : N_hor;
   bool success = m_teb_planner->plan(robot_pose, robot_goal, checking_hor, &robot_vel, m_teb_planner->m_is_forward);
 
-  std_msgs::Int32 drive_dir;
-  if (m_teb_planner->m_is_forward)
-    drive_dir.data = cpc_aux_mapping::nf1_task::TYPE_FORWARD;
-  else
-    drive_dir.data = cpc_aux_mapping::nf1_task::TYPE_BACKWARD;
-
-  m_drive_dir_pub.publish(drive_dir);
-
   if (!success)
   {
     m_teb_planner->clearPlanner();
@@ -336,9 +339,6 @@ bool IntLocalPlanner::do_normal_teb()
   else
   {
     m_teb_planner->clearPlanner();
-    m_braking_start_cycle = m_plan_cycle;
-    m_status = UGV::BRAKING;
-    cycle_process_based_on_status();
     return false;
   }
 }
