@@ -14,8 +14,9 @@ UAVNF1MotionPlanner::UAVNF1MotionPlanner():
   m_nf1_map(nullptr),
   m_planning_started(false)
 {
-  m_goal_sub = m_nh.subscribe("/mid_layer/goal",1,&UAVNF1MotionPlanner::goal_call_back, this);
+  m_nh.param<float>("/nndp_cpp/fly_height",m_take_off_height,2.0);
 
+  m_goal_sub = m_nh.subscribe("/mid_layer/goal",1,&UAVNF1MotionPlanner::goal_call_back, this);
 
   m_ref_pub = m_nh.advertise<cpc_motion_planning::ref_data>("ref_traj",1);
 
@@ -91,6 +92,11 @@ void UAVNF1MotionPlanner::plan_call_back(const ros::TimerEvent&)
 
 void UAVNF1MotionPlanner::goal_call_back(const cpc_aux_mapping::grid_map::ConstPtr &msg)
 {
+  // During taking off the carrot position shall not be changed (set at the at_ground state)
+  // so directly return at this stage.
+  if (m_fly_status == UAV::TAKING_OFF)
+    return;
+
   m_goal_received = true;
   if (m_nf1_map == nullptr)
   {
@@ -109,15 +115,10 @@ void UAVNF1MotionPlanner::goal_call_back(const cpc_aux_mapping::grid_map::ConstP
   m_pso_planner->m_eva.m_nf1_map = *m_nf1_map;
   m_emergent_planner->m_eva.m_nf1_map = *m_nf1_map;
 
-  m_carrot.x = msg->x_carrot;
-  m_carrot.y = msg->y_carrot;
-  m_carrot.z = msg->z_carrot;
-
-  m_pso_planner->m_eva.m_carrot = m_carrot;
-  m_emergent_planner->m_eva.m_carrot = m_carrot;
+  float3 nf1_carrot = make_float3(msg->x_carrot, msg->y_carrot, msg->z_carrot);
+  m_pso_planner->m_eva.m_carrot = nf1_carrot;
+  m_emergent_planner->m_eva.m_carrot = nf1_carrot;
 }
-
-
 
 void UAVNF1MotionPlanner::do_at_ground()
 {
@@ -130,6 +131,14 @@ void UAVNF1MotionPlanner::do_at_ground()
     //set the yaw target as the current target
     m_head_sov.set_yaw_target(m_curr_yaw_ref.p);
 
+    //create the take_off carrot
+    float3 take_off_carrot = m_curr_ref.p;
+    take_off_carrot.z = m_take_off_height;
+
+    //assign the take_off_carrot to the planners
+    m_pso_planner->m_eva.m_carrot = take_off_carrot;
+    m_emergent_planner->m_eva.m_carrot = take_off_carrot;
+
     // Egage and takeoff
     std_srvs::Empty::Request eReq;
     std_srvs::Empty::Response eRes;
@@ -141,8 +150,16 @@ void UAVNF1MotionPlanner::do_taking_off()
 {
   auto start = std::chrono::steady_clock::now();
   m_planning_started = true;
+
+  // During taking off the carrot position shall not be changed (set at the at_ground state)
+  // in goal call back, it returns directly in this stage.
   calculate_trajectory<SIMPLE_UAV_NF1>(m_pso_planner,m_traj);
-  if (m_curr_ref.p.z >= m_carrot.z - 0.2f && fabsf(m_curr_ref.v.z)<0.3f)
+
+  // The target heading shall not be changed as well (set at the at_ground state)
+  m_yaw_traj = m_head_sov.generate_yaw_traj();
+
+  // Condition for finishing takeoff
+  if (m_curr_ref.p.z >= m_take_off_height - 0.2f && fabsf(m_curr_ref.v.z)<0.3f)
   {
     m_pso_planner->m_eva.m_oa = true;
     m_pso_planner->m_eva.m_fov = false;
@@ -151,6 +168,7 @@ void UAVNF1MotionPlanner::do_taking_off()
     m_emergent_planner->m_eva.m_fov = false;
     m_fly_status = UAV::IN_AIR;
   }
+
   auto end = std::chrono::steady_clock::now();
   std::cout << "local planner: "
             << std::chrono::duration_cast<std::chrono::milliseconds>(end - start).count()

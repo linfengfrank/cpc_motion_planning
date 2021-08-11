@@ -43,9 +43,6 @@ private:
   PSO::Planner<SIMPLE_UAV_NF1> *m_pso_planner;
   PSO::Planner<EMERGENT_UAV_NF1> *m_emergent_planner;
 
-
-
-  float3 m_carrot;
   UAV::UAVModel::State m_curr_ref;
   JLT::State m_curr_yaw_ref;
   cpc_motion_planning::ref_data m_ref_msg;
@@ -57,6 +54,7 @@ private:
   int m_start_braking_cycle;
   UAV::UAVRepulsiveField m_rep_filed;
   bool m_planning_started;
+  float m_take_off_height;
 };
 
 #endif // UAV_NF1_MOTION_PLANNER_H
