@@ -202,7 +202,8 @@ void UAVNF1MotionPlanner::do_emergent()
 void UAVNF1MotionPlanner::do_braking()
 {
   auto start = std::chrono::steady_clock::now();
-  m_rep_filed.generate_repulse_traj(m_traj, *m_edt_map, m_curr_ref);
+//  m_rep_filed.generate_repulse_traj(m_traj, *m_edt_map, m_curr_ref);
+  generate_static_traj(m_traj, m_curr_ref);
   if (m_plan_cycle - m_start_braking_cycle > 20)
   {
     m_fly_status = UAV::IN_AIR;
