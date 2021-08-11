@@ -135,7 +135,7 @@ void UAVAstarMotionPlanner::do_taking_off()
   m_yaw_traj = m_head_sov.generate_yaw_traj();
 
   // Condition for finishing takeoff
-  if (m_curr_ref.p.z >= 1.8f && fabsf(m_curr_ref.v.z)<0.3f)
+  if (m_curr_ref.p.z >= m_take_off_height - 0.2f && fabsf(m_curr_ref.v.z)<0.3f)
   {
     // Turn on obstacle avoidance using this line
     set_planner_goal(m_carrot,true);
