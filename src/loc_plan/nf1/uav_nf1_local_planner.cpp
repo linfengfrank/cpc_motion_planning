@@ -137,11 +137,11 @@ void UAVNF1MotionPlanner::do_taking_off()
   calculate_trajectory<SIMPLE_UAV_NF1>(m_pso_planner,m_traj);
   if (m_curr_ref.p.z >= 1.8f && fabsf(m_curr_ref.v.z)<0.3f)
   {
-    m_pso_planner->m_eva.m_oa = m_goal_received;
-    m_pso_planner->m_eva.m_fov = m_goal_received;
+    m_pso_planner->m_eva.m_oa = true;
+    m_pso_planner->m_eva.m_fov = false;
 
-    m_emergent_planner->m_eva.m_oa = m_goal_received;
-    m_emergent_planner->m_eva.m_fov = m_goal_received;
+    m_emergent_planner->m_eva.m_oa = true;
+    m_emergent_planner->m_eva.m_fov = false;
     m_fly_status = UAV::IN_AIR;
   }
   auto end = std::chrono::steady_clock::now();
@@ -162,7 +162,7 @@ void UAVNF1MotionPlanner::do_in_air()
   }
   else
   {
-    m_head_sov.cal_yaw_target(m_pso_planner->result.best_loc[0]);
+    //m_head_sov.cal_yaw_target(m_pso_planner->result.best_loc[0]);
     m_yaw_traj = m_head_sov.generate_yaw_traj();
     if(is_stuck(m_traj, m_yaw_traj, m_pso_planner->result.best_cost))
     {
