@@ -11,7 +11,8 @@ template <typename T> int sgn(T val)
 UAVNF1MotionPlanner::UAVNF1MotionPlanner():
   UAVLocalMotionPlanner(),
   m_goal_received(false),
-  m_nf1_map(nullptr)
+  m_nf1_map(nullptr),
+  m_planning_started(false)
 {
   m_goal_sub = m_nh.subscribe("/mid_layer/goal",1,&UAVNF1MotionPlanner::goal_call_back, this);
 
@@ -48,6 +49,8 @@ void UAVNF1MotionPlanner::plan_call_back(const ros::TimerEvent&)
 {
   cycle_init();
   cycle_process_based_on_status();
+  if (!m_planning_started)
+    return;
 
   if (m_fly_status <= UAV::AT_GROUND)
     return;
@@ -115,8 +118,10 @@ void UAVNF1MotionPlanner::do_at_ground()
   {
     //set the current state from pose
     convert_init_pose(m_pose,m_curr_ref,m_curr_yaw_ref);
+    set_init_state(m_curr_ref, m_curr_yaw_ref);
+
+    //set the yaw target as the current target
     m_head_sov.set_yaw_target(m_curr_yaw_ref.p);
-    cycle_init();
 
     // Egage and takeoff
     std_srvs::Empty::Request eReq;
@@ -128,6 +133,7 @@ void UAVNF1MotionPlanner::do_at_ground()
 void UAVNF1MotionPlanner::do_taking_off()
 {
   auto start = std::chrono::steady_clock::now();
+  m_planning_started = true;
   calculate_trajectory<SIMPLE_UAV_NF1>(m_pso_planner,m_traj);
   if (m_curr_ref.p.z >= 1.8f && fabsf(m_curr_ref.v.z)<0.3f)
   {
@@ -244,32 +250,7 @@ void UAVNF1MotionPlanner::cycle_init()
   set_init_state(m_curr_ref, m_curr_yaw_ref);
 
   // Construct default trajectories for pos and yaw
-  switch (m_fly_status) {
-  case UAV::AT_GROUND:
-  {
-    generate_static_traj(m_traj, m_curr_ref);
-    break;
-  }
-  case UAV::TAKING_OFF:
-  case UAV::IN_AIR:
-  {
-     m_traj = m_pso_planner->generate_trajectory();
-    break;
-  }
-  case UAV::EMERGENT:
-  {
-    m_traj = m_emergent_planner->generate_trajectory();
-    break;
-  }
-  case UAV::BRAKING:
-  {
-    generate_static_traj(m_traj, m_curr_ref);
-    break;
-  }
-  default:
-    break;
-  }
-
+  generate_static_traj(m_traj, m_curr_ref);
   m_yaw_traj = m_head_sov.generate_yaw_traj();
 }
 

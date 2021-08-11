@@ -56,6 +56,7 @@ private:
   std::vector<JLT::State> m_yaw_traj;
   int m_start_braking_cycle;
   UAV::UAVRepulsiveField m_rep_filed;
+  bool m_planning_started;
 };
 
 #endif // UAV_NF1_MOTION_PLANNER_H
