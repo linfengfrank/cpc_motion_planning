@@ -108,6 +108,13 @@ void UAVNF1MotionPlanner::goal_call_back(const cpc_aux_mapping::grid_map::ConstP
 
   m_pso_planner->m_eva.m_nf1_map = *m_nf1_map;
   m_emergent_planner->m_eva.m_nf1_map = *m_nf1_map;
+
+  m_carrot.x = msg->x_carrot;
+  m_carrot.y = msg->y_carrot;
+  m_carrot.z = msg->z_carrot;
+
+  m_pso_planner->m_eva.m_carrot = m_carrot;
+  m_emergent_planner->m_eva.m_carrot = m_carrot;
 }
 
 
@@ -135,7 +142,7 @@ void UAVNF1MotionPlanner::do_taking_off()
   auto start = std::chrono::steady_clock::now();
   m_planning_started = true;
   calculate_trajectory<SIMPLE_UAV_NF1>(m_pso_planner,m_traj);
-  if (m_curr_ref.p.z >= 1.8f && fabsf(m_curr_ref.v.z)<0.3f)
+  if (m_curr_ref.p.z >= m_carrot.z - 0.2f && fabsf(m_curr_ref.v.z)<0.3f)
   {
     m_pso_planner->m_eva.m_oa = true;
     m_pso_planner->m_eva.m_fov = false;

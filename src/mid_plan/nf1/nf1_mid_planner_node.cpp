@@ -185,6 +185,13 @@ void glb_plan(const ros::TimerEvent&)
 
   setup_map_msg(nf1_map_msg,mid_map,false);
   copy_map_to_msg(nf1_map_msg,mid_map,tgt_height_coord);
+
+  // set the carrot position
+  CUDA_GEO::pos carrot = a_map->coord2pos(path[0]);
+  nf1_map_msg.x_carrot = carrot.x;
+  nf1_map_msg.y_carrot = carrot.y;
+  nf1_map_msg.z_carrot = carrot.z;
+
   nf1_pub->publish(nf1_map_msg);
 #ifdef SHOWPC
   publishMap(tgt_height_coord);

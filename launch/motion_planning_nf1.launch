@@ -1,5 +1,6 @@
 <?xml version="1.0"?>
 <launch>
+<param name="/nndp_cpp/fly_height" type="double" value="1.0" />
 <include file="$(find cpc_reference_publisher)/launch/ref_pub.launch"/>
 <node pkg="cpc_motion_planning" type="nf1_loc_planning_node" name="nf1_loc_planning_node" output="screen">
 </node>

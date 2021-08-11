@@ -45,7 +45,7 @@ private:
 
 
 
-  //UAV::SingleTargetEvaluator::Target m_goal;
+  float3 m_carrot;
   UAV::UAVModel::State m_curr_ref;
   JLT::State m_curr_yaw_ref;
   cpc_motion_planning::ref_data m_ref_msg;

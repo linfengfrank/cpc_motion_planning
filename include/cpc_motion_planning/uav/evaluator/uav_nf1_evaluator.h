@@ -17,7 +17,7 @@ public:
 
   NF1Evaluator():m_oa(false),m_fov(false)
   {
-
+    m_carrot = make_float3(0,0,0);
   }
 
   ~NF1Evaluator()
@@ -29,7 +29,7 @@ public:
   float process_cost(const UAVModel::State &s, const EDTMap &map, const float &time, bool &collision) const
   {
     float cost = 0;
-    float dist_err = s.p.z - 2.0f;
+    float dist_err = s.p.z - m_carrot.z;
     cost += 0.5f*3.0f*sqrtf(dist_err*dist_err);
     cost += 0.1f*sqrtf(s.a.x*s.a.x + s.a.y*s.a.y + s.a.z*s.a.z);
 
@@ -93,7 +93,7 @@ public:
   float final_cost(const UAVModel::State &s, const EDTMap &map) const
   {
     float cost = 0;
-    float dist_err = s.p.z - 2.0f;
+    float dist_err = s.p.z - m_carrot.z;
     cost += 0.5f*3.0f*sqrtf(dist_err*dist_err);
     cost += 0.1f*sqrtf(s.a.x*s.a.x + s.a.y*s.a.y + s.a.z*s.a.z);
 
@@ -149,6 +149,7 @@ public:
   bool m_fov;
   float m_curr_yaw;
   float3 m_curr_pos;
+  float3 m_carrot;
   NF1Map m_nf1_map;
 };
 }
