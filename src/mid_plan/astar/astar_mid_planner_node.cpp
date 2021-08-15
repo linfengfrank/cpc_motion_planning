@@ -176,76 +176,6 @@ void goalCallback(const geometry_msgs::PoseStamped::ConstPtr &msg)
   goal.z = msg->pose.position.z;
 }
 //---
-void extract_target(const ros::TimerEvent&)
-{
-  if (guide_path.empty())
-    return;
-
-  std::vector<CUDA_GEO::coord> path_adopt;
-
-  for (CUDA_GEO::pos &path_pnt : guide_path)
-  {
-    CUDA_GEO::coord path_crd = mid_map->pos2coord(path_pnt);
-    path_adopt.push_back(path_crd);
-  }
-  std::reverse(path_adopt.begin(),path_adopt.end());
-
-  CUDA_GEO::coord start;
-  if(received_ref)
-  {
-    CUDA_GEO::pos start_pos(ref.data[0], ref.data[1], ref.data[2]);
-    start = mid_map->pos2coord(start_pos);
-  }
-  else
-  {
-    start = CUDA_GEO::coord(mid_map->getMaxX()/2,mid_map->getMaxY()/2,mid_map->getMaxZ()/2);
-  }
-
-  int tgt_height_coord = mid_map->calcTgtHeightCoord(FLY_HEIGHT);
-#ifdef USE2D
-  start.z = tgt_height_coord;
-#endif
-
-  unsigned int tgt_idx = 0;
-  tgt_idx = mid_map->findTargetCoordLos(path_adopt,start,0,0.5f);
-
-  CUDA_GEO::coord curr_tgt = path_adopt[tgt_idx];
-  curr_target_pos = mid_map->coord2pos(curr_tgt);
-
-#ifdef SHOWPC
-  publishMap(path_adopt,curr_tgt,false);
-  pcl_conversions::toPCL(ros::Time::now(), pclOut->header.stamp);
-  pc_pub->publish (pclOut);
-  pclOut->clear();
-
-//  CUDA_GEO::pos mid_tgt_pos = mid_map->coord2pos(glb_tgt);
-//  pcl::PointXYZRGB clrP;
-//  clrP.x = mid_tgt_pos.x;
-//  clrP.y = mid_tgt_pos.y;
-//  clrP.z = mid_tgt_pos.z;
-//  clrP.a = 255;
-//  clrP.r = 255;
-//  pclOut->points.push_back (clrP);
-
-  pcl::PointXYZRGB clrP;
-  clrP.x = curr_target_pos.x;
-  clrP.y = curr_target_pos.y;
-  clrP.z = curr_target_pos.z;
-  clrP.a = 255;
-  clrP.r = 255;
-  clrP.g = 255;
-  pclOut->points.push_back (clrP);
-  mid_goal_pub->publish(pclOut);
-  pclOut->clear();
-#endif
-
-  geometry_msgs::PoseStamped tgt_msg;
-  tgt_msg.pose.position.x = curr_target_pos.x;
-  tgt_msg.pose.position.y = curr_target_pos.y;
-  tgt_msg.pose.position.z = curr_target_pos.z;
-  point_pub->publish(tgt_msg);
-}
-//---
 void glb_plan(const ros::TimerEvent& msg)
 {
   if (!received_cmd || !received_map)
@@ -350,8 +280,6 @@ void glb_plan(const ros::TimerEvent& msg)
                 << " ms" << std::endl;
 
   first_run = false;
-
-  extract_target(msg);
 }
 //---
 void get_reference(const cpc_motion_planning::ref_data::ConstPtr &msg)
@@ -368,11 +296,11 @@ int main(int argc, char **argv)
   line_pub = new ros::Publisher;
   mid_goal_pub = new ros::Publisher;
   ros::NodeHandle nh;
-  ros::Subscriber map_sub = nh.subscribe("/edt_map", 1, &mapCallback);
+  ros::Subscriber map_sub = nh.subscribe("edt_map", 1, &mapCallback);
   ros::Subscriber stuck_sub = nh.subscribe("stuck", 1, &stuckCallback);
   ros::Subscriber glb_tgt_sub = nh.subscribe("/move_base_simple/goal", 1, &goalCallback);
-  ros::Subscriber state_sub = nh.subscribe("/ref_traj", 1, get_reference);
-  *line_pub = nh.advertise<cpc_motion_planning::guide_line>("/mid_layer/guide_line",1);
+  ros::Subscriber state_sub = nh.subscribe("ref_traj", 1, get_reference);
+  *line_pub = nh.advertise<cpc_motion_planning::guide_line>("mid_layer/guide_line",1);
 
   *pc_pub = nh.advertise<PointCloud> ("/path", 1);
   *mid_goal_pub = nh.advertise<PointCloud> ("/mid_goal", 1);
@@ -383,7 +311,6 @@ int main(int argc, char **argv)
 
 
   glb_plan_timer = nh.createTimer(ros::Duration(1.5), &glb_plan);
-  target_extract_timer = nh.createTimer(ros::Duration(0.2), &extract_target);
 
   ros::spin();
 

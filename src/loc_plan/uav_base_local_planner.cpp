@@ -5,9 +5,11 @@ UAVLocalMotionPlanner::UAVLocalMotionPlanner():
   m_received_map(false),
   m_pose_received(false),
   m_edt_map(nullptr),
-  m_fly_status(UAV::AT_GROUND)
+  m_fly_status(UAV::AT_GROUND),
+  m_hst_map(nullptr),
+  m_use_hst_map(false)
 {
-  m_map_sub = m_nh.subscribe("/edt_map", 1, &UAVLocalMotionPlanner::map_call_back, this);
+  m_map_sub = m_nh.subscribe("edt_map", 1, &UAVLocalMotionPlanner::map_call_back, this);
   m_pose_sub = m_nh.subscribe("/ground_truth/state", 1, &UAVLocalMotionPlanner::vehicle_pose_call_back, this);
 #ifdef SHOWPC
   m_traj_pub = m_nh.advertise<PointCloud> ("pred_traj", 1);
@@ -23,6 +25,9 @@ UAVLocalMotionPlanner::~UAVLocalMotionPlanner()
     m_edt_map->free_device();
     delete m_edt_map;
   }
+
+  if(m_hst_map)
+    delete m_hst_map;
 }
 
 void UAVLocalMotionPlanner::map_call_back(const cpc_aux_mapping::grid_map::ConstPtr &msg)
@@ -34,11 +39,20 @@ void UAVLocalMotionPlanner::map_call_back(const cpc_aux_mapping::grid_map::Const
     int3 edt_map_size = make_int3(msg->x_size,msg->y_size,msg->z_size);
     m_edt_map = new EDTMap(origin,msg->width,edt_map_size);
     m_edt_map->setup_device();
+    if (m_use_hst_map)
+    {
+      m_hst_map = new GridGraph(msg->x_size,msg->y_size,msg->z_size);
+      m_hst_map->copyEdtData(msg);
+    }
   }
   else
   {
     m_edt_map->m_origin = CUDA_GEO::pos(msg->x_origin,msg->y_origin,msg->z_origin);
     m_edt_map->m_grid_step = msg->width;
+    if (m_use_hst_map)
+    {
+      m_hst_map->copyEdtData(msg);
+    }
   }
   CUDA_MEMCPY_H2D(m_edt_map->m_sd_map,msg->payload8.data(),static_cast<size_t>(m_edt_map->m_byte_size));
 }
