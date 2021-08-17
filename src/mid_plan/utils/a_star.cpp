@@ -45,7 +45,7 @@ std::vector<CUDA_GEO::coord> Astar::AStar2D(const CUDA_GEO::coord &goal, const C
     ni->inClosed = true;
     my_coord = ni->c;
 
-    obsCostAt(my_coord,0,occupied,false,safety_radius);
+    getObsCostAndOccupancy(my_coord,0,occupied,false,safety_radius);
     if (!occupied)
       reached_free_zone = true;
 
@@ -74,7 +74,7 @@ std::vector<CUDA_GEO::coord> Astar::AStar2D(const CUDA_GEO::coord &goal, const C
         {
 
           float new_g = sqrtf(static_cast<float>(ix*ix+iy*iy))*getGridStep() +
-              ni->g + obsCostAt(child_coord,0,safety_radius);
+              ni->g + obsCostAt(child_coord,0,safety_radius,5.0f);
 
           if (p->g > new_g && !(occupied && reached_free_zone))
           {

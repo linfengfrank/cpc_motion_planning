@@ -44,8 +44,8 @@ class GridGraph : public MapBase
 {
 public:
   GridGraph(int maxX, int maxY, int maxZ);
-  float obsCostAt(CUDA_GEO::coord s, float default_value, bool &occupied, bool extend=false, float obstacle_dist = MID_SAFE_DIST) const;
-  float obsCostAt(CUDA_GEO::coord s, float default_value, float obstacle_dist = MID_SAFE_DIST) const;
+  float getObsCostAndOccupancy(CUDA_GEO::coord s, float default_value, bool &occupied, bool extend=false, float obstacle_dist = MID_SAFE_DIST) const;
+  float obsCostAt(CUDA_GEO::coord s, float default_value, float obstacle_dist = MID_SAFE_DIST, float weight = 50.0f) const;
   bool isSeen(const CUDA_GEO::coord & s, const bool default_value) const;
   float getEdt(const CUDA_GEO::coord & s, const float default_value) const;
 
@@ -101,7 +101,7 @@ public:
     bool occupied = false;
     for (CUDA_GEO::coord s : rayCast(p0Index, p1Index))
     {
-      obsCostAt(s, 0, occupied, obstacle_dist);
+      getObsCostAndOccupancy(s, 0, occupied, obstacle_dist);
       if (occupied)
       {
         los = false;
@@ -114,7 +114,7 @@ public:
   bool isOccupied(const CUDA_GEO::coord &s, float obstacle_dist = MID_SAFE_DIST)
   {
     bool occupied = false;
-    obsCostAt(s, 0, occupied, obstacle_dist);
+    getObsCostAndOccupancy(s, 0, occupied, obstacle_dist);
     return occupied;
   }
   //---
