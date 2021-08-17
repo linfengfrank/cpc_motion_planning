@@ -57,7 +57,7 @@ public:
       mc = m->c;
       m->inClosed = true;
 
-      obsCostAt(mc,0,occupied,false,safety_radius);
+      getObsCostAndOccupancy(mc,0,occupied,false,safety_radius);
       if (!occupied)
       {
         found_free = true;

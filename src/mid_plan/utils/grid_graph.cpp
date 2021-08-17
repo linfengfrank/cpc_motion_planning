@@ -62,7 +62,7 @@ float GridGraph::getTheta(const CUDA_GEO::coord & s, const float &default_value)
   }
 }
 
-float GridGraph::obsCostAt(CUDA_GEO::coord s, float default_value, bool &occupied, bool extend, float obstacle_dist) const
+float GridGraph::getObsCostAndOccupancy(CUDA_GEO::coord s, float default_value, bool &occupied, bool extend, float obstacle_dist) const
 {
   SeenDist* map_ptr;
   map_ptr = _val_map;
@@ -97,7 +97,7 @@ float GridGraph::obsCostAt(CUDA_GEO::coord s, float default_value, bool &occupie
   return cost;
 }
 
-float GridGraph::obsCostAt(CUDA_GEO::coord s, float default_value, float obstacle_dist) const
+float GridGraph::obsCostAt(CUDA_GEO::coord s, float default_value, float obstacle_dist, float weight) const
 {
   SeenDist* map_ptr;
   map_ptr = _val_map;
@@ -115,7 +115,7 @@ float GridGraph::obsCostAt(CUDA_GEO::coord s, float default_value, float obstacl
   dist *= static_cast<float>(getGridStep());
 
   float free_dist = fmaxf(dist - obstacle_dist, 0);
-  cost += expf(-9.0f*free_dist)*50;
+  cost += expf(-9.0f*free_dist)*weight;
 
   //if (dist < obstacle_dist + 1.0f)
   //  cost += expf(-4.0f*dist)*4;
