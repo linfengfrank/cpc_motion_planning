@@ -151,7 +151,7 @@ public:
       is_forward = data.is_forward;
 
     float rd = getMinDist(s,map);
-    //cost += expf(-9.5f*rd)*10;
+    cost += expf(-9.5f*rd)*10;
 
     if (rd < m_safety_radius)
       cost += (1000 + expf(-4.5f*rd)*1000);
