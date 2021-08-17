@@ -260,7 +260,7 @@ CUDA_GEO::coord Dijkstra::get_first_free_coord(CUDA_GEO::coord start,float safet
     mc = m->c;
     m->inClosed = true;
 
-    obsCostAt(mc,0,occupied,false,safety_radius);
+    getObsCostAndOccupancy(mc,0,occupied,false,safety_radius);
     if (!occupied)
     {
       found_free = true;
@@ -405,7 +405,7 @@ CUDA_GEO::coord Dijkstra::find_available_target_with_line(CUDA_GEO::coord start,
 
         if (p && !p->inClosed)
         {
-          obsCostAt(pc,0,occupied,false,safety_radius);
+          getObsCostAndOccupancy(pc,0,occupied,false,safety_radius);
           if (!occupied)
           {
             p->inClosed = true;

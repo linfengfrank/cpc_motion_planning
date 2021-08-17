@@ -35,7 +35,7 @@ private:
 
     c = pos2coord(c_r);
     if (isInside(c))
-      obsCostAt(c,0,occupied,false,safety_radius);
+      getObsCostAndOccupancy(c,0,occupied,false,safety_radius);
 
     if(occupied)
       return true;
@@ -43,7 +43,7 @@ private:
     occupied = true;
     c = pos2coord(c_f);
     if (isInside(c))
-      obsCostAt(c,0,occupied,false,safety_radius);
+      getObsCostAndOccupancy(c,0,occupied,false,safety_radius);
 
     if(occupied)
       return true;
