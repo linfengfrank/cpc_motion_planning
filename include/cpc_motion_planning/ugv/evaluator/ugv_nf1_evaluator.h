@@ -156,7 +156,7 @@ public:
     if (rd < m_safety_radius)
       cost += (1000 + expf(-4.5f*rd)*1000);
 
-    if (rd < PSO::MIN_DIST && time < 0.31f)
+    if (rd < PSO::MIN_DIST && time < 1.21f)
     {
       data.collision = true;
     }
