@@ -14,14 +14,15 @@ UAVNF1MotionPlanner::UAVNF1MotionPlanner():
   m_nf1_map(nullptr),
   m_planning_started(false)
 {
+  // Read parameters
   m_nh.param<float>("/nndp_cpp/fly_height",m_take_off_height,2.0);
 
-  m_goal_sub = m_nh.subscribe("/mid_layer/goal",1,&UAVNF1MotionPlanner::goal_call_back, this);
-
+  // Advertise subscribe
+  m_nf1_sub = m_nh.subscribe("/mid_layer/goal",1,&UAVNF1MotionPlanner::nf1_call_back, this);
   m_ref_pub = m_nh.advertise<cpc_motion_planning::ref_data>("ref_traj",1);
-
   m_planning_timer = m_nh.createTimer(ros::Duration(PSO::PSO_REPLAN_DT), &UAVNF1MotionPlanner::plan_call_back, this);
 
+  // Initialize the planners
   m_pso_planner = new PSO::Planner<SIMPLE_UAV_NF1>(150,30,1);
   m_pso_planner->initialize();
 
@@ -29,7 +30,6 @@ UAVNF1MotionPlanner::UAVNF1MotionPlanner():
   m_emergent_planner->initialize();
   m_emergent_planner->m_ctrl_dev.set_limit(make_float2(5,2), make_float2(4,2), make_float2(5,5));
   m_emergent_planner->m_ctrl_host.set_limit(make_float2(5,2), make_float2(4,2), make_float2(5,5));
-
 
   //Initialize the control message
   m_ref_msg.rows = 12;
@@ -90,7 +90,7 @@ void UAVNF1MotionPlanner::plan_call_back(const ros::TimerEvent&)
 #endif
 }
 
-void UAVNF1MotionPlanner::goal_call_back(const cpc_aux_mapping::grid_map::ConstPtr &msg)
+void UAVNF1MotionPlanner::nf1_call_back(const cpc_aux_mapping::grid_map::ConstPtr &msg)
 {
   // During taking off the carrot position shall not be changed (set at the at_ground state)
   // so directly return at this stage.
@@ -100,6 +100,7 @@ void UAVNF1MotionPlanner::goal_call_back(const cpc_aux_mapping::grid_map::ConstP
   m_goal_received = true;
   if (m_nf1_map == nullptr)
   {
+    // Initialize the NF1 map for PSO planner
     CUDA_GEO::pos origin(msg->x_origin,msg->y_origin,msg->z_origin);
     int3 m_nf1_map_size = make_int3(msg->x_size,msg->y_size,msg->z_size);
     m_nf1_map = new NF1Map(origin,msg->width,m_nf1_map_size);
@@ -107,14 +108,20 @@ void UAVNF1MotionPlanner::goal_call_back(const cpc_aux_mapping::grid_map::ConstP
   }
   else
   {
+    // Set the NF1 map's origin and grid step
     m_nf1_map->m_origin = CUDA_GEO::pos(msg->x_origin,msg->y_origin,msg->z_origin);
     m_nf1_map->m_grid_step = msg->width;
   }
+
+  // Copy the actual map data to GPU device
   CUDA_MEMCPY_H2D(m_nf1_map->m_nf1_map,msg->payload8.data(),static_cast<size_t>(m_nf1_map->m_byte_size));
 
+  // Set the map pointer for the evaluators
   m_pso_planner->m_eva.m_nf1_map = *m_nf1_map;
   m_emergent_planner->m_eva.m_nf1_map = *m_nf1_map;
 
+  // Set the carrot for the evaluators (they will be used to set the desired fly height
+  // in the optimization process)
   float3 nf1_carrot = make_float3(msg->x_carrot, msg->y_carrot, msg->z_carrot);
   m_pso_planner->m_eva.m_carrot = nf1_carrot;
   m_emergent_planner->m_eva.m_carrot = nf1_carrot;
@@ -149,6 +156,8 @@ void UAVNF1MotionPlanner::do_at_ground()
 void UAVNF1MotionPlanner::do_taking_off()
 {
   auto start = std::chrono::steady_clock::now();
+
+  // The reference can now be genereated and published
   m_planning_started = true;
 
   // During taking off the carrot position shall not be changed (set at the at_ground state)
@@ -161,6 +170,8 @@ void UAVNF1MotionPlanner::do_taking_off()
   // Condition for finishing takeoff
   if (m_curr_ref.p.z >= m_take_off_height - 0.2f && fabsf(m_curr_ref.v.z)<0.3f)
   {
+    // In the NF1 planner, since we assume we are using a 2D Lidar (for now)
+    // we only turn on obstacle avoidance but not the field of view constraints
     m_pso_planner->m_eva.m_oa = true;
     m_pso_planner->m_eva.m_fov = false;
 
@@ -179,18 +190,25 @@ void UAVNF1MotionPlanner::do_taking_off()
 void UAVNF1MotionPlanner::do_in_air()
 {
   auto start = std::chrono::steady_clock::now();
+  // Plan the trajectory
   calculate_trajectory<SIMPLE_UAV_NF1>(m_pso_planner,m_traj);
+
+  // If the generated trajectory is unsafe
   if (m_pso_planner->result.collision)
   {
+    // Go to the emergency mode and use the emergency planner
     m_fly_status = UAV::EMERGENT;
     cycle_process_based_on_status();
   }
   else
   {
+    // Since we assume we are using a 2D lidar, we fix the yaw during the
+    // entire flight.
     //m_head_sov.cal_yaw_target(m_pso_planner->result.best_loc[0]);
-    m_yaw_traj = m_head_sov.generate_yaw_traj();
+    m_yaw_traj = m_head_sov.generate_yaw_traj(); // Generate the yaw trajectory here
     if(is_stuck(m_traj, m_yaw_traj, m_pso_planner->result.best_cost))
     {
+      // Stuck handling
       m_fly_status = UAV::STUCK;
       cycle_process_based_on_status();
     }
@@ -205,11 +223,16 @@ void UAVNF1MotionPlanner::do_in_air()
 void UAVNF1MotionPlanner::do_emergent()
 {
   auto start = std::chrono::steady_clock::now();
+  // Emergent planner will try find a trajectory with increased acceleration
+  // and jerk limits.
   calculate_trajectory<EMERGENT_UAV_NF1>(m_emergent_planner,m_traj);
   if(m_emergent_planner->result.collision)
   {
+    // If the emergency planner still fails go to the braking mode
     m_fly_status = UAV::BRAKING;
     m_start_braking_cycle = m_plan_cycle;
+
+    // Braking point is determined by the current vehicle pose
     m_curr_ref = odom2state(m_pose);
     cycle_process_based_on_status();
   }
@@ -228,7 +251,12 @@ void UAVNF1MotionPlanner::do_braking()
 {
   auto start = std::chrono::steady_clock::now();
 //  m_rep_filed.generate_repulse_traj(m_traj, *m_edt_map, m_curr_ref);
+
+  // Just stop and brake
   generate_static_traj(m_traj, m_curr_ref);
+
+  // After a while go back to in-air mode
+  // TODO: shall in fact go to the stuck mode
   if (m_plan_cycle - m_start_braking_cycle > 20)
   {
     m_fly_status = UAV::IN_AIR;
@@ -244,16 +272,26 @@ void UAVNF1MotionPlanner::do_braking()
 void UAVNF1MotionPlanner::do_stuck()
 {
   std::cout<<"stuck"<<std::endl;
-  bool old_redord = m_pso_planner->m_eva.m_fov;
-  m_pso_planner->m_eva.m_fov = false;
-  m_pso_planner->plan(*m_edt_map);
-  m_pso_planner->m_eva.m_fov = old_redord;
+  // TODO: in a 2D fixed heading mode we shall chose different strategy
+  // so far we just brake
 
-  std::cout<<"guiding target: "<<m_pso_planner->result.best_loc[0].x<<" "<<m_pso_planner->result.best_loc[0].y<<std::endl;
-  std::cout<<"yaw target: "<<m_head_sov.get_yaw_target()<<std::endl;
-  m_head_sov.cal_yaw_target(m_pso_planner->result.best_loc[0]);
-  m_yaw_traj = m_head_sov.generate_yaw_traj();
-  m_fly_status = UAV::IN_AIR;
+  m_fly_status = UAV::BRAKING;
+  m_start_braking_cycle = m_plan_cycle;
+
+  // Braking point is determined by the current vehicle pose
+  m_curr_ref = odom2state(m_pose);
+  cycle_process_based_on_status();
+
+//  bool old_redord = m_pso_planner->m_eva.m_fov;
+//  m_pso_planner->m_eva.m_fov = false;
+//  m_pso_planner->plan(*m_edt_map);
+//  m_pso_planner->m_eva.m_fov = old_redord;
+
+//  std::cout<<"guiding target: "<<m_pso_planner->result.best_loc[0].x<<" "<<m_pso_planner->result.best_loc[0].y<<std::endl;
+//  std::cout<<"yaw target: "<<m_head_sov.get_yaw_target()<<std::endl;
+//  m_head_sov.cal_yaw_target(m_pso_planner->result.best_loc[0]);
+//  m_yaw_traj = m_head_sov.generate_yaw_traj();
+//  m_fly_status = UAV::IN_AIR;
 }
 
 void UAVNF1MotionPlanner::set_init_state(const UAV::UAVModel::State& trans, const JLT::State &yaw)

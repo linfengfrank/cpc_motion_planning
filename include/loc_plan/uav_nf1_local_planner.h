@@ -21,39 +21,32 @@ protected:
 
 private:
   void plan_call_back(const ros::TimerEvent&);
-  void goal_call_back(const cpc_aux_mapping::grid_map::ConstPtr &msg);
+  void nf1_call_back(const cpc_aux_mapping::grid_map::ConstPtr &msg);
   void cycle_init();
   void set_init_state(const UAV::UAVModel::State& trans, const JLT::State &yaw);
 
 private:
-
-
-  ros::Subscriber m_goal_sub;
+  ros::Subscriber m_nf1_sub;
   ros::Timer m_planning_timer;
-
-
-
   ros::Publisher m_ref_pub;
-
-
-  bool m_goal_received;
-
   NF1Map *m_nf1_map;
 
   PSO::Planner<SIMPLE_UAV_NF1> *m_pso_planner;
   PSO::Planner<EMERGENT_UAV_NF1> *m_emergent_planner;
+  UAVHeadingSolver m_head_sov;
+  UAV::UAVRepulsiveField m_rep_filed;
 
   UAV::UAVModel::State m_curr_ref;
   JLT::State m_curr_yaw_ref;
   cpc_motion_planning::ref_data m_ref_msg;
-  int m_plan_cycle;
-  int m_ref_start_idx;
-  UAVHeadingSolver m_head_sov;
   std::vector<UAV::UAVModel::State> m_traj;
   std::vector<JLT::State> m_yaw_traj;
+
   int m_start_braking_cycle;
-  UAV::UAVRepulsiveField m_rep_filed;
+  int m_plan_cycle;
+  int m_ref_start_idx;
   bool m_planning_started;
+  bool m_goal_received;
   float m_take_off_height;
 };
 
