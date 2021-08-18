@@ -198,16 +198,18 @@ std::vector<CUDA_GEO::coord> GridGraph::rayCast(const CUDA_GEO::coord &p0Index, 
   bool done = false;
   while (!done)
   {
-    output.push_back(currIndex);
+
     // reached endpoint? or go outside map boundary?
     if( (currIndex.x == p1Index.x && currIndex.y == p1Index.y && currIndex.z == p1Index.z) ||
-        currIndex.x <= 0 || currIndex.x >= _w-1 ||
-        currIndex.y <= 0 || currIndex.y >= _h-1 ||
-        currIndex.z <= 0 || currIndex.z >= _d-1)
+        currIndex.x < 0 || currIndex.x > _w-1 ||
+        currIndex.y < 0 || currIndex.y > _h-1 ||
+        currIndex.z < 0 || currIndex.z > _d-1)
     {
       done = true;
       break;
     }
+
+    output.push_back(currIndex);
 
     if (limit_radius > 0 && sqrtf((currIndex-p0Index).square())*getGridStep() > limit_radius)
     {
