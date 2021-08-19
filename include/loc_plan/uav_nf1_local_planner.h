@@ -48,6 +48,7 @@ private:
   bool m_planning_started;
   bool m_goal_received;
   float m_take_off_height;
+  float m_leap_height;
 };
 
 #endif // UAV_NF1_MOTION_PLANNER_H
