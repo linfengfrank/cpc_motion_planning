@@ -54,6 +54,12 @@ public:
       int ix = floorf( (s.p.x - map.m_origin.x) / map.m_grid_step + 0.5f);
       int iy = floorf( (s.p.y - map.m_origin.y) / map.m_grid_step + 0.5f);
       int iz = floorf( (s.p.z - map.m_origin.z) / map.m_grid_step + 0.5f);
+
+      // If we are using a 2D map, set the height coord to ZERO
+      // since there is only one layer
+      if (map.m_map_size.z == 1)
+        iz = 0;
+
       if (ix<0 || ix>=map.m_map_size.x ||
           iy<0 || iy>=map.m_map_size.y ||
           iz<0 || iz>=map.m_map_size.z)
@@ -141,6 +147,12 @@ public:
       int ix = floorf( (s.p.x - map.m_origin.x) / map.m_grid_step + 0.5f);
       int iy = floorf( (s.p.y - map.m_origin.y) / map.m_grid_step + 0.5f);
       int iz = floorf( (s.p.z - map.m_origin.z) / map.m_grid_step + 0.5f);
+
+      // If we are using a 2D map, set the height coord to ZERO
+      // since there is only one layer
+      if (map.m_map_size.z == 1)
+        iz = 0;
+
       if (ix<0 || ix>=map.m_map_size.x ||
           iy<0 || iy>=map.m_map_size.y ||
           iz<0 || iz>=map.m_map_size.z)
