@@ -21,88 +21,64 @@
   bool got_offset=false;
 
 typedef pcl::PointCloud<pcl::PointXYZRGB> PointCloud;
-PointCloud::Ptr pclOut (new PointCloud);
-ros::Publisher* nf1_pub;
-ros::Publisher* pc_pub;
-ros::Publisher* mid_goal_pub;
-Dijkstra *mid_map=nullptr;
-Astar *a_map=nullptr;
+PointCloud::Ptr pclOut (new PointCloud); //Point cloud to show the NF1 map
+ros::Publisher* nf1_pub; // Publisher of NF1 map (for local planner)
+ros::Publisher* pc_pub; // Publisher of NF1 map (for visulization)
+Dijkstra *mid_map=nullptr; // Dijkstra planner
+Astar *a_map=nullptr; // Astar planner
 
-float FLY_HEIGHT;
-bool first_run = true;
-CUDA_GEO::pos curr_target_pos;
-bool stucked = false;
-bool received_cmd = false;
-bool received_map = false;
-bool received_ref = false;
-CUDA_GEO::pos goal;
-ros::Timer glb_plan_timer;
-cpc_motion_planning::ref_data ref;
-cpc_aux_mapping::grid_map nf1_map_msg;
+float fly_height; // Desired fly height
+bool received_cmd = false; // Flag, whether goal command is received
+bool received_map = false; // Flag, whether map is received
+CUDA_GEO::pos goal; // The desired goal location
+ros::Timer mid_plan_timer; // Main loop timer
+cpc_aux_mapping::grid_map nf1_map_msg; // NF1 map that is to be published
 //---
+//publish the NF1 map as point cloud to rviz for checking
 void publishMap(int tgt_height_coord)
 {
-  //publish the point cloud to rviz for checking
   CUDA_GEO::coord c;
   CUDA_GEO::pos p;
   for (int x=0;x<mid_map->getMaxX();x++)
   {
     for (int y=0;y<mid_map->getMaxY();y++)
     {
-      //for (int z=0;z<msg->z_length;z++)
+      // Construct the coordinate
+      c.x = x;
+      c.y = y;
+      c.z = tgt_height_coord;
+
+      // Get the NF1 value
+      float d_c = mid_map->getCost2Come(c,0.0f)*15;
+      if (d_c > 255) d_c = 255;
+      int d = static_cast<int>(d_c);
+
+      // Get its position
+      p = mid_map->coord2pos(c);
+      pcl::PointXYZRGB clrP;
+      clrP.x = p.x;
+      clrP.y = p.y;
+      clrP.z = p.z;
+
+      // Clour the point based on its NF1 value
+      if ( d < 128)
       {
-        c.x = x;
-        c.y = y;
-        c.z = tgt_height_coord;
-        float d_c = mid_map->getCost2Come(c,0.0f)*15;
-        if (d_c > 255) d_c = 255;
-        int d = static_cast<int>(d_c);
-
-        //                std::cout<<d<<" ";
-        //int color = (EDTMap::MAX_RANGE*EDTMap::MAX_RANGE-d)*255/EDTMap::MAX_RANGE/EDTMap::MAX_RANGE;
-        //if (d < 4.1)
-        {
-          p = mid_map->coord2pos(c);
-          pcl::PointXYZRGB clrP;
-          clrP.x = p.x+gt_offset[0];
-          clrP.y = p.y+gt_offset[1];
-          clrP.z = p.z+gt_offset[2];
-
-          if ( d < 128)
-          {
-            clrP.b = 255-2*static_cast<unsigned char>(d);
-            clrP.g = 2*static_cast<unsigned char>(d);
-          }
-          else
-          {
-            clrP.g = 255 - 2*(static_cast<unsigned char>(d) - 128);
-            clrP.r = 2*(static_cast<unsigned char>(d)-128);
-          }
-
-
-
-          clrP.a = 255;
-
-          pclOut->points.push_back (clrP);
-        }
-
+        clrP.b = 255-2*static_cast<unsigned char>(d);
+        clrP.g = 2*static_cast<unsigned char>(d);
       }
+      else
+      {
+        clrP.g = 255 - 2*(static_cast<unsigned char>(d) - 128);
+        clrP.r = 2*(static_cast<unsigned char>(d)-128);
+      }
+
+      clrP.a = 255;
+      pclOut->points.push_back (clrP);
     }
   }
   pcl_conversions::toPCL(ros::Time::now(), pclOut->header.stamp);
-
   pc_pub->publish (pclOut);
-
   pclOut->clear();
-}
-//---
-
-
-//---
-void stuckCallback(const std_msgs::Bool::ConstPtr& msg)
-{
-  stucked = msg->data;
-  std::cout<<"Stucked."<<std::endl;
 }
 //---
 void setup_map_msg(cpc_aux_mapping::grid_map &msg, GridGraph* map, bool resize)
@@ -116,6 +92,7 @@ void setup_map_msg(cpc_aux_mapping::grid_map &msg, GridGraph* map, bool resize)
   {
     msg.x_size = map->getMaxX();
     msg.y_size = map->getMaxY();
+    // Currently it is a 2D NF1 map, therefore it has only ONE height layer
     msg.z_size = 1;
     msg.payload8.resize(sizeof(float)*static_cast<unsigned int>(msg.x_size*msg.y_size*msg.z_size));
   }
@@ -132,14 +109,11 @@ void copy_map_to_msg(cpc_aux_mapping::grid_map &msg, GridGraph* map,int tgt_heig
   {
     for (int x=0;x<map->getMaxX();x++)
     {
-      //for (int z=0;z<map->getMaxZ();z++)
-      {
-        c.x = x;
-        c.y = y;
-        c.z = tgt_height_coord;
-        float d_c = mid_map->getCost2Come(c,0.0);
-        tmp[i++]=d_c;
-      }
+      c.x = x;
+      c.y = y;
+      c.z = tgt_height_coord;
+      float d_c = mid_map->getCost2Come(c,0.0);
+      tmp[i++]=d_c;
     }
   }
 }
@@ -150,11 +124,14 @@ void mapCallback(const cpc_aux_mapping::grid_map::ConstPtr& msg)
   CUDA_GEO::pos origin;
   if (mid_map == nullptr)
   {
+    // Setup the Dijkstra planner
     mid_map = new Dijkstra(msg->x_size,msg->y_size,msg->z_size);
     setup_map_msg(nf1_map_msg,mid_map,true);
 
+    // Setup the A-star planner
     a_map = new Astar(msg->x_size,msg->y_size,msg->z_size);
   }
+  // Copy EDT data into the planner
   mid_map->copyEdtData(msg);
   a_map->copyEdtData(msg);
 }
@@ -195,64 +172,88 @@ void glb_plan(const ros::TimerEvent&)
 
   auto start_time = std::chrono::steady_clock::now();
 
-  // Set all points
-  int tgt_height_coord = mid_map->calcTgtHeightCoord(FLY_HEIGHT);
+  // If it is 2D map mode (!! Important here !!)
+  if (mid_map->getMaxZ() == 1)
+  {
+    //We set the fly height to the height of the map (by geting height from its origin)
+    fly_height = mid_map->getOrigin().z;
+  }
 
+  // Find the z coordinate of the desired height in the Dijkstra map
+  int tgt_height_coord = mid_map->calcTgtHeightCoord(fly_height);
+
+  // Calculate the start point coordinate
   CUDA_GEO::coord start(mid_map->getMaxX()/2,mid_map->getMaxY()/2,mid_map->getMaxZ()/2);
-  start.z = tgt_height_coord;
+  start.z = tgt_height_coord; // Put the start point in the desired fly height
 
+  // Calculate the goal point coordinate
   CUDA_GEO::coord glb_tgt = mid_map->pos2coord(goal);
   glb_tgt.z = tgt_height_coord;
+  // Put the target inside the square box of the Dijkstra map
   glb_tgt = mid_map->rayCast(start,glb_tgt).back();
 
+  // Find the available target which is path[0] (the last point on the Astar path)
   float length = 0.0f;
   std::vector<CUDA_GEO::coord> path = a_map->AStar2D(glb_tgt,start,false,length);
 
+  // Do dijkstra search with path[0] as the target
   mid_map->dijkstra2D(path[0]);
 
+  // Set up the map message and copy the NF1 data
   setup_map_msg(nf1_map_msg,mid_map,false);
   copy_map_to_msg(nf1_map_msg,mid_map,tgt_height_coord);
+
+  // Set and copy the carrot data
+  CUDA_GEO::pos carrot = a_map->coord2pos(path[0]);
+  nf1_map_msg.x_carrot = carrot.x;
+  nf1_map_msg.y_carrot = carrot.y;
+  nf1_map_msg.z_carrot = carrot.z;
+
+  // Publish the NF1 map (for local planner)
   nf1_pub->publish(nf1_map_msg);
+
 #ifdef SHOWPC
   publishMap(tgt_height_coord);
 #endif
 
   auto end_time = std::chrono::steady_clock::now();
-//      std::cout << "Middle planning time: "
-//                << std::chrono::duration_cast<std::chrono::milliseconds>(end_time - start_time).count()
-//                << " ms" << std::endl;
+  std::cout << "Middle planning time: "
+            << std::chrono::duration_cast<std::chrono::milliseconds>(end_time - start_time).count()
+            << " ms" << std::endl;
 
-  first_run = false;
 }
 //---
 int main(int argc, char **argv)
 {
   ros::init(argc, argv, "mid_layer_node");
+  ros::NodeHandle nh;
+
+  // Read the parameters
+  nh.param<float>("/nndp_cpp/fly_height",fly_height,2.0);
+
+  // Initialize the publishers
   pc_pub = new ros::Publisher;
   nf1_pub = new ros::Publisher;
-  mid_goal_pub = new ros::Publisher;
-  ros::NodeHandle nh;
-  ros::Subscriber map_sub = nh.subscribe("edt_map", 1, &mapCallback);
-  ros::Subscriber stuck_sub = nh.subscribe("stuck", 1, &stuckCallback);
-  ros::Subscriber glb_tgt_sub = nh.subscribe("/move_base_simple/goal", 1, &goalCallback);
-  ros::Subscriber task_tgt_sub = nh.subscribe("task_planner/goal", 1, &taskGoalCallback);
-  ros::Subscriber  m_offset_sub= nh.subscribe("/ground_truth/odom", 1,&get_gt_odom);
-
   *pc_pub = nh.advertise<PointCloud> ("nf1", 1);
-  *mid_goal_pub = nh.advertise<PointCloud> ("mid_goal", 1);
   *nf1_pub = nh.advertise<cpc_aux_mapping::grid_map>("mid_layer/goal",1);
 
+  // Subscribers
+  ros::Subscriber map_sub = nh.subscribe("edt_map", 1, &mapCallback);
+  ros::Subscriber glb_tgt_sub = nh.subscribe("/move_base_simple/goal", 1, &goalCallback);
+
+  // other initilization
   pclOut->header.frame_id = "/world";
-  nh.param<float>("/nndp_cpp/fly_height",FLY_HEIGHT,2.0);
 
-
-  glb_plan_timer = nh.createTimer(ros::Duration(0.333), glb_plan);
+  // start the timer
+  mid_plan_timer = nh.createTimer(ros::Duration(0.333), glb_plan);
 
   ros::spin();
 
+  // Delete the publishers
   delete pc_pub;
   delete nf1_pub;
 
+  // Delete the planners
   if (mid_map)
   {
     delete mid_map;

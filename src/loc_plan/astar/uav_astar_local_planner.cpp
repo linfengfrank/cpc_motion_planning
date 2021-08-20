@@ -14,6 +14,7 @@ UAVAstarMotionPlanner::UAVAstarMotionPlanner():
   m_planning_started(false)
 {
   m_nh.param<float>("/nndp_cpp/fly_height",m_take_off_height,2.0);
+  m_nh.param<float>("/nndp_cpp/leap_height",m_leap_height,0.4);
 
   m_guide_line_sub = m_nh.subscribe("mid_layer/guide_line",1,&UAVAstarMotionPlanner::guide_line_call_back, this);
 
@@ -104,6 +105,9 @@ void UAVAstarMotionPlanner::do_at_ground()
   {
     //set the current state from pose
     convert_init_pose(m_pose,m_curr_ref,m_curr_yaw_ref);
+    //to make the height refernece "leap" a little bit
+    //during the takeoff
+    m_curr_ref.p.z += m_leap_height;
     set_init_state(m_curr_ref, m_curr_yaw_ref);
 
     //set the yaw target as the current target
@@ -198,7 +202,8 @@ void UAVAstarMotionPlanner::do_emergent()
 void UAVAstarMotionPlanner::do_braking()
 {
   auto start = std::chrono::steady_clock::now();
-  m_rep_filed.generate_repulse_traj(m_traj, *m_edt_map, m_curr_ref);
+//  m_rep_filed.generate_repulse_traj(m_traj, *m_edt_map, m_curr_ref);
+  generate_static_traj(m_traj, m_curr_ref);
   if (m_plan_cycle - m_start_braking_cycle > 20)
   {
     m_fly_status = UAV::IN_AIR;

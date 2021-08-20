@@ -183,6 +183,7 @@ private:
 
   ros::Publisher m_carrot_pub;
   PointCloud::Ptr m_carrot_pnt_cld;
+  float m_leap_height;
 };
 
 #endif // UAV_ASTAR_MOTION_PLANNER_H

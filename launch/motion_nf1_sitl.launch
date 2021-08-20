@@ -1,7 +1,7 @@
 <?xml version="1.0"?>
 <launch>
 <arg name="vehicle" default="/iris_0"/>
-
+<rosparam file="$(find cpc_aux_mapping)/launch/map_param.yaml" command="load" />
 <group ns="$(arg vehicle)">
     <include file="$(find cpc_reference_publisher)/launch/ref_pub.launch">
         <arg name="vehicle" value="$(arg vehicle)"/>

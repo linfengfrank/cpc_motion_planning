@@ -11,15 +11,19 @@ template <typename T> int sgn(T val)
 UAVNF1MotionPlanner::UAVNF1MotionPlanner():
   UAVLocalMotionPlanner(),
   m_goal_received(false),
-  m_nf1_map(nullptr)
+  m_nf1_map(nullptr),
+  m_planning_started(false)
 {
-  m_goal_sub = m_nh.subscribe("/mid_layer/goal",1,&UAVNF1MotionPlanner::goal_call_back, this);
+  // Read parameters
+  m_nh.param<float>("/nndp_cpp/fly_height",m_take_off_height,2.0);
+  m_nh.param<float>("/nndp_cpp/leap_height",m_leap_height,0.4);
 
-
+  // Advertise subscribe
+  m_nf1_sub = m_nh.subscribe("/mid_layer/goal",1,&UAVNF1MotionPlanner::nf1_call_back, this);
   m_ref_pub = m_nh.advertise<cpc_motion_planning::ref_data>("ref_traj",1);
-
   m_planning_timer = m_nh.createTimer(ros::Duration(PSO::PSO_REPLAN_DT), &UAVNF1MotionPlanner::plan_call_back, this);
 
+  // Initialize the planners
   m_pso_planner = new PSO::Planner<SIMPLE_UAV_NF1>(150,30,1);
   m_pso_planner->initialize();
 
@@ -27,7 +31,6 @@ UAVNF1MotionPlanner::UAVNF1MotionPlanner():
   m_emergent_planner->initialize();
   m_emergent_planner->m_ctrl_dev.set_limit(make_float2(5,2), make_float2(4,2), make_float2(5,5));
   m_emergent_planner->m_ctrl_host.set_limit(make_float2(5,2), make_float2(4,2), make_float2(5,5));
-
 
   //Initialize the control message
   m_ref_msg.rows = 12;
@@ -48,6 +51,8 @@ void UAVNF1MotionPlanner::plan_call_back(const ros::TimerEvent&)
 {
   cycle_init();
   cycle_process_based_on_status();
+  if (!m_planning_started)
+    return;
 
   if (m_fly_status <= UAV::AT_GROUND)
     return;
@@ -86,11 +91,17 @@ void UAVNF1MotionPlanner::plan_call_back(const ros::TimerEvent&)
 #endif
 }
 
-void UAVNF1MotionPlanner::goal_call_back(const cpc_aux_mapping::grid_map::ConstPtr &msg)
+void UAVNF1MotionPlanner::nf1_call_back(const cpc_aux_mapping::grid_map::ConstPtr &msg)
 {
+  // During taking off the carrot position shall not be changed (set at the at_ground state)
+  // so directly return at this stage.
+  if (m_fly_status == UAV::TAKING_OFF)
+    return;
+
   m_goal_received = true;
   if (m_nf1_map == nullptr)
   {
+    // Initialize the NF1 map for PSO planner
     CUDA_GEO::pos origin(msg->x_origin,msg->y_origin,msg->z_origin);
     int3 m_nf1_map_size = make_int3(msg->x_size,msg->y_size,msg->z_size);
     m_nf1_map = new NF1Map(origin,msg->width,m_nf1_map_size);
@@ -98,16 +109,24 @@ void UAVNF1MotionPlanner::goal_call_back(const cpc_aux_mapping::grid_map::ConstP
   }
   else
   {
+    // Set the NF1 map's origin and grid step
     m_nf1_map->m_origin = CUDA_GEO::pos(msg->x_origin,msg->y_origin,msg->z_origin);
     m_nf1_map->m_grid_step = msg->width;
   }
+
+  // Copy the actual map data to GPU device
   CUDA_MEMCPY_H2D(m_nf1_map->m_nf1_map,msg->payload8.data(),static_cast<size_t>(m_nf1_map->m_byte_size));
 
+  // Set the map pointer for the evaluators
   m_pso_planner->m_eva.m_nf1_map = *m_nf1_map;
   m_emergent_planner->m_eva.m_nf1_map = *m_nf1_map;
+
+  // Set the carrot for the evaluators (they will be used to set the desired fly height
+  // in the optimization process)
+  float3 nf1_carrot = make_float3(msg->x_carrot, msg->y_carrot, msg->z_carrot);
+  m_pso_planner->m_eva.m_carrot = nf1_carrot;
+  m_emergent_planner->m_eva.m_carrot = nf1_carrot;
 }
-
-
 
 void UAVNF1MotionPlanner::do_at_ground()
 {
@@ -117,8 +136,21 @@ void UAVNF1MotionPlanner::do_at_ground()
   {
     //set the current state from pose
     convert_init_pose(m_pose,m_curr_ref,m_curr_yaw_ref);
+    //to make the height refernece "leap" a little bit
+    //during the takeoff
+    m_curr_ref.p.z += m_leap_height;
+    set_init_state(m_curr_ref, m_curr_yaw_ref);
+
+    //set the yaw target as the current target
     m_head_sov.set_yaw_target(m_curr_yaw_ref.p);
-    cycle_init();
+
+    //create the take_off carrot
+    float3 take_off_carrot = m_curr_ref.p;
+    take_off_carrot.z = m_take_off_height;
+
+    //assign the take_off_carrot to the planners
+    m_pso_planner->m_eva.m_carrot = take_off_carrot;
+    m_emergent_planner->m_eva.m_carrot = take_off_carrot;
 
     // Egage and takeoff
     std_srvs::Empty::Request eReq;
@@ -131,16 +163,30 @@ void UAVNF1MotionPlanner::do_at_ground()
 void UAVNF1MotionPlanner::do_taking_off()
 {
   auto start = std::chrono::steady_clock::now();
-  calculate_trajectory<SIMPLE_UAV_NF1>(m_pso_planner,m_traj);
-  if (m_curr_ref.p.z >= 1.8f && fabsf(m_curr_ref.v.z)<0.3f)
-  {
-    m_pso_planner->m_eva.m_oa = m_goal_received;
-    m_pso_planner->m_eva.m_fov = m_goal_received;
 
-    m_emergent_planner->m_eva.m_oa = m_goal_received;
-    m_emergent_planner->m_eva.m_fov = m_goal_received;
+  // The reference can now be genereated and published
+  m_planning_started = true;
+
+  // During taking off the carrot position shall not be changed (set at the at_ground state)
+  // in goal call back, it returns directly in this stage.
+  calculate_trajectory<SIMPLE_UAV_NF1>(m_pso_planner,m_traj);
+
+  // The target heading shall not be changed as well (set at the at_ground state)
+  m_yaw_traj = m_head_sov.generate_yaw_traj();
+
+  // Condition for finishing takeoff
+  if (m_curr_ref.p.z >= m_take_off_height - 0.2f && fabsf(m_curr_ref.v.z)<0.3f)
+  {
+    // In the NF1 planner, since we assume we are using a 2D Lidar (for now)
+    // we only turn on obstacle avoidance but not the field of view constraints
+    m_pso_planner->m_eva.m_oa = true;
+    m_pso_planner->m_eva.m_fov = false;
+
+    m_emergent_planner->m_eva.m_oa = true;
+    m_emergent_planner->m_eva.m_fov = false;
     m_fly_status = UAV::IN_AIR;
   }
+
   auto end = std::chrono::steady_clock::now();
   std::cout << "local planner: "
             << std::chrono::duration_cast<std::chrono::milliseconds>(end - start).count()
@@ -151,18 +197,25 @@ void UAVNF1MotionPlanner::do_taking_off()
 void UAVNF1MotionPlanner::do_in_air()
 {
   auto start = std::chrono::steady_clock::now();
+  // Plan the trajectory
   calculate_trajectory<SIMPLE_UAV_NF1>(m_pso_planner,m_traj);
+
+  // If the generated trajectory is unsafe
   if (m_pso_planner->result.collision)
   {
+    // Go to the emergency mode and use the emergency planner
     m_fly_status = UAV::EMERGENT;
     cycle_process_based_on_status();
   }
   else
   {
-    m_head_sov.cal_yaw_target(m_pso_planner->result.best_loc[0]);
-    m_yaw_traj = m_head_sov.generate_yaw_traj();
+    // Since we assume we are using a 2D lidar, we fix the yaw during the
+    // entire flight.
+    //m_head_sov.cal_yaw_target(m_pso_planner->result.best_loc[0]);
+    m_yaw_traj = m_head_sov.generate_yaw_traj(); // Generate the yaw trajectory here
     if(is_stuck(m_traj, m_yaw_traj, m_pso_planner->result.best_cost))
     {
+      // Stuck handling
       m_fly_status = UAV::STUCK;
       cycle_process_based_on_status();
     }
@@ -177,11 +230,16 @@ void UAVNF1MotionPlanner::do_in_air()
 void UAVNF1MotionPlanner::do_emergent()
 {
   auto start = std::chrono::steady_clock::now();
+  // Emergent planner will try find a trajectory with increased acceleration
+  // and jerk limits.
   calculate_trajectory<EMERGENT_UAV_NF1>(m_emergent_planner,m_traj);
   if(m_emergent_planner->result.collision)
   {
+    // If the emergency planner still fails go to the braking mode
     m_fly_status = UAV::BRAKING;
     m_start_braking_cycle = m_plan_cycle;
+
+    // Braking point is determined by the current vehicle pose
     m_curr_ref = odom2state(m_pose);
     cycle_process_based_on_status();
   }
@@ -199,7 +257,13 @@ void UAVNF1MotionPlanner::do_emergent()
 void UAVNF1MotionPlanner::do_braking()
 {
   auto start = std::chrono::steady_clock::now();
-  m_rep_filed.generate_repulse_traj(m_traj, *m_edt_map, m_curr_ref);
+//  m_rep_filed.generate_repulse_traj(m_traj, *m_edt_map, m_curr_ref);
+
+  // Just stop and brake
+  generate_static_traj(m_traj, m_curr_ref);
+
+  // After a while go back to in-air mode
+  // TODO: shall in fact go to the stuck mode
   if (m_plan_cycle - m_start_braking_cycle > 20)
   {
     m_fly_status = UAV::IN_AIR;
@@ -215,16 +279,26 @@ void UAVNF1MotionPlanner::do_braking()
 void UAVNF1MotionPlanner::do_stuck()
 {
   std::cout<<"stuck"<<std::endl;
-  bool old_redord = m_pso_planner->m_eva.m_fov;
-  m_pso_planner->m_eva.m_fov = false;
-  m_pso_planner->plan(*m_edt_map);
-  m_pso_planner->m_eva.m_fov = old_redord;
+  // TODO: in a 2D fixed heading mode we shall chose different strategy
+  // so far we just brake
 
-  std::cout<<"guiding target: "<<m_pso_planner->result.best_loc[0].x<<" "<<m_pso_planner->result.best_loc[0].y<<std::endl;
-  std::cout<<"yaw target: "<<m_head_sov.get_yaw_target()<<std::endl;
-  m_head_sov.cal_yaw_target(m_pso_planner->result.best_loc[0]);
-  m_yaw_traj = m_head_sov.generate_yaw_traj();
-  m_fly_status = UAV::IN_AIR;
+  m_fly_status = UAV::BRAKING;
+  m_start_braking_cycle = m_plan_cycle;
+
+  // Braking point is determined by the current vehicle pose
+  m_curr_ref = odom2state(m_pose);
+  cycle_process_based_on_status();
+
+//  bool old_redord = m_pso_planner->m_eva.m_fov;
+//  m_pso_planner->m_eva.m_fov = false;
+//  m_pso_planner->plan(*m_edt_map);
+//  m_pso_planner->m_eva.m_fov = old_redord;
+
+//  std::cout<<"guiding target: "<<m_pso_planner->result.best_loc[0].x<<" "<<m_pso_planner->result.best_loc[0].y<<std::endl;
+//  std::cout<<"yaw target: "<<m_head_sov.get_yaw_target()<<std::endl;
+//  m_head_sov.cal_yaw_target(m_pso_planner->result.best_loc[0]);
+//  m_yaw_traj = m_head_sov.generate_yaw_traj();
+//  m_fly_status = UAV::IN_AIR;
 }
 
 void UAVNF1MotionPlanner::set_init_state(const UAV::UAVModel::State& trans, const JLT::State &yaw)
@@ -247,32 +321,7 @@ void UAVNF1MotionPlanner::cycle_init()
   set_init_state(m_curr_ref, m_curr_yaw_ref);
 
   // Construct default trajectories for pos and yaw
-  switch (m_fly_status) {
-  case UAV::AT_GROUND:
-  {
-    generate_static_traj(m_traj, m_curr_ref);
-    break;
-  }
-  case UAV::TAKING_OFF:
-  case UAV::IN_AIR:
-  {
-     m_traj = m_pso_planner->generate_trajectory();
-    break;
-  }
-  case UAV::EMERGENT:
-  {
-    m_traj = m_emergent_planner->generate_trajectory();
-    break;
-  }
-  case UAV::BRAKING:
-  {
-    generate_static_traj(m_traj, m_curr_ref);
-    break;
-  }
-  default:
-    break;
-  }
-
+  generate_static_traj(m_traj, m_curr_ref);
   m_yaw_traj = m_head_sov.generate_yaw_traj();
 }
 
