@@ -176,11 +176,11 @@ void UAVNF1MotionPlanner::do_taking_off()
   {
     // In the NF1 planner, since we assume we are using a 2D Lidar (for now)
     // we only turn on obstacle avoidance but not the field of view constraints
-    m_pso_planner->m_eva.m_oa = true;
-    m_pso_planner->m_eva.m_fov = false;
+    m_pso_planner->m_eva.m_in_air = true;
+    m_pso_planner->m_eva.m_consider_fov = false;
 
-    m_emergent_planner->m_eva.m_oa = true;
-    m_emergent_planner->m_eva.m_fov = false;
+    m_emergent_planner->m_eva.m_in_air = true;
+    m_emergent_planner->m_eva.m_consider_fov = false;
     m_fly_status = UAV::IN_AIR;
   }
 
@@ -286,10 +286,10 @@ void UAVNF1MotionPlanner::do_stuck()
   m_curr_ref = odom2state(m_pose);
   cycle_process_based_on_status();
 
-//  bool old_redord = m_pso_planner->m_eva.m_fov;
-//  m_pso_planner->m_eva.m_fov = false;
+//  bool old_redord = m_pso_planner->m_eva.m_consider_fov;
+//  m_pso_planner->m_eva.m_consider_fov = false;
 //  m_pso_planner->plan(*m_edt_map);
-//  m_pso_planner->m_eva.m_fov = old_redord;
+//  m_pso_planner->m_eva.m_consider_fov = old_redord;
 
 //  std::cout<<"guiding target: "<<m_pso_planner->result.best_loc[0].x<<" "<<m_pso_planner->result.best_loc[0].y<<std::endl;
 //  std::cout<<"yaw target: "<<m_head_sov.get_yaw_target()<<std::endl;
