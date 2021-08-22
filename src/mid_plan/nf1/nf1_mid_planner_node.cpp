@@ -228,7 +228,7 @@ int main(int argc, char **argv)
 
   // other initilization
   pclOut->header.frame_id = "/world";
-  mid_safety_radius = 1.0f;
+  mid_safety_radius = 0.51f;
 
   // start the timer
   mid_plan_timer = nh.createTimer(ros::Duration(0.333), glb_plan);

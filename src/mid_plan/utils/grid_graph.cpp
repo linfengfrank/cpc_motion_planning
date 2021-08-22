@@ -64,12 +64,19 @@ float GridGraph::getObsCostAndCollision(CUDA_GEO::coord s, float default_value, 
   }
   dist *= static_cast<float>(getGridStep());
 
-  cost = 10.0f*expf(-dist*6.5f);
+  float free_dist = fmaxf(dist - obstacle_dist, 0);
+  cost += expf(-4.0f*free_dist)*10;
+
   // Check wheter it is on any obstacle or stays in the height range
   if (dist <= obstacle_dist)
+  {
+    cost += 1000.0f;
     occupied = true;
+  }
   else
+  {
     occupied = false;
+  }
 
   return cost;
 }
