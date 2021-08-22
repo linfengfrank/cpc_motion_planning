@@ -43,6 +43,7 @@ private:
   std::vector<JLT::State> m_yaw_traj;
 
   int m_start_braking_cycle;
+  int m_start_stuck_cycle;
   int m_plan_cycle;
   int m_ref_start_idx;
   bool m_planning_started;

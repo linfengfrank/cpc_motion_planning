@@ -19,7 +19,7 @@ UAVNF1MotionPlanner::UAVNF1MotionPlanner():
   m_nh.param<float>("/nndp_cpp/leap_height",m_leap_height,0.4);
 
   // Advertise subscribe
-  m_nf1_sub = m_nh.subscribe("/mid_layer/goal",1,&UAVNF1MotionPlanner::nf1_call_back, this);
+  m_nf1_sub = m_nh.subscribe("/nf1",1,&UAVNF1MotionPlanner::nf1_call_back, this);
   m_ref_pub = m_nh.advertise<cpc_motion_planning::ref_data>("ref_traj",1);
   m_planning_timer = m_nh.createTimer(ros::Duration(PSO::PSO_REPLAN_DT), &UAVNF1MotionPlanner::plan_call_back, this);
 
@@ -179,11 +179,11 @@ void UAVNF1MotionPlanner::do_taking_off()
   {
     // In the NF1 planner, since we assume we are using a 2D Lidar (for now)
     // we only turn on obstacle avoidance but not the field of view constraints
-    m_pso_planner->m_eva.m_oa = true;
-    m_pso_planner->m_eva.m_fov = false;
+    m_pso_planner->m_eva.m_in_air = true;
+    m_pso_planner->m_eva.m_consider_fov = false;
 
-    m_emergent_planner->m_eva.m_oa = true;
-    m_emergent_planner->m_eva.m_fov = false;
+    m_emergent_planner->m_eva.m_in_air = true;
+    m_emergent_planner->m_eva.m_consider_fov = false;
     m_fly_status = UAV::IN_AIR;
   }
 
@@ -213,15 +213,15 @@ void UAVNF1MotionPlanner::do_in_air()
     // entire flight.
     //m_head_sov.cal_yaw_target(m_pso_planner->result.best_loc[0]);
     m_yaw_traj = m_head_sov.generate_yaw_traj(); // Generate the yaw trajectory here
-    if(is_stuck(m_traj, m_yaw_traj, m_pso_planner->result.best_cost))
+    if(is_stuck(m_traj, m_yaw_traj, m_pso_planner->m_eva.m_carrot))
     {
       // Stuck handling
       m_fly_status = UAV::STUCK;
-      cycle_process_based_on_status();
+      m_start_stuck_cycle = m_plan_cycle;
     }
   }
   auto end = std::chrono::steady_clock::now();
-  std::cout << "local planner: "
+  std::cout << "local planner (in air): "
             << std::chrono::duration_cast<std::chrono::milliseconds>(end - start).count()
             << "ms, cost: " << m_pso_planner->result.best_cost
             << ", collision: " << m_pso_planner->result.collision<<std::endl;
@@ -262,11 +262,12 @@ void UAVNF1MotionPlanner::do_braking()
   // Just stop and brake
   generate_static_traj(m_traj, m_curr_ref);
 
-  // After a while go back to in-air mode
-  // TODO: shall in fact go to the stuck mode
+  // After a while go to stuck mode
   if (m_plan_cycle - m_start_braking_cycle > 20)
   {
-    m_fly_status = UAV::IN_AIR;
+    // Stuck handling
+    m_fly_status = UAV::STUCK;
+    m_start_stuck_cycle = m_plan_cycle;
   }
   auto end = std::chrono::steady_clock::now();
   std::cout << "local planner (braking): "
@@ -279,26 +280,29 @@ void UAVNF1MotionPlanner::do_braking()
 void UAVNF1MotionPlanner::do_stuck()
 {
   std::cout<<"stuck"<<std::endl;
-  // TODO: in a 2D fixed heading mode we shall chose different strategy
-  // so far we just brake
 
-  m_fly_status = UAV::BRAKING;
-  m_start_braking_cycle = m_plan_cycle;
+  m_pso_planner->m_eva.m_stuck = true;
+  calculate_trajectory<SIMPLE_UAV_NF1>(m_pso_planner, m_traj);
 
-  // Braking point is determined by the current vehicle pose
-  m_curr_ref = odom2state(m_pose);
-  cycle_process_based_on_status();
+  //Goto: Braking
+  if (m_pso_planner->result.collision)
+  {
+    // If the stuck planner fails go to the braking mode
+    m_fly_status = UAV::BRAKING;
+    m_pso_planner->m_eva.m_stuck = false;
+    m_start_braking_cycle = m_plan_cycle;
 
-//  bool old_redord = m_pso_planner->m_eva.m_fov;
-//  m_pso_planner->m_eva.m_fov = false;
-//  m_pso_planner->plan(*m_edt_map);
-//  m_pso_planner->m_eva.m_fov = old_redord;
+    // Braking point is determined by the current vehicle pose
+    m_curr_ref = odom2state(m_pose);
+    cycle_process_based_on_status();
+  }
 
-//  std::cout<<"guiding target: "<<m_pso_planner->result.best_loc[0].x<<" "<<m_pso_planner->result.best_loc[0].y<<std::endl;
-//  std::cout<<"yaw target: "<<m_head_sov.get_yaw_target()<<std::endl;
-//  m_head_sov.cal_yaw_target(m_pso_planner->result.best_loc[0]);
-//  m_yaw_traj = m_head_sov.generate_yaw_traj();
-//  m_fly_status = UAV::IN_AIR;
+  //Goto: Normal
+  if (m_plan_cycle - m_start_stuck_cycle >= 10)
+  {
+    m_fly_status = UAV::IN_AIR;
+    m_pso_planner->m_eva.m_stuck = false;
+  }
 }
 
 void UAVNF1MotionPlanner::set_init_state(const UAV::UAVModel::State& trans, const JLT::State &yaw)

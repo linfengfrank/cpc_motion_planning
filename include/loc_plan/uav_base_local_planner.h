@@ -144,7 +144,7 @@ protected:
   void map_call_back(const cpc_aux_mapping::grid_map::ConstPtr &msg);
   void vehicle_pose_call_back(const nav_msgs::Odometry::ConstPtr &msg);
   void cycle_process_based_on_status();
-  bool is_stuck(const std::vector<UAV::UAVModel::State> &traj, std::vector<JLT::State> yaw_traj, const float &best_cost);
+  bool is_stuck(const std::vector<UAV::UAVModel::State> &traj, std::vector<JLT::State> yaw_traj, const float3 &target_pos);
   void add_to_ref_msg(cpc_motion_planning::ref_data& ref_msg, int ref_counter, const UAV::UAVModel::State &traj, const JLT::State &yaw_state);
 
   virtual void do_at_ground() = 0;
@@ -199,6 +199,15 @@ protected:
     state.v.z = odom.twist.twist.linear.z;
 
     return state;
+  }
+
+  bool is_pos_reached(const UAV::UAVModel::State &s, const float3 &tgt_pos, float reaching_radius = 0.8f)
+  {
+    float3 p_diff = s.p - tgt_pos;
+    if (sqrtf(dot(p_diff, p_diff))<reaching_radius && sqrtf(dot(s.v, s.v)) < 0.5f)
+      return true;
+    else
+      return false;
   }
 
 #ifdef SHOWPC

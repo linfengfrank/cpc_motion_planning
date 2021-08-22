@@ -24,6 +24,7 @@ typedef pcl::PointCloud<pcl::PointXYZRGB> PointCloud;
 PointCloud::Ptr pclOut (new PointCloud); //Point cloud to show the NF1 map
 ros::Publisher* nf1_pub; // Publisher of NF1 map (for local planner)
 ros::Publisher* pc_pub; // Publisher of NF1 map (for visulization)
+ros::Publisher* mid_goal_pub; // Publisher of carrot (for visulization)
 Dijkstra *mid_map=nullptr; // Dijkstra planner
 Astar *a_map=nullptr; // Astar planner
 
@@ -33,6 +34,7 @@ bool received_map = false; // Flag, whether map is received
 CUDA_GEO::pos goal; // The desired goal location
 ros::Timer mid_plan_timer; // Main loop timer
 cpc_aux_mapping::grid_map nf1_map_msg; // NF1 map that is to be published
+float mid_safety_radius;
 //---
 //publish the NF1 map as point cloud to rviz for checking
 void publishMap(int tgt_height_coord)
@@ -185,6 +187,7 @@ void glb_plan(const ros::TimerEvent&)
   // Calculate the start point coordinate
   CUDA_GEO::coord start(mid_map->getMaxX()/2,mid_map->getMaxY()/2,mid_map->getMaxZ()/2);
   start.z = tgt_height_coord; // Put the start point in the desired fly height
+  start = mid_map->get_first_free_coord(start,mid_safety_radius);
 
   // Calculate the goal point coordinate
   CUDA_GEO::coord glb_tgt = mid_map->pos2coord(goal);
@@ -194,10 +197,10 @@ void glb_plan(const ros::TimerEvent&)
 
   // Find the available target which is path[0] (the last point on the Astar path)
   float length = 0.0f;
-  std::vector<CUDA_GEO::coord> path = a_map->AStar2D(glb_tgt,start,false,length);
+  std::vector<CUDA_GEO::coord> path = a_map->AStar2D(glb_tgt,start,false,length,mid_safety_radius);
 
   // Do dijkstra search with path[0] as the target
-  mid_map->dijkstra2D(path[0]);
+  mid_map->dijkstra2D(path[0],mid_safety_radius);
 
   // Set up the map message and copy the NF1 data
   setup_map_msg(nf1_map_msg,mid_map,false);
@@ -213,6 +216,13 @@ void glb_plan(const ros::TimerEvent&)
   nf1_pub->publish(nf1_map_msg);
 
 #ifdef SHOWPC
+  geometry_msgs::PoseStamped mid_goal_pose;
+  mid_goal_pose.header.frame_id="world";
+  mid_goal_pose.pose.position.x = carrot.x;
+  mid_goal_pose.pose.position.y = carrot.y;
+  mid_goal_pose.pose.position.z = carrot.z;
+  mid_goal_pub->publish(mid_goal_pose);
+
   publishMap(tgt_height_coord);
 #endif
 
@@ -234,8 +244,10 @@ int main(int argc, char **argv)
   // Initialize the publishers
   pc_pub = new ros::Publisher;
   nf1_pub = new ros::Publisher;
-  *pc_pub = nh.advertise<PointCloud> ("nf1", 1);
-  *nf1_pub = nh.advertise<cpc_aux_mapping::grid_map>("mid_layer/goal",1);
+  mid_goal_pub = new ros::Publisher;
+  *pc_pub = nh.advertise<PointCloud> ("nf1_vis", 1);
+  *nf1_pub = nh.advertise<cpc_aux_mapping::grid_map>("nf1",1);
+  *mid_goal_pub = nh.advertise<geometry_msgs::PoseStamped> ("mid_goal", 1);
 
   // Subscribers
   ros::Subscriber map_sub = nh.subscribe("edt_map", 1, &mapCallback);
@@ -243,6 +255,7 @@ int main(int argc, char **argv)
 
   // other initilization
   pclOut->header.frame_id = "/world";
+  mid_safety_radius = 0.51f;
 
   // start the timer
   mid_plan_timer = nh.createTimer(ros::Duration(0.333), glb_plan);

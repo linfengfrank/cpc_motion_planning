@@ -34,7 +34,7 @@ ros::Timer target_extract_timer;
 cpc_motion_planning::ref_data ref;
 std::vector<CUDA_GEO::pos> guide_path;
 CUDA_GEO::coord glb_tgt;
-
+float mid_safety_radius;
 //---
 void publishMap(const std::vector<CUDA_GEO::coord> &path, CUDA_GEO::coord local_tgt, bool blue)
 {
@@ -70,14 +70,13 @@ float actualDistBetweenCoords(const CUDA_GEO::coord &c1, const CUDA_GEO::coord &
   return mid_map->getGridStep()*sqrt(static_cast<float>(c.square()));
 }
 //---
-float planPath(const CUDA_GEO::coord &start, const CUDA_GEO::coord &goal, std::vector<CUDA_GEO::coord> &path,
-                const CUDA_GEO::coord *crd_shift = nullptr, SeenDist *last_value_map=nullptr)
+float planPath(const CUDA_GEO::coord &start, const CUDA_GEO::coord &goal, std::vector<CUDA_GEO::coord> &path)
 {
   float length = 0;
 #ifdef USE2D
-  path = mid_map->AStar2D(goal,start,false,length,crd_shift,last_value_map);
+  path = mid_map->AStar2D(goal,start,false,length,mid_safety_radius);
 #else
-  path = mid_map->AStar3D(goal,start,false,length,crd_shift,last_value_map);
+  path = mid_map->AStar3D(goal,start,false,length,mid_safety_radius);
 #endif
   length += 1*actualDistBetweenCoords(path[0],goal);
   return length;
@@ -117,7 +116,7 @@ float modifyPath(const std::vector<CUDA_GEO::coord> &path_in, std::vector<CUDA_G
   bool occupied = false;
   for (int i = path_in.size()-1; i>=0; i--)
   {
-    mid_map->obsCostAt(path_in[i],0,occupied);
+    mid_map->getObsCostAndCollision(path_in[i],0,occupied,mid_safety_radius);
     if (!occupied)
       valid_pt = i;
     else
@@ -134,9 +133,9 @@ float modifyPath(const std::vector<CUDA_GEO::coord> &path_in, std::vector<CUDA_G
     // otherwise we modify the path
     float tmp;
 #ifdef USE2D
-    path_out = mid_map->AStar2D(path_in[0],path_in[valid_pt],false,tmp);
+    path_out = mid_map->AStar2D(path_in[0],path_in[valid_pt],false,tmp,mid_safety_radius);
 #else
-    path_out = mid_map->AStar3D(path_in[0],path_in[valid_pt],false,tmp);
+    path_out = mid_map->AStar3D(path_in[0],path_in[valid_pt],false,tmp,mid_safety_radius);
 #endif
 
     // cascade the path
@@ -308,6 +307,7 @@ int main(int argc, char **argv)
 
   pclOut->header.frame_id = "/world";
   nh.param<float>("/nndp_cpp/fly_height",FLY_HEIGHT,2.0);
+  mid_safety_radius = 1.0f;
 
 
   glb_plan_timer = nh.createTimer(ros::Duration(1.5), &glb_plan);

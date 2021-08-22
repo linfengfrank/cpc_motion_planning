@@ -50,21 +50,8 @@ float GridGraph::getCost2Come(const CUDA_GEO::coord & s, const float &default_va
   }
 }
 
-float GridGraph::obsCostAt(CUDA_GEO::coord s, float default_value, bool &occupied,
-                             const CUDA_GEO::coord *crd_shift, SeenDist *last_val_map, float obstacle_dist) const
+float GridGraph::getObsCostAndCollision(CUDA_GEO::coord s, float default_value, bool &occupied, float obstacle_dist) const
 {
-  SeenDist* map_ptr;
-  if (last_val_map != nullptr)
-  {
-    s = s + (*crd_shift);
-    default_value = 100;
-    map_ptr = last_val_map;
-  }
-  else
-  {
-    map_ptr = _val_map;
-  }
-
   float dist = 0.0f;
   float cost = 0.0;
   if (s.x<0 || s.x>=_w || s.y<0 || s.y>=_h || s.z<0 || s.z>=_d)
@@ -73,19 +60,21 @@ float GridGraph::obsCostAt(CUDA_GEO::coord s, float default_value, bool &occupie
   }
   else
   {
-    dist = map_ptr[coord2index(s)].d;
+    dist = _val_map[coord2index(s)].d;
   }
   dist *= static_cast<float>(getGridStep());
+
+  float free_dist = fmaxf(dist - obstacle_dist, 0);
+  cost += expf(-4.0f*free_dist)*10;
 
   // Check wheter it is on any obstacle or stays in the height range
   if (dist <= obstacle_dist)
   {
-    cost = 400.0f*expf(-dist*1.5f);
+    cost += 1000.0f;
     occupied = true;
   }
   else
   {
-    cost = 0.0;
     occupied = false;
   }
 
