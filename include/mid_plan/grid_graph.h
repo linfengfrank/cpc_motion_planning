@@ -29,8 +29,7 @@ class GridGraph : public MapBase
 {
 public:
   GridGraph(int maxX, int maxY, int maxZ);
-  float obsCostAt(CUDA_GEO::coord s, float default_value, bool &occupied,
-                  const CUDA_GEO::coord *crd_shift = nullptr, SeenDist *last_val_map = nullptr, float obstacle_dist = 1.0) const;
+  float getObsCostAndCollision(CUDA_GEO::coord s, float default_value, bool &occupied, float obstacle_dist) const;
   bool isSeen(const CUDA_GEO::coord & s, const bool default_value) const;
 
   nodeInfo* getIdMapPtr() {return _id_map;}
@@ -79,7 +78,7 @@ public:
     bool occupied = false;
     for (CUDA_GEO::coord s : rayCast(p0Index, p1Index))
     {
-      obsCostAt(s, 0, occupied, nullptr,nullptr, obstacle_dist);
+      getObsCostAndCollision(s, 0, occupied, obstacle_dist);
       if (occupied)
       {
         los = false;
@@ -92,7 +91,7 @@ public:
   bool isOccupied(const CUDA_GEO::coord &s, float obstacle_dist = 1.0)
   {
     bool occupied = false;
-    obsCostAt(s, 0, occupied, nullptr,nullptr, obstacle_dist);
+    getObsCostAndCollision(s, 0, occupied, obstacle_dist);
     return occupied;
   }
   //---

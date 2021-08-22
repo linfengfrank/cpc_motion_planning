@@ -7,7 +7,7 @@ Dijkstra::Dijkstra(int maxX, int maxY, int maxZ):
 
 }
 
-void Dijkstra::dijkstra2D(CUDA_GEO::coord glb_tgt)
+void Dijkstra::dijkstra2D(CUDA_GEO::coord glb_tgt, float obstacle_dist)
 {
   memcpy(_id_map,_init_id_map,sizeof(nodeInfo)*static_cast<size_t>(_w*_h*_d));
   //Get the local Dijkstra target
@@ -20,7 +20,7 @@ void Dijkstra::dijkstra2D(CUDA_GEO::coord glb_tgt)
   bool occupied=false;
   if (m)
   {
-    m->g = 0 + obsCostAt(mc,0,occupied);
+    m->g = 0 + getObsCostAndCollision(mc,0,occupied,obstacle_dist);
     _PQ.insert(m,m->g);
   }
   while (_PQ.size()>0)
@@ -46,7 +46,7 @@ void Dijkstra::dijkstra2D(CUDA_GEO::coord glb_tgt)
           if (!p->inClosed)
           {
             float new_g = sqrtf(static_cast<float>(ix*ix+iy*iy))*getGridStep() +
-                m->g + obsCostAt(pc,0,occupied);
+                m->g + getObsCostAndCollision(pc,0,occupied,obstacle_dist);
             if (p->g > new_g)
             {
               p->g = new_g;
@@ -59,7 +59,7 @@ void Dijkstra::dijkstra2D(CUDA_GEO::coord glb_tgt)
   }
 }
 
-void Dijkstra::dijkstra3D(CUDA_GEO::coord glb_tgt)
+void Dijkstra::dijkstra3D(CUDA_GEO::coord glb_tgt, float obstacle_dist)
 {
   memcpy(_id_map,_init_id_map,sizeof(nodeInfo)*static_cast<size_t>(_w*_h*_d));
   //Get the local Dijkstra target
@@ -72,7 +72,7 @@ void Dijkstra::dijkstra3D(CUDA_GEO::coord glb_tgt)
   bool occupied=false;
   if (m)
   {
-    m->g = 0 + obsCostAt(mc,0,occupied);
+    m->g = 0 + getObsCostAndCollision(mc,0,occupied,obstacle_dist);
     _PQ.insert(m,m->g);
   }
   while (_PQ.size()>0)
@@ -100,7 +100,7 @@ void Dijkstra::dijkstra3D(CUDA_GEO::coord glb_tgt)
             if (!p->inClosed)
             {
               float new_g = sqrtf(static_cast<float>(ix*ix+iy*iy+iz*iz))*getGridStep() +
-                  m->g + obsCostAt(pc,0,occupied);
+                  m->g + getObsCostAndCollision(pc,0,occupied,obstacle_dist);
               if (p->g > new_g)
               {
                 p->g = new_g;
@@ -114,7 +114,7 @@ void Dijkstra::dijkstra3D(CUDA_GEO::coord glb_tgt)
   }
 }
 
-void Dijkstra::bfs2D(CUDA_GEO::coord glb_tgt)
+void Dijkstra::bfs2D(CUDA_GEO::coord glb_tgt, float obstacle_dist)
 {
   memcpy(_id_map,_init_id_map,sizeof(nodeInfo)*static_cast<size_t>(_w*_h*_d));
   //Get the local Dijkstra target
@@ -127,7 +127,7 @@ void Dijkstra::bfs2D(CUDA_GEO::coord glb_tgt)
   bool occupied=false;
   if (m)
   {
-    m->g = 0 + obsCostAt(mc,0,occupied);
+    m->g = 0 + getObsCostAndCollision(mc,0,occupied,obstacle_dist);
     _Q.push(m);
   }
   while (_Q.size()>0)
@@ -152,7 +152,7 @@ void Dijkstra::bfs2D(CUDA_GEO::coord glb_tgt)
 
         if (p && !p->inClosed)
         {
-          obsCostAt(pc,0,occupied);
+          getObsCostAndCollision(pc,0,occupied,obstacle_dist);
           p->inClosed = true;
           p->g = 1*getGridStep() + m->g;
           if (!occupied)

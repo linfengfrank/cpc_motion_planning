@@ -7,10 +7,10 @@ class Astar : public GridGraph
 public:
   Astar(int maxX, int maxY, int maxZ);
   std::vector<CUDA_GEO::coord> AStar2D(const CUDA_GEO::coord &goal, const CUDA_GEO::coord &start, bool reached_free_zone, float &length,
-                                       const CUDA_GEO::coord *crd_shift = nullptr, SeenDist *last_val_map = nullptr);
+                                       float obstacle_dist);
 
   std::vector<CUDA_GEO::coord> AStar3D(const CUDA_GEO::coord &goal, const CUDA_GEO::coord &start, bool reached_free_zone, float &length,
-                                       const CUDA_GEO::coord *crd_shift = nullptr, SeenDist *last_val_map = nullptr);
+                                       float obstacle_dist);
 
   unsigned int findTargetCoord(const std::vector<CUDA_GEO::coord> &path);
   unsigned int findTargetCoordLos(std::vector<CUDA_GEO::coord> path, CUDA_GEO::coord start, unsigned int start_idx, float look_ahead_diff=0.5f);

@@ -27,6 +27,7 @@ bool received_map = false; // Flag, whether map is received
 CUDA_GEO::pos goal; // The desired goal location
 ros::Timer mid_plan_timer; // Main loop timer
 cpc_aux_mapping::grid_map nf1_map_msg; // NF1 map that is to be published
+float mid_safety_radius;
 //---
 //publish the NF1 map as point cloud to rviz for checking
 void publishMap(int tgt_height_coord)
@@ -167,10 +168,10 @@ void glb_plan(const ros::TimerEvent&)
 
   // Find the available target which is path[0] (the last point on the Astar path)
   float length = 0.0f;
-  std::vector<CUDA_GEO::coord> path = a_map->AStar2D(glb_tgt,start,false,length);
+  std::vector<CUDA_GEO::coord> path = a_map->AStar2D(glb_tgt,start,false,length,mid_safety_radius);
 
   // Do dijkstra search with path[0] as the target
-  mid_map->dijkstra2D(path[0]);
+  mid_map->dijkstra2D(path[0],mid_safety_radius);
 
   // Set up the map message and copy the NF1 data
   setup_map_msg(nf1_map_msg,mid_map,false);
@@ -216,6 +217,7 @@ int main(int argc, char **argv)
 
   // other initilization
   pclOut->header.frame_id = "/world";
+  mid_safety_radius = 1.0f;
 
   // start the timer
   mid_plan_timer = nh.createTimer(ros::Duration(0.333), glb_plan);
