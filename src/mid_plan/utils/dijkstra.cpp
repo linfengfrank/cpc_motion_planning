@@ -196,4 +196,63 @@ void Dijkstra::bfs2D(CUDA_GEO::coord glb_tgt, float obstacle_dist)
   }
 }
 
+CUDA_GEO::coord Dijkstra::get_first_free_coord(CUDA_GEO::coord start,float safety_radius)
+{
+  memcpy(_id_map,_init_id_map,sizeof(nodeInfo)*static_cast<size_t>(_w*_h*_d));
+  CUDA_GEO::coord mc = start;
+  CUDA_GEO::coord pc;
+  nodeInfo* m;
+  m = getNode(mc);
+
+  if (m)
+  {
+    m->inClosed = true;
+    _Q.push(m);
+  }
+
+  bool occupied;
+  bool found_free=false;
+  while (_Q.size()>0)
+  {
+    m=_Q.front();
+    _Q.pop();
+    mc = m->c;
+    m->inClosed = true;
+
+    getObsCostAndCollision(mc,0,occupied,safety_radius);
+    if (!occupied)
+    {
+      found_free = true;
+      break;
+    }
+
+    for (int ix=-1;ix<=1;ix++)
+    {
+      for (int iy=-1;iy<=1;iy++)
+      {
+        if ((ix==0 && iy ==0))
+          continue;
+
+        pc.x = mc.x + ix;
+        pc.y = mc.y + iy;
+        pc.z = mc.z;
+        nodeInfo* p = getNode(pc);
+
+        if (p && !p->inClosed)
+        {
+          p->inClosed = true;
+          _Q.push(p);
+        }
+      }
+    }
+  }
+
+  while(!_Q.empty()) _Q.pop();
+
+  if(found_free)
+    return mc;
+  else
+    return start;
+}
+
 

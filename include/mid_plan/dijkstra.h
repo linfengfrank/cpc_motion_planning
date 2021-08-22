@@ -11,6 +11,7 @@ public:
   void dijkstra2D(CUDA_GEO::coord glb_tgt, float obstacle_dist);
   void bfs2D(CUDA_GEO::coord glb_tgt, float obstacle_dist);
   void dijkstra3D(CUDA_GEO::coord glb_tgt, float obstacle_dist);
+  CUDA_GEO::coord get_first_free_coord(CUDA_GEO::coord start,float safety_radius);
 private:
   std::queue<nodeInfo*> _Q;
   std::queue<nodeInfo*> _OQ;
