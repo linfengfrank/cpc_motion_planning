@@ -210,7 +210,7 @@ void UAVNF1MotionPlanner::do_in_air()
     // entire flight.
     //m_head_sov.cal_yaw_target(m_pso_planner->result.best_loc[0]);
     m_yaw_traj = m_head_sov.generate_yaw_traj(); // Generate the yaw trajectory here
-    if(is_stuck(m_traj, m_yaw_traj, m_pso_planner->result.best_cost))
+    if(is_stuck(m_traj, m_yaw_traj, m_pso_planner->m_eva.m_carrot))
     {
       // Stuck handling
       m_fly_status = UAV::STUCK;

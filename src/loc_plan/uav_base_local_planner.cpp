@@ -101,7 +101,7 @@ void UAVLocalMotionPlanner::cycle_process_based_on_status()
   }
 }
 
-bool UAVLocalMotionPlanner::is_stuck(const std::vector<UAV::UAVModel::State> &traj, std::vector<JLT::State> yaw_traj, const float &best_cost)
+bool UAVLocalMotionPlanner::is_stuck(const std::vector<UAV::UAVModel::State> &traj, std::vector<JLT::State> yaw_traj, const float3 &target_pos)
 {
     if (m_fly_status <= UAV::TAKING_OFF)
         return false;
@@ -111,8 +111,7 @@ bool UAVLocalMotionPlanner::is_stuck(const std::vector<UAV::UAVModel::State> &tr
     bool no_moving_intention = false;
 
     // check is it far from target
-    // TODO: make a better checking condition
-    if (best_cost > 10)
+    if (!is_pos_reached(traj[0],target_pos))
         far_from_tgt = true;
 
     // check whether the vehicle is about to turn
