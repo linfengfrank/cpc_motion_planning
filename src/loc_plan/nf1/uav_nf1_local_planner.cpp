@@ -19,7 +19,7 @@ UAVNF1MotionPlanner::UAVNF1MotionPlanner():
   m_nh.param<float>("/nndp_cpp/leap_height",m_leap_height,0.4);
 
   // Advertise subscribe
-  m_nf1_sub = m_nh.subscribe("/nf1",1,&UAVNF1MotionPlanner::nf1_call_back, this);
+  m_nf1_sub = m_nh.subscribe("nf1",1,&UAVNF1MotionPlanner::nf1_call_back, this);
   m_ref_pub = m_nh.advertise<cpc_motion_planning::ref_data>("ref_traj",1);
   m_planning_timer = m_nh.createTimer(ros::Duration(PSO::PSO_REPLAN_DT), &UAVNF1MotionPlanner::plan_call_back, this);
 
