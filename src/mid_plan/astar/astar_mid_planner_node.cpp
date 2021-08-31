@@ -16,53 +16,19 @@
 #define USE2D
 typedef pcl::PointCloud<pcl::PointXYZRGB> PointCloud;
 PointCloud::Ptr pclOut (new PointCloud);
-ros::Publisher* point_pub;
 ros::Publisher* line_pub;
-ros::Publisher* pc_pub;
-ros::Publisher* mid_goal_pub;
 Astar *mid_map=nullptr;
 float FLY_HEIGHT;
-bool first_run = true;
-CUDA_GEO::pos curr_target_pos;
-bool stucked = false;
 bool received_cmd = false;
 bool received_map = false;
 bool received_ref = false;
 CUDA_GEO::pos goal;
 ros::Timer glb_plan_timer;
-ros::Timer target_extract_timer;
 cpc_motion_planning::ref_data ref;
 std::vector<CUDA_GEO::pos> guide_path;
 CUDA_GEO::coord glb_tgt;
 float mid_safety_radius;
-//---
-void publishMap(const std::vector<CUDA_GEO::coord> &path, CUDA_GEO::coord local_tgt, bool blue)
-{
-  //publish the point cloud to rviz for checking
-  CUDA_GEO::pos p;
-  for (int i=0; i<path.size(); i++)
-  {
-    p = mid_map->coord2pos(path[i]);
-    pcl::PointXYZRGB clrP;
-    clrP.x = p.x;
-    clrP.y = p.y;
-    clrP.z = p.z;
-    clrP.a = 255;
-    if (path[i] == local_tgt)
-      clrP.r = 255;
-    else
-    {
-      if (blue)
-        clrP.b = 255;
-      else
-        clrP.g = 255;
-    }
 
-    pclOut->points.push_back (clrP);
-  }
-
-  //pclOut->clear();
-}
 //---
 float actualDistBetweenCoords(const CUDA_GEO::coord &c1, const CUDA_GEO::coord &c2)
 {
@@ -82,21 +48,6 @@ float planPath(const CUDA_GEO::coord &start, const CUDA_GEO::coord &goal, std::v
   return length;
 }
 //---
-void stuckCallback(const std_msgs::Bool::ConstPtr& msg)
-{
-  stucked = msg->data;
-  std::cout<<"Stucked."<<std::endl;
-}
-//---
-CUDA_GEO::coord calculateMapCoordShift(CUDA_GEO::pos old_origin, CUDA_GEO::pos new_origin, float stepSize)
-{
-  CUDA_GEO::coord output;
-  output.x = floor((new_origin.x-old_origin.x)/stepSize + 0.5);
-  output.y = floor((new_origin.y-old_origin.y)/stepSize + 0.5);
-  output.z = floor((new_origin.z-old_origin.z)/stepSize + 0.5);
-  return output;
-}
-//---
 float pathLength(const std::vector<CUDA_GEO::coord> &path)
 {
   float length = 0;
@@ -107,46 +58,6 @@ float pathLength(const std::vector<CUDA_GEO::coord> &path)
     length += sqrt(static_cast<float>(shift.square()))*mid_map->getGridStep();
   }
   return length;
-}
-//---
-float modifyPath(const std::vector<CUDA_GEO::coord> &path_in, std::vector<CUDA_GEO::coord> &path_out)
-{
-  // Find the last point with no intersection with obstacle
-  int valid_pt = path_in.size()-1; // The last one if there is no intersection
-  bool occupied = false;
-  for (int i = path_in.size()-1; i>=0; i--)
-  {
-    mid_map->getObsCostAndCollision(path_in[i],0,occupied,mid_safety_radius);
-    if (!occupied)
-      valid_pt = i;
-    else
-      break;
-  }
-
-  // if valid_pt == 0 it means, the whole path is obstacle free
-  if (valid_pt == 0)
-  {
-    path_out = path_in;
-  }
-  else
-  {
-    // otherwise we modify the path
-    float tmp;
-#ifdef USE2D
-    path_out = mid_map->AStar2D(path_in[0],path_in[valid_pt],false,tmp,mid_safety_radius);
-#else
-    path_out = mid_map->AStar3D(path_in[0],path_in[valid_pt],false,tmp,mid_safety_radius);
-#endif
-
-    // cascade the path
-    for (int i = valid_pt + 1; i < path_in.size(); i++)
-    {
-      path_out.push_back(path_in[i]);
-    }
-  }
-
-  // calculate the length
-  return pathLength(path_out) + 1*actualDistBetweenCoords(path_out[0],path_in[0]);
 }
 //---
 float cascadePath(const std::vector<CUDA_GEO::coord> &path, std::vector<CUDA_GEO::coord> &cascade, CUDA_GEO::coord goal)
@@ -270,15 +181,11 @@ void glb_plan(const ros::TimerEvent& msg)
   }
   line_pub->publish(line_msg);
 
-  if (stucked)
-    stucked = false;
 
   auto end_time = std::chrono::steady_clock::now();
       std::cout << "Planning time: "
                 << std::chrono::duration_cast<std::chrono::milliseconds>(end_time - start_time).count()
                 << " ms" << std::endl;
-
-  first_run = false;
 }
 //---
 void get_reference(const cpc_motion_planning::ref_data::ConstPtr &msg)
@@ -290,20 +197,12 @@ void get_reference(const cpc_motion_planning::ref_data::ConstPtr &msg)
 int main(int argc, char **argv)
 {
   ros::init(argc, argv, "mid_layer_node");
-  pc_pub = new ros::Publisher;
-  point_pub = new ros::Publisher;
   line_pub = new ros::Publisher;
-  mid_goal_pub = new ros::Publisher;
   ros::NodeHandle nh;
   ros::Subscriber map_sub = nh.subscribe("/edt_map", 1, &mapCallback);
-  ros::Subscriber stuck_sub = nh.subscribe("/stuck", 1, &stuckCallback);
   ros::Subscriber glb_tgt_sub = nh.subscribe("/move_base_simple/goal", 1, &goalCallback);
   ros::Subscriber state_sub = nh.subscribe("/ref_traj", 1, get_reference);
   *line_pub = nh.advertise<cpc_motion_planning::guide_line>("/mid_layer/guide_line",1);
-
-  *pc_pub = nh.advertise<PointCloud> ("/path", 1);
-  *mid_goal_pub = nh.advertise<PointCloud> ("/mid_goal", 1);
-  *point_pub = nh.advertise<geometry_msgs::PoseStamped>("/mid_layer/goal",1);
 
   pclOut->header.frame_id = "/world";
   nh.param<float>("/nndp_cpp/fly_height",FLY_HEIGHT,2.0);
@@ -313,9 +212,6 @@ int main(int argc, char **argv)
   glb_plan_timer = nh.createTimer(ros::Duration(1.5), &glb_plan);
 
   ros::spin();
-
-  delete pc_pub;
-  delete point_pub;
 
   if (mid_map)
   {
