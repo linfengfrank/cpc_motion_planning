@@ -17,6 +17,9 @@ void Spline::init(int p, int no_of_ctrl_pnts, double beta, int D, bool optimize_
     m_u[i] = i;
   m_D = D;
   m_optimize_beta = optimize_beta;
+  m_ctrl_points.resize(m_n+1,m_D);
+  m_s_ini.resize(3,m_D);
+  m_s_ter.resize(3,m_D);
 
   for (int d=0; d<m_D; d++)
   {

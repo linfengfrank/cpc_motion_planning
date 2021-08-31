@@ -11,6 +11,7 @@
 #include <algorithm>
 #include "cpc_motion_planning/ref_data.h"
 #include "cpc_motion_planning/guide_line.h"
+#include "spline_optimizer/Spline.h"
 
 #define SHOWPC
 #define USE2D
@@ -29,19 +30,20 @@ cpc_motion_planning::ref_data ref;
 std::vector<CUDA_GEO::pos> guide_path;
 CUDA_GEO::coord glb_tgt;
 float mid_safety_radius;
+SPL_OPTI::Spline *spl;
+ceres::Problem problem;
+ceres::Solver::Options options;
+ceres::Solver::Summary summary;
 //---
-//---
-void publish_path(const std::vector<CUDA_GEO::coord> &path)
+void publish_path(const cpc_motion_planning::guide_line &path)
 {
   //publish the point cloud to rviz for checking
-  CUDA_GEO::pos p;
-  for (int i=0; i<path.size(); i++)
+  for (int i=0; i<path.pts.size(); i++)
   {
-    p = mid_map->coord2pos(path[i]);
     pcl::PointXYZRGB clrP;
-    clrP.x = p.x;
-    clrP.y = p.y;
-    clrP.z = p.z;
+    clrP.x = path.pts[i].x;
+    clrP.y = path.pts[i].y;
+    clrP.z = path.pts[i].z;
     clrP.a = 255;
     pclOut->points.push_back (clrP);
   }
@@ -122,27 +124,85 @@ void glb_plan(const ros::TimerEvent& msg)
   float cost;
 
   cost =planPath(start,glb_tgt,path);
-
-  //publish the guide line
   std::reverse(path.begin(),path.end());
-  cpc_motion_planning::guide_line line_msg;
-  geometry_msgs::Point line_pnt;
+
+  //Get the guide path in pos instead of coord
   guide_path.clear();
   for (CUDA_GEO::coord &path_crd : path)
   {
     CUDA_GEO::pos path_pnt = mid_map->coord2pos(path_crd);
     guide_path.push_back(path_pnt);
-    line_pnt.x = path_pnt.x;
-    line_pnt.y = path_pnt.y;
-    line_pnt.z = path_pnt.z;
+  }
+
+  //-----------WORKING-----------------
+  // Smoothing
+  Eigen::MatrixXd s_ini,s_ter,D;
+  s_ini.resize(3,3);
+  s_ter.resize(3,3);
+  s_ini<<guide_path[0].x, guide_path[0].y, guide_path[0].z,
+         0,0,0,
+         0,0,0;
+
+  s_ter<<guide_path.back().x, guide_path.back().y, guide_path.back().z,
+         0,0,0,
+         0,0,0;
+
+  int sample_size = spl->m_n+1;
+  D.resize(sample_size,3);
+
+  for(int d=0; d<3; d++)
+  {
+    D.col(d).setLinSpaced(sample_size,s_ini(0,d),s_ter(0,d));
+  }
+
+  spl->init_direct(s_ini,s_ter,D);
+  spl->update_start_cost();
+  spl->update_finish_cost();
+
+  ceres::Solve(options,&problem,&summary);
+
+  Eigen::Vector2d tr = spl->get_available_t_range();
+  std::vector<double> t;
+
+  for(double time = tr(0); time <= tr(1); time += 0.1)
+  {
+    t.push_back(time);
+  }
+
+  Eigen::MatrixXd trajectory = spl->get_trajectory(t);
+
+
+  cpc_motion_planning::guide_line line_msg;
+  geometry_msgs::Point line_pnt;
+  for (int i=0; i < trajectory.rows(); i++)
+  {
+    line_pnt.x = trajectory(i,0);
+    line_pnt.y = trajectory(i,1);
+    line_pnt.z = trajectory(i,2);
     line_msg.pts.push_back(line_pnt);
   }
   line_pub->publish(line_msg);
 
-#ifdef SHOWPC
-  publish_path(path);
-#endif
 
+  //-----------WORKING-----------------
+
+  //Publish the guide line
+//  cpc_motion_planning::guide_line line_msg;
+//  geometry_msgs::Point line_pnt;
+//  for (CUDA_GEO::pos &path_pos : guide_path)
+//  {
+//    line_pnt.x = path_pos.x;
+//    line_pnt.y = path_pos.y;
+//    line_pnt.z = path_pos.z;
+//    line_msg.pts.push_back(line_pnt);
+//  }
+//  line_pub->publish(line_msg);
+
+
+
+#ifdef SHOWPC
+  publish_path(line_msg);
+#endif
 
   auto end_time = std::chrono::steady_clock::now();
   std::cout << "Mid planning time: "
@@ -172,6 +232,21 @@ int main(int argc, char **argv)
   nh.param<float>("/nndp_cpp/fly_height",FLY_HEIGHT,2.0);
   mid_safety_radius = 1.0f;
 
+//-----------WORKING-----------------
+  // Initialize the spline
+  spl = new SPL_OPTI::Spline;
+  spl->init(3,40,1.0,3,true);
+  spl->add_vel_cost(&problem);
+  spl->add_acc_cost(&problem);
+  spl->add_jerk_cost(&problem);
+  spl->add_start_cost(&problem);
+  spl->add_finish_cost(&problem);
+  spl->add_time_cost(&problem);
+
+  //Set upper and lower boundary
+  problem.SetParameterLowerBound(&(spl->m_beta),0,0.1);
+  problem.SetParameterUpperBound(&(spl->m_beta),0,10.0);
+//-----------WORKING-----------------
 
   glb_plan_timer = nh.createTimer(ros::Duration(1.5), &glb_plan);
 
@@ -179,6 +254,7 @@ int main(int argc, char **argv)
 
   delete line_pub;
   delete line_vis_pub;
+  delete spl;
   if (mid_map)
   {
     delete mid_map;
