@@ -34,6 +34,18 @@ public:
 
   nodeInfo* getIdMapPtr() {return _id_map;}
   SeenDist* getEdtMapPtr() {return _val_map;}
+  float getEdt(int x, int y, int z, float default_value = 0.0f) const
+  {
+    if (x<0 || x>=_w || y<0 || y>=_h || z<0 || z>=_d)
+    {
+      return default_value;
+    }
+    else
+    {
+      return _val_map[coord2index(x,y,z)].d * _gridstep;
+    }
+  }
+
   int getMapByteSize() {return _mapByteSize;}
   int getMaxX() {return _w;}
   int getMaxY() {return _h;}
@@ -63,6 +75,11 @@ protected:
   inline int coord2index(const CUDA_GEO::coord & s) const
   {
     return s.z*_w*_h+s.y*_w+s.x;
+  }
+
+  inline int coord2index(int x, int y, int z) const
+  {
+    return z*_w*_h+y*_w+x;
   }
 
   inline float dist(const CUDA_GEO::coord & c1, const CUDA_GEO::coord & c2)

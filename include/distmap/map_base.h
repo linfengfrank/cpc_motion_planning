@@ -48,6 +48,16 @@ public:
     return output;
   }
   //---
+  // Regulate the value (so now the width of a grid is 1)
+  CUDA_GEO::pos regulate_pos(const CUDA_GEO::pos & p) const
+  {
+    CUDA_GEO::pos pr;
+    pr.x = (p.x - _origin.x) / _gridstep;
+    pr.y = (p.y - _origin.y) / _gridstep;
+    pr.z = (p.z - _origin.z) / _gridstep;
+    return pr;
+  }
+  //---
   CUDA_GEO::pos coord2pos(const CUDA_GEO::coord & c) const
   {
     CUDA_GEO::pos output;

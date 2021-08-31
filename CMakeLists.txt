@@ -19,6 +19,8 @@ find_package(catkin REQUIRED COMPONENTS
 ## System dependencies are found with CMake's conventions
 # find_package(Boost REQUIRED COMPONENTS system)
 FIND_PACKAGE(CUDA REQUIRED)
+find_package(Eigen3)
+find_package(Ceres REQUIRED)
 
 if(NOT CMAKE_BUILD_TYPE AND NOT CMAKE_CONFIGURATION_TYPES)
   set(CMAKE_BUILD_TYPE Release CACHE STRING "Choose the type of build." FORCE)
@@ -137,6 +139,8 @@ catkin_package(
 include_directories(
   include
   ${catkin_INCLUDE_DIRS}
+  ${EIGEN3_INCLUDE_DIR}
+  ${CERES_INCLUDE_DIRS}
 )
 
 ## Declare a C++ library
@@ -184,13 +188,15 @@ add_dependencies(astar_loc_planning_node ${${PROJECT_NAME}_EXPORTED_TARGETS} ${c
 cuda_add_executable(astar_mid_planning_node
     src/mid_plan/utils/grid_graph.cpp
     src/mid_plan/utils/a_star.cpp
-    src/mid_plan/astar/astar_mid_planner_node.cpp)
+    src/mid_plan/astar/astar_mid_planner_node.cpp
+    src/spline_optimizer/Spline.cpp)
 
 target_link_libraries(astar_mid_planning_node
     ${CUDA_curand_LIBRARY}
     ${CUDA_cublas_LIBRARY}
     ${CUDA_LIBRARIES}
-    ${catkin_LIBRARIES})
+    ${catkin_LIBRARIES}
+    ${CERES_LIBRARIES})
 
 add_dependencies(astar_mid_planning_node ${${PROJECT_NAME}_EXPORTED_TARGETS} ${catkin_EXPORTED_TARGETS})
 
