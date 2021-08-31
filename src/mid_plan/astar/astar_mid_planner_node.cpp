@@ -15,29 +15,29 @@
 
 #define SHOWPC
 #define USE2D
+
 typedef pcl::PointCloud<pcl::PointXYZRGB> PointCloud;
-PointCloud::Ptr pclOut (new PointCloud);
-ros::Publisher* line_vis_pub;
-ros::Publisher* line_pub;
-Astar *mid_map=nullptr;
-float FLY_HEIGHT;
-bool received_cmd = false;
-bool received_map = false;
-bool received_ref = false;
-CUDA_GEO::pos goal;
-ros::Timer glb_plan_timer;
-cpc_motion_planning::ref_data ref;
-std::vector<CUDA_GEO::pos> guide_path;
-CUDA_GEO::coord glb_tgt;
-float mid_safety_radius;
-SPL_OPTI::Spline *spl;
-ceres::Problem problem;
-ceres::Solver::Options options;
-ceres::Solver::Summary summary;
+PointCloud::Ptr pclOut (new PointCloud); // Point cloud to show the path
+ros::Publisher* line_vis_pub; // Publisher to visulize the guidance path
+ros::Publisher* line_pub; // Publisher of the guidance line
+Astar *mid_map=nullptr; // A star planner
+float _2D_fly_height; // Targeted fly height at 2D case
+bool received_cmd = false; // Flag to check whether a target has been received
+bool received_map = false; // Flag to check whether a map has been received
+bool received_ref = false; // Flag to check wheter the current reference has been received
+CUDA_GEO::pos goal; // The global goal
+ros::Timer glb_plan_timer; // Timer to trigger the mid planner
+Eigen::Matrix3d current_ref_state; // To log down the current state according to the reference
+std::vector<CUDA_GEO::pos> guide_path; // The guide path directly produced by the A* search
+float mid_safety_radius; // Safety radius during A* search
+SPL_OPTI::Spline *spl; // Smoothing spline pointer
+ceres::Problem problem; // Nonlinear least square problem
+ceres::Solver::Options options; // Ceres Solver options
+ceres::Solver::Summary summary; // Ceres Solving summary
 //---
 void publish_path(const cpc_motion_planning::guide_line &path)
 {
-  //publish the point cloud to rviz for checking
+  //publish the path as point cloud to rviz for checking
   for (int i=0; i<path.pts.size(); i++)
   {
     pcl::PointXYZRGB clrP;
@@ -51,13 +51,7 @@ void publish_path(const cpc_motion_planning::guide_line &path)
   pclOut->clear();
 }
 //---
-float actualDistBetweenCoords(const CUDA_GEO::coord &c1, const CUDA_GEO::coord &c2)
-{
-  CUDA_GEO::coord c = c1-c2;
-  return mid_map->getGridStep()*sqrt(static_cast<float>(c.square()));
-}
-//---
-float planPath(const CUDA_GEO::coord &start, const CUDA_GEO::coord &goal, std::vector<CUDA_GEO::coord> &path)
+void planPath(const CUDA_GEO::coord &start, const CUDA_GEO::coord &goal, std::vector<CUDA_GEO::coord> &path)
 {
   float length = 0;
 #ifdef USE2D
@@ -65,20 +59,6 @@ float planPath(const CUDA_GEO::coord &start, const CUDA_GEO::coord &goal, std::v
 #else
   path = mid_map->AStar3D(goal,start,false,length,mid_safety_radius);
 #endif
-  length += 1*actualDistBetweenCoords(path[0],goal);
-  return length;
-}
-//---
-float pathLength(const std::vector<CUDA_GEO::coord> &path)
-{
-  float length = 0;
-  CUDA_GEO::coord shift;
-  for (int i=0; i<path.size()-1;i++)
-  {
-    shift = path[i+1]-path[i];
-    length += sqrt(static_cast<float>(shift.square()))*mid_map->getGridStep();
-  }
-  return length;
 }
 //---
 void mapCallback(const cpc_aux_mapping::grid_map::ConstPtr& msg)
@@ -100,6 +80,48 @@ void goalCallback(const geometry_msgs::PoseStamped::ConstPtr &msg)
   goal.z = msg->pose.position.z;
 }
 //---
+CUDA_GEO::coord select_start_coord()
+{
+  // Default to the center of the map
+  CUDA_GEO::coord start_crd(mid_map->getMaxX()/2,mid_map->getMaxY()/2,mid_map->getMaxZ()/2);
+
+  // Already recevied current ref_information
+  if (received_ref)
+  {
+    CUDA_GEO::pos curr_pos(current_ref_state(0,0),
+                           current_ref_state(0,1),
+                           current_ref_state(0,2));
+    CUDA_GEO::coord curr_crd = mid_map->pos2coord(curr_pos);
+
+    // Check whether the current coord is inside the map
+    if(mid_map->isInside(curr_crd))
+      start_crd = curr_crd;
+  }
+
+  // If we are using the 2D mode, reset the coord's z value to the desired one
+#ifdef USE2D
+  int tgt_height_coord = mid_map->calcTgtHeightCoord(_2D_fly_height);
+  start_crd.z = tgt_height_coord;
+#endif
+
+  return start_crd;
+}
+//---
+CUDA_GEO::coord select_goal_coord(const CUDA_GEO::coord &start_crd)
+{
+  CUDA_GEO::coord goal_crd; // Target coord, for A* algorithm
+  // Transform global goal to coord
+  goal_crd = mid_map->pos2coord(goal);
+
+  // Set the height of the coord to the desired flight height
+  goal_crd.z = mid_map->calcTgtHeightCoord(_2D_fly_height);
+
+  // Keep the target inside map
+  goal_crd = mid_map->rayCast(start_crd,goal_crd, mid_map->getMaxX()*mid_map->getGridStep()*0.5*0.8).back();
+
+  return goal_crd;
+}
+//---
 void glb_plan(const ros::TimerEvent& msg)
 {
   if (!received_cmd || !received_map)
@@ -107,23 +129,13 @@ void glb_plan(const ros::TimerEvent& msg)
 
   auto start_time = std::chrono::steady_clock::now();
 
-  // Set all points
-  int tgt_height_coord = mid_map->calcTgtHeightCoord(FLY_HEIGHT);
-
-  CUDA_GEO::coord start(mid_map->getMaxX()/2,mid_map->getMaxY()/2,mid_map->getMaxZ()/2);
-#ifdef USE2D
-  start.z = tgt_height_coord;
-#endif
-
-  glb_tgt = mid_map->pos2coord(goal);
-  glb_tgt.z = tgt_height_coord;
-  glb_tgt = mid_map->rayCast(start,glb_tgt).back();
+  // Select the start and target coordinate
+  CUDA_GEO::coord start = select_start_coord();
+  CUDA_GEO::coord target = select_goal_coord(start);
 
   // Do the planning
   std::vector<CUDA_GEO::coord> path;
-  float cost;
-
-  cost =planPath(start,glb_tgt,path);
+  planPath(start,target,path);
   std::reverse(path.begin(),path.end());
 
   //Get the guide path in pos instead of coord
@@ -136,67 +148,74 @@ void glb_plan(const ros::TimerEvent& msg)
 
   //-----------WORKING-----------------
   // Smoothing
-  Eigen::MatrixXd s_ini,s_ter,D;
-  s_ini.resize(3,3);
-  s_ter.resize(3,3);
-  s_ini<<guide_path[0].x, guide_path[0].y, guide_path[0].z,
-         0,0,0,
-         0,0,0;
+//  Eigen::MatrixXd s_ini,s_ter,D;
+//  s_ini.resize(3,3);
+//  s_ter.resize(3,3);
+//  if (received_ref)
+//  {
+//    s_ini = current_ref_state;
+//  }
+//  else
+//  {
+//    s_ini<<guide_path[0].x, guide_path[0].y, guide_path[0].z,
+//        0,0,0,
+//        0,0,0;
+//  }
 
-  s_ter<<guide_path.back().x, guide_path.back().y, guide_path.back().z,
-         0,0,0,
-         0,0,0;
+//  s_ter<<guide_path.back().x, guide_path.back().y, guide_path.back().z,
+//         0,0,0,
+//         0,0,0;
 
-  int sample_size = spl->m_n+1;
-  D.resize(sample_size,3);
+//  int sample_size = spl->m_n+1;
+//  D.resize(sample_size,3);
 
-  for(int d=0; d<3; d++)
-  {
-    D.col(d).setLinSpaced(sample_size,s_ini(0,d),s_ter(0,d));
-  }
+//  for(int d=0; d<3; d++)
+//  {
+//    D.col(d).setLinSpaced(sample_size,s_ini(0,d),s_ter(0,d));
+//  }
 
-  spl->init_direct(s_ini,s_ter,D);
-  spl->update_start_cost();
-  spl->update_finish_cost();
+//  spl->init_direct(s_ini,s_ter,D);
+//  spl->update_start_cost();
+//  spl->update_finish_cost();
 
-  ceres::Solve(options,&problem,&summary);
+//  ceres::Solve(options,&problem,&summary);
 
-  Eigen::Vector2d tr = spl->get_available_t_range();
-  std::vector<double> t;
+//  Eigen::Vector2d tr = spl->get_available_t_range();
+//  std::vector<double> t;
 
-  for(double time = tr(0); time <= tr(1); time += 0.1)
-  {
-    t.push_back(time);
-  }
+//  for(double time = tr(0); time <= tr(1); time += 0.1)
+//  {
+//    t.push_back(time);
+//  }
 
-  Eigen::MatrixXd trajectory = spl->get_trajectory(t);
+//  Eigen::MatrixXd trajectory = spl->get_trajectory(t);
 
 
-  cpc_motion_planning::guide_line line_msg;
-  geometry_msgs::Point line_pnt;
-  for (int i=0; i < trajectory.rows(); i++)
-  {
-    line_pnt.x = trajectory(i,0);
-    line_pnt.y = trajectory(i,1);
-    line_pnt.z = trajectory(i,2);
-    line_msg.pts.push_back(line_pnt);
-  }
-  line_pub->publish(line_msg);
+//  cpc_motion_planning::guide_line line_msg;
+//  geometry_msgs::Point line_pnt;
+//  for (int i=0; i < trajectory.rows(); i++)
+//  {
+//    line_pnt.x = trajectory(i,0);
+//    line_pnt.y = trajectory(i,1);
+//    line_pnt.z = trajectory(i,2);
+//    line_msg.pts.push_back(line_pnt);
+//  }
+//  line_pub->publish(line_msg);
 
 
   //-----------WORKING-----------------
 
   //Publish the guide line
-//  cpc_motion_planning::guide_line line_msg;
-//  geometry_msgs::Point line_pnt;
-//  for (CUDA_GEO::pos &path_pos : guide_path)
-//  {
-//    line_pnt.x = path_pos.x;
-//    line_pnt.y = path_pos.y;
-//    line_pnt.z = path_pos.z;
-//    line_msg.pts.push_back(line_pnt);
-//  }
-//  line_pub->publish(line_msg);
+  cpc_motion_planning::guide_line line_msg;
+  geometry_msgs::Point line_pnt;
+  for (CUDA_GEO::pos &path_pos : guide_path)
+  {
+    line_pnt.x = path_pos.x;
+    line_pnt.y = path_pos.y;
+    line_pnt.z = path_pos.z;
+    line_msg.pts.push_back(line_pnt);
+  }
+  line_pub->publish(line_msg);
 
 
 
@@ -210,29 +229,36 @@ void glb_plan(const ros::TimerEvent& msg)
             << " ms" << std::endl;
 }
 //---
-void get_reference(const cpc_motion_planning::ref_data::ConstPtr &msg)
+void get_current_reference(const cpc_motion_planning::ref_data::ConstPtr &msg)
 {
   received_ref = true;
-  ref = *msg;
+  current_ref_state<<msg->data[0],msg->data[1],msg->data[2],
+      msg->data[3],msg->data[4],msg->data[5],
+      msg->data[6],msg->data[7],msg->data[8];
 }
 //---
 int main(int argc, char **argv)
 {
   ros::init(argc, argv, "mid_layer_node");
+  ros::NodeHandle nh;
+
+  // Create the publisher
   line_pub = new ros::Publisher;
   line_vis_pub = new ros::Publisher;
-  ros::NodeHandle nh;
-  ros::Subscriber map_sub = nh.subscribe("/edt_map", 1, &mapCallback);
-  ros::Subscriber glb_tgt_sub = nh.subscribe("/move_base_simple/goal", 1, &goalCallback);
-  ros::Subscriber state_sub = nh.subscribe("/ref_traj", 1, get_reference);
   *line_pub = nh.advertise<cpc_motion_planning::guide_line>("/mid_layer/guide_line",1);
   *line_vis_pub = nh.advertise<PointCloud>("/mid_layer/guide_line_vis",1);
 
+  // Create the subscriber
+  ros::Subscriber map_sub = nh.subscribe("/edt_map", 1, &mapCallback);
+  ros::Subscriber glb_tgt_sub = nh.subscribe("/move_base_simple/goal", 1, &goalCallback);
+  ros::Subscriber state_sub = nh.subscribe("/current_ref", 1, get_current_reference);
+
+  // Other initialization
   pclOut->header.frame_id = "/world";
-  nh.param<float>("/nndp_cpp/fly_height",FLY_HEIGHT,2.0);
+  nh.param<float>("/nndp_cpp/fly_height",_2D_fly_height,2.0);
   mid_safety_radius = 1.0f;
 
-//-----------WORKING-----------------
+  //------------- Initialize the spline optimization-----------
   // Initialize the spline
   spl = new SPL_OPTI::Spline;
   spl->init(3,40,1.0,3,true);
@@ -246,8 +272,9 @@ int main(int argc, char **argv)
   //Set upper and lower boundary
   problem.SetParameterLowerBound(&(spl->m_beta),0,0.1);
   problem.SetParameterUpperBound(&(spl->m_beta),0,10.0);
-//-----------WORKING-----------------
+  //-------- Finish initializing the spline optimization-------
 
+  // Create the mid planner timer
   glb_plan_timer = nh.createTimer(ros::Duration(1.5), &glb_plan);
 
   ros::spin();
