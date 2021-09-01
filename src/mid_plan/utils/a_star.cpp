@@ -196,8 +196,8 @@ std::vector<CUDA_GEO::coord> Astar::AStar3D(const CUDA_GEO::coord &goal, const C
     }
     auto end_time = std::chrono::steady_clock::now();
     long passed_time = std::chrono::duration_cast<std::chrono::milliseconds>(end_time - start_time).count();
-    if(passed_time > 15)
-      break;
+//    if(passed_time > 15)
+//      break;
   }
 
   //retrieve the path
