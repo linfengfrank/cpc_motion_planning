@@ -40,10 +40,10 @@ public:
     m_yaw_target = 0;
     m_yaw_limit.vMax = 1;
     m_yaw_limit.vMin = -1;
-    m_yaw_limit.aMax = 2;
-    m_yaw_limit.aMin = -2;
-    m_yaw_limit.jMax = 2;
-    m_yaw_limit.jMin = -2;
+    m_yaw_limit.aMax = 5;
+    m_yaw_limit.aMin = -5;
+    m_yaw_limit.jMax = 100;
+    m_yaw_limit.jMin = -100;
   }
   ~UAVHeadingSolver()
   {
