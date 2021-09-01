@@ -12,6 +12,8 @@
 #include "cpc_motion_planning/ref_data.h"
 #include "cpc_motion_planning/guide_line.h"
 #include "spline_optimizer/Spline.h"
+#include "edt/gpu_edt.cuh"
+#include "cutt/cutt.h"
 
 #define SHOWPC
 #define USE2D
@@ -34,6 +36,9 @@ SPL_OPTI::Spline *spl; // Smoothing spline pointer
 ceres::Problem problem; // Nonlinear least square problem
 ceres::Solver::Options options; // Ceres Solver options
 ceres::Solver::Summary summary; // Ceres Solving summary
+EDTMap* m_line_map=nullptr; // Distance to line map, used to calcualte the distance go guidance line
+cuttHandle m_rot_plan[3]; // Rotation plan
+cpc_motion_planning::guide_line line_msg; //line msg to be published
 //---
 void publish_path(const cpc_motion_planning::guide_line &path)
 {
@@ -77,6 +82,25 @@ void planPath(const CUDA_GEO::coord &start, const CUDA_GEO::coord &goal, std::ve
 #endif
 }
 //---
+void setup_map_msg(cpc_aux_mapping::grid_map &msg, EDTMap* map, bool resize)
+{
+  // Setup size the grid width
+  msg.x_origin = map->m_origin.x;
+  msg.y_origin = map->m_origin.y;
+  msg.z_origin = map->m_origin.z;
+  msg.width = map->m_grid_step;
+
+  if (resize)
+  {
+    msg.x_size = map->m_map_size.x;
+    msg.y_size = map->m_map_size.y;
+    msg.z_size = map->m_map_size.z;
+    msg.payload8.resize(sizeof(SeenDist)*static_cast<unsigned int>(msg.x_size*msg.y_size*msg.z_size));
+  }
+
+  msg.type = cpc_aux_mapping::grid_map::TYPE_EDT;
+}
+//---
 void mapCallback(const cpc_aux_mapping::grid_map::ConstPtr& msg)
 {
   received_map = true;
@@ -85,8 +109,32 @@ void mapCallback(const cpc_aux_mapping::grid_map::ConstPtr& msg)
   {
     mid_map = new Astar(msg->x_size,msg->y_size,msg->z_size);
     spl->add_map_cost(&problem,mid_map);
+
+    //--- for line map init---
+    CUDA_GEO::pos origin(msg->x_origin,msg->y_origin,msg->z_origin);
+    int3 edt_map_size = make_int3(msg->x_size,msg->y_size,msg->z_size);
+    m_line_map = new EDTMap(origin,msg->width,edt_map_size);
+    m_line_map->m_create_host_cpy = true;
+    m_line_map->setup_device();
+
+    // 3D rotation mode
+    int m = m_line_map->m_map_size.x;
+    int n = m_line_map->m_map_size.y;
+    int p = m_line_map->m_map_size.z;
+    int dim_0[3] = {m,n,p};
+    int permu_0[3] = {1,0,2};
+    int dim_1[3] = {n,m,p};
+    int permu_1[3] = {0,2,1};
+    int dim_2[3] = {n,p,m};
+    int permu_2[3] = {2,0,1};
+    cuttPlan(&m_rot_plan[0], 3, dim_0, permu_0, sizeof(int), nullptr);
+    cuttPlan(&m_rot_plan[1], 3, dim_1, permu_1, sizeof(int), nullptr);
+    cuttPlan(&m_rot_plan[2], 3, dim_2, permu_2, sizeof(int), nullptr);
+
+    setup_map_msg(line_msg.line_map,m_line_map,true);
   }
   mid_map->copyEdtData(msg);
+  m_line_map->m_origin = CUDA_GEO::pos(msg->x_origin,msg->y_origin,msg->z_origin);
 }
 //---
 void goalCallback(const geometry_msgs::PoseStamped::ConstPtr &msg)
@@ -176,6 +224,47 @@ Eigen::Matrix3d setup_ter_state(const std::vector<CUDA_GEO::pos> &guide_path)
   return s_ter;
 }
 //---
+void prepare_line_map(const std::vector<CUDA_GEO::pos> &trajectory)
+{
+  m_line_map->clearOccupancy();
+  for (size_t i = 0; i < trajectory.size(); i++)
+  {
+    float3 pt = make_float3(trajectory[i].x,
+                            trajectory[i].y,
+                            trajectory[i].z);
+
+    m_line_map->setOccupancy(pt,true);
+  }
+  CUDA_MEMCPY_H2D(m_line_map->m_sd_map,m_line_map->m_hst_sd_map,m_line_map->m_byte_size);
+  GPU_EDT::edt_from_occupancy(m_line_map, m_rot_plan);
+}
+//---
+void prepare_guidance_line_msg(const std::vector<CUDA_GEO::pos> &trajectory)
+{
+  // Clear the current line
+  line_msg.pts.clear();
+
+  // Put in the new line (as a vector of points)
+  geometry_msgs::Point line_pnt;
+  for (int i=0; i < trajectory.size(); i++)
+  {
+    line_pnt.x = trajectory[i].x;
+    line_pnt.y = trajectory[i].y;
+    line_pnt.z = trajectory[i].z;
+    line_msg.pts.push_back(line_pnt);
+  }
+
+//  // Prepare the line distance map
+//  prepare_line_map(trajectory);
+
+//  // Copy it to the mssage, the size is prelocated in the map callback function
+//  CUDA_MEMCPY_D2H(line_msg.line_map.payload8.data(),m_line_map->m_sd_map,m_line_map->m_byte_size);
+
+//  // Update the origin and grid step
+//  setup_map_msg(line_msg.line_map,m_line_map,false);
+
+}
+//---
 void glb_plan(const ros::TimerEvent& msg)
 {
   if (!received_cmd || !received_map)
@@ -204,7 +293,6 @@ void glb_plan(const ros::TimerEvent& msg)
   publish_a_star_path(guide_path);
 #endif
 
-  cpc_motion_planning::guide_line line_msg;
   if (guide_path.size() >= 2) //Do the trajectory smoothing as non-convex optimization
   {
     // Initialization
@@ -223,34 +311,20 @@ void glb_plan(const ros::TimerEvent& msg)
     for(double time = tr(0); time <= tr(1); time += 0.25)
       t.push_back(time);
 
-    Eigen::MatrixXd trajectory = spl->get_trajectory(t);
+    std::vector<CUDA_GEO::pos> trajectory = spl->get_trajectory_vec(t);
 
     // Debug info
     std::cout<<summary.BriefReport()<<std::endl;
     std::cout<<"-----Total time: "<<tr[1]<<std::endl;
 
     //Publish
-    geometry_msgs::Point line_pnt;
-    for (int i=0; i < trajectory.rows(); i++)
-    {
-      line_pnt.x = trajectory(i,0);
-      line_pnt.y = trajectory(i,1);
-      line_pnt.z = trajectory(i,2);
-      line_msg.pts.push_back(line_pnt);
-    }
+    prepare_guidance_line_msg(trajectory);
     line_pub->publish(line_msg);
   }
   else
   {
     //Publish the guide line
-    geometry_msgs::Point line_pnt;
-    for (CUDA_GEO::pos &path_pos : guide_path)
-    {
-      line_pnt.x = path_pos.x;
-      line_pnt.y = path_pos.y;
-      line_pnt.z = path_pos.z;
-      line_msg.pts.push_back(line_pnt);
-    }
+    prepare_guidance_line_msg(guide_path);
     line_pub->publish(line_msg);
   }
 
@@ -331,6 +405,12 @@ int main(int argc, char **argv)
   if (mid_map)
   {
     delete mid_map;
+  }
+  if (m_line_map)
+  {
+    delete m_line_map;
+    for (int i=0;i<3;i++)
+      cuttDestroy(m_rot_plan[i]);
   }
   return 0;
 }

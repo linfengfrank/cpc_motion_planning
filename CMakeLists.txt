@@ -92,6 +92,7 @@ generate_messages(
   DEPENDENCIES
   std_msgs
   geometry_msgs
+  cpc_aux_mapping
 )
 
 ################################################
@@ -143,6 +144,7 @@ include_directories(
   ${CERES_INCLUDE_DIRS}
 )
 
+LINK_DIRECTORIES(../cpc_aux_mapping/lib)
 ## Declare a C++ library
 # add_library(${PROJECT_NAME}
 #   src/${PROJECT_NAME}/cpc_motion_planning.cpp
@@ -189,7 +191,8 @@ cuda_add_executable(astar_mid_planning_node
     src/mid_plan/utils/grid_graph.cpp
     src/mid_plan/utils/a_star.cpp
     src/mid_plan/astar/astar_mid_planner_node.cpp
-    src/spline_optimizer/Spline.cpp)
+    src/spline_optimizer/Spline.cpp
+    ../cpc_aux_mapping/src/kernel/edt_kernel.cu)
 
 target_link_libraries(astar_mid_planning_node
     ${CUDA_curand_LIBRARY}
@@ -197,6 +200,14 @@ target_link_libraries(astar_mid_planning_node
     ${CUDA_LIBRARIES}
     ${catkin_LIBRARIES}
     ${CERES_LIBRARIES})
+
+IF(${CMAKE_SYSTEM_PROCESSOR} MATCHES "aarch64")
+    target_link_libraries(astar_mid_planning_node cutt_arm)
+    message("link with cutt_arm")
+ELSE(${CMAKE_SYSTEM_PROCESSOR} MATCHES "aarch64")
+    target_link_libraries(astar_mid_planning_node cutt_x86)
+    message("link with cutt_x86")
+ENDIF(${CMAKE_SYSTEM_PROCESSOR} MATCHES "aarch64")
 
 add_dependencies(astar_mid_planning_node ${${PROJECT_NAME}_EXPORTED_TARGETS} ${catkin_EXPORTED_TARGETS})
 
