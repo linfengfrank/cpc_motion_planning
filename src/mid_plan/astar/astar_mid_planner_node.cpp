@@ -22,6 +22,7 @@ typedef pcl::PointCloud<pcl::PointXYZRGB> PointCloud;
 PointCloud::Ptr pclOut (new PointCloud); // Point cloud to show the path
 ros::Publisher* line_vis_pub; // Publisher to visulize the guidance path
 ros::Publisher* astar_vis_pub; // Publisher to visulize the smoothed path
+ros::Publisher* line_map_vis_pub; // Publisher to visulize the smoothed path
 ros::Publisher* line_pub; // Publisher of the guidance line
 Astar *mid_map=nullptr; // A star planner
 float _2D_fly_height; // Targeted fly height at 2D case
@@ -69,6 +70,35 @@ void publish_a_star_path(const std::vector<CUDA_GEO::pos> &path)
     pclOut->points.push_back (clrP);
   }
   astar_vis_pub->publish(pclOut);
+  pclOut->clear();
+}
+//----
+void publish_line_map()
+{
+  CUDA_GEO::coord c;
+  CUDA_GEO::pos p;
+  int idx;
+  for (c.x=0;c.x<m_line_map->m_map_size.x;c.x++)
+  {
+    for (c.y=0;c.y<m_line_map->m_map_size.y;c.y++)
+    {
+      for (c.z=0;c.z<m_line_map->m_map_size.z;c.z++)
+      {
+        idx = m_line_map->to_id(c.x, c.y, c.z);
+        float dist = m_line_map->m_hst_sd_map[idx].d;
+        if (dist*m_line_map->m_grid_step <= 0.5)
+        {
+          p = m_line_map->coord2pos(c);
+          pcl::PointXYZRGB clrP;
+          clrP.x = p.x;
+          clrP.y = p.y;
+          clrP.z = p.z;
+          pclOut->points.push_back (clrP);
+        }
+      }
+    }
+  }
+  line_map_vis_pub->publish (pclOut);
   pclOut->clear();
 }
 //---
@@ -237,6 +267,7 @@ void prepare_line_map(const std::vector<CUDA_GEO::pos> &trajectory)
   }
   CUDA_MEMCPY_H2D(m_line_map->m_sd_map,m_line_map->m_hst_sd_map,m_line_map->m_byte_size);
   GPU_EDT::edt_from_occupancy(m_line_map, m_rot_plan);
+  CUDA_MEMCPY_D2H(m_line_map->m_hst_sd_map,m_line_map->m_sd_map,m_line_map->m_byte_size);
 }
 //---
 void prepare_guidance_line_msg(const std::vector<CUDA_GEO::pos> &trajectory)
@@ -254,14 +285,14 @@ void prepare_guidance_line_msg(const std::vector<CUDA_GEO::pos> &trajectory)
     line_msg.pts.push_back(line_pnt);
   }
 
-//  // Prepare the line distance map
-//  prepare_line_map(trajectory);
+  // Prepare the line distance map
+  prepare_line_map(trajectory);
 
-//  // Copy it to the mssage, the size is prelocated in the map callback function
-//  CUDA_MEMCPY_D2H(line_msg.line_map.payload8.data(),m_line_map->m_sd_map,m_line_map->m_byte_size);
+  // Copy it to the mssage, the size is prelocated in the map callback function
+  CUDA_MEMCPY_D2H(line_msg.line_map.payload8.data(),m_line_map->m_sd_map,m_line_map->m_byte_size);
 
-//  // Update the origin and grid step
-//  setup_map_msg(line_msg.line_map,m_line_map,false);
+  // Update the origin and grid step
+  setup_map_msg(line_msg.line_map,m_line_map,false);
 
 }
 //---
@@ -329,7 +360,8 @@ void glb_plan(const ros::TimerEvent& msg)
   }
 
 #ifdef SHOWPC
-    publish_path(line_msg);
+  publish_line_map();
+  publish_path(line_msg);
 #endif
 
   auto end_time = std::chrono::steady_clock::now();
@@ -355,9 +387,11 @@ int main(int argc, char **argv)
   line_pub = new ros::Publisher;
   line_vis_pub = new ros::Publisher;
   astar_vis_pub = new ros::Publisher;
+  line_map_vis_pub = new ros::Publisher;
   *line_pub = nh.advertise<cpc_motion_planning::guide_line>("/mid_layer/guide_line",1);
   *line_vis_pub = nh.advertise<PointCloud>("/mid_layer/guide_line_vis",1);
   *astar_vis_pub = nh.advertise<PointCloud>("/mid_layer/astar_path_vis",1);
+  *line_map_vis_pub = nh.advertise<PointCloud>("/mid_layer/line_map_vis",1);
 
   // Create the subscriber
   ros::Subscriber map_sub = nh.subscribe("/edt_map", 1, &mapCallback);
@@ -401,6 +435,8 @@ int main(int argc, char **argv)
 
   delete line_pub;
   delete line_vis_pub;
+  delete line_map_vis_pub;
+  delete astar_vis_pub;
   delete spl;
   if (mid_map)
   {
