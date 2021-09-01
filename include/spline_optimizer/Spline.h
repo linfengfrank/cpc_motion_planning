@@ -6,6 +6,8 @@
 #include <ceres/ceres.h>
 #include <spline_optimizer/TrajectoryCostFunction.h>
 #include <spline_optimizer/MapCostFunction.h>
+#include <spline_optimizer/LinearInterpolator.h>
+
 namespace SPL_OPTI
 {
 class Spline
@@ -26,8 +28,8 @@ public:
   void set_ini_ter_matrix();
   void init_with_approximation(const Eigen::MatrixXd &s_ini, const Eigen::MatrixXd &s_ter,
                                const Eigen::MatrixXd &D, const Eigen::VectorXd &S);
-  void init_direct(const Eigen::MatrixXd &s_ini, const Eigen::MatrixXd &s_ter,
-                               const Eigen::MatrixXd &D);
+  void init_direct(const Eigen::MatrixXd &s_ini, const Eigen::MatrixXd &s_ter, const double &beta,
+                               const std::vector<CUDA_GEO::pos> &guide_path, bool fix_boundary);
   void approximation(const Eigen::MatrixXd &D, const Eigen::VectorXd &S, const Eigen::MatrixXi &fix);
   void get_params_from_array(const double *x);
   void send_params_to_array(double*x);
@@ -168,6 +170,9 @@ public:
   // Boundary condition soft constraints
   std::vector<StartCostFunction*> m_cf_start;
   std::vector<FinishCostFunction*> m_cf_finish;
+
+  // Linear interpolator
+  LinearInterpolator m_linp;
 };
 }
 #endif // Spline_H

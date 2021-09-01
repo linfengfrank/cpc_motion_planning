@@ -243,19 +243,58 @@ void Spline::init_with_approximation(const Eigen::MatrixXd &s_ini, const Eigen::
   approximation(D,S,fix);
 }
 
-void Spline::init_direct(const Eigen::MatrixXd &s_ini, const Eigen::MatrixXd &s_ter,
-                             const Eigen::MatrixXd &D)
+void Spline::init_direct(const Eigen::MatrixXd &s_ini, const Eigen::MatrixXd &s_ter, const double &beta,
+                             const std::vector<CUDA_GEO::pos> &guide_path, bool fix_boundary)
 {
-  m_s_ini = s_ini;
-  m_s_ter = s_ter;
-
-  if(D.rows() != m_n+1 || D.cols() != m_D)
+  if(guide_path.size() < 2)
   {
-    std::wcerr<<"Wrong dimension of control points!"<<std::endl;
+    std::wcerr<<"Guided path has less than 2 points, cannot be interpolated!"<<std::endl;
     return;
   }
 
-  m_ctrl_points = D;
+  if (m_D !=3 )
+  {
+    std::wcerr<<"Direct initialization only works for 3D case!"<<std::endl;
+    return;
+  }
+
+  if(m_n+1 < 10)
+  {
+    std::wcerr<<"Direct initialization requires spline has at least 10 ctrl points!"<<std::endl;
+    return;
+  }
+
+  m_beta = beta;
+  m_s_ini = s_ini;
+  m_s_ter = s_ter;
+  set_ini_ter_matrix();
+
+  if(fix_boundary)
+  {
+    // Calculate the correct ctrl points for the boundary conditions as initial guess
+    m_ctrl_points.block(0,0,3,m_D) = m_A_ini.colPivHouseholderQr().solve(s_ini);
+    m_ctrl_points.block(m_n-2,0,3,m_D) = m_A_ter.colPivHouseholderQr().solve(s_ter);
+
+    // Only populate the ctrl points from row 3 to n-3
+    std::vector<CUDA_GEO::pos> intp_path = m_linp.interpolate_path(m_n+1-6, guide_path);
+    for (int i=3; i<m_n-2; i++)
+    {
+      m_ctrl_points(i,0) = intp_path[i].x;
+      m_ctrl_points(i,1) = intp_path[i].y;
+      m_ctrl_points(i,2) = intp_path[i].z;
+    }
+  }
+  else
+  {
+    // Ignore the saisfaction of the boundary conditions and populate all control points
+    std::vector<CUDA_GEO::pos> intp_path = m_linp.interpolate_path(m_n+1, guide_path);
+    for (int i=0; i<m_n+1; i++)
+    {
+      m_ctrl_points(i,0) = intp_path[i].x;
+      m_ctrl_points(i,1) = intp_path[i].y;
+      m_ctrl_points(i,2) = intp_path[i].z;
+    }
+  }
 }
 
 void Spline::approximation(const Eigen::MatrixXd &D, const Eigen::VectorXd &S, const Eigen::MatrixXi &fix)
