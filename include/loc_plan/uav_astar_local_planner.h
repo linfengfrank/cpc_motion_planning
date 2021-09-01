@@ -45,7 +45,7 @@ private:
 
     float a_square = a.square();
     float b_square = b.square();
-    float a_dot_b = a.x*b.x + a.y*b.y;
+    float a_dot_b = a.x*b.x + a.y*b.y + a.z*b.z;
 
     if (b_square < 1e-3)
       return sqrtf(static_cast<float>(a_square));
