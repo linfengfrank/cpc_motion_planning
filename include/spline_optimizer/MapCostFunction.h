@@ -9,6 +9,7 @@ namespace SPL_OPTI
 {
 class MapCostFunction : public ceres::SizedCostFunction<1,1,1,1>
 {
+public:
   MapCostFunction(double w, double r, GridGraph* map)
   {
     m_w = w;
@@ -85,7 +86,7 @@ class MapCostFunction : public ceres::SizedCostFunction<1,1,1,1>
       grad[0] += diff.z *diff.y * (values[1][1][1] - values[0][1][1]);
       grad[0] *= resolution_inv_;
 
-      assign_values(F,J,(m_r+0.05-dist)*m_w,grad[0],grad[1],grad[2]);
+      assign_values(F,J,(m_r+0.05-dist)*m_w,-m_w*grad[0],-m_w*grad[1],-m_w*grad[2]);
     }
     else
     {

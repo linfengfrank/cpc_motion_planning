@@ -401,8 +401,6 @@ void Spline::add_start_cost(ceres::Problem* problem)
   }
 }
 
-
-
 void Spline::add_finish_cost(ceres::Problem* problem)
 {
   for (int d=0; d<m_D; d++)
@@ -434,6 +432,20 @@ void Spline::update_finish_cost()
   {
     if (m_cf_finish[d])
       m_cf_finish[d]->m_s_ter = m_s_ter.col(d);
+  }
+}
+
+void Spline::add_map_cost(ceres::Problem* problem, GridGraph* map)
+{
+  if (m_D != 3)
+  {
+    std::wcerr<<"In order to use the map cost the spline dimension must be 3!"<<std::endl;
+    return;
+  }
+
+  for (int i=0;i<m_n+1;i++)
+  {
+    problem->AddResidualBlock(new SPL_OPTI::MapCostFunction(50.0,1.0,map),nullptr,&m_ctrl_points(i,0),&m_ctrl_points(i,1),&m_ctrl_points(i,2));
   }
 }
 

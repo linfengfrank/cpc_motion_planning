@@ -39,6 +39,7 @@ public:
   void add_start_cost(ceres::Problem* problem);
   void add_finish_cost(ceres::Problem* problem);
   void add_time_cost(ceres::Problem* problem);
+  void add_map_cost(ceres::Problem* problem, GridGraph* map);
   void update_start_cost();
   void update_finish_cost();
 
