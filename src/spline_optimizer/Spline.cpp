@@ -114,6 +114,24 @@ Eigen::MatrixXd Spline::get_trajectory(std::vector<double> t)
   return trajectory;
 }
 
+std::vector<CUDA_GEO::pos> Spline::get_trajectory_vec(std::vector<double> t)
+{
+  std::vector<CUDA_GEO::pos> trajectory;
+  if (m_D !=3 )
+  {
+    std::wcerr<<"Get trajectory in CUDA_GEO pos requires the spline of dimension 3!"<<std::endl;
+    return trajectory;
+  }
+
+  for (size_t i = 0; i < t.size(); i++)
+  {
+    double u_probe = t[i] * m_beta + m_u(m_p);
+    Eigen::VectorXd p = single_deboor(u_probe);
+    trajectory.push_back(CUDA_GEO::pos(p(0),p(1),p(2)));
+  }
+  return trajectory;
+}
+
 Eigen::Vector2d Spline::get_available_s_range()
 {
   Eigen::Vector2d range;

@@ -19,6 +19,7 @@ public:
   void set_control_points(const Eigen::MatrixXd &ctrl_pnts);
   Eigen::VectorXd single_deboor(double u_probe);
   Eigen::MatrixXd get_trajectory(std::vector<double> t);
+  std::vector<CUDA_GEO::pos> get_trajectory_vec(std::vector<double> t);
   Eigen::Vector2d get_available_s_range();
   Eigen::Vector2d get_available_t_range();
   void construct_evaluation_matrix(std::vector<double> s);
