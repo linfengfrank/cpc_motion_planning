@@ -279,9 +279,9 @@ void Spline::init_direct(const Eigen::MatrixXd &s_ini, const Eigen::MatrixXd &s_
     std::vector<CUDA_GEO::pos> intp_path = m_linp.interpolate_path(m_n+1-6, guide_path);
     for (int i=3; i<m_n-2; i++)
     {
-      m_ctrl_points(i,0) = intp_path[i].x;
-      m_ctrl_points(i,1) = intp_path[i].y;
-      m_ctrl_points(i,2) = intp_path[i].z;
+      m_ctrl_points(i,0) = intp_path[i-3].x;
+      m_ctrl_points(i,1) = intp_path[i-3].y;
+      m_ctrl_points(i,2) = intp_path[i-3].z;
     }
   }
   else
@@ -453,7 +453,7 @@ void Spline::add_finish_cost(ceres::Problem* problem)
 
 void Spline::add_time_cost(ceres::Problem *problem)
 {
-  problem->AddResidualBlock(new SPL_OPTI::TimeCostFunction(20.0),nullptr,&m_beta);
+  problem->AddResidualBlock(new SPL_OPTI::TimeCostFunction(6.5),nullptr,&m_beta);
 }
 
 void Spline::update_start_cost()
