@@ -7,18 +7,21 @@
 
 namespace SPL_OPTI
 {
-class MapCostFunction : public ceres::SizedCostFunction<1,1,1,1>
+class MapCostFunction : public ceres::SizedCostFunction<2,1,1,1>
 {
 public:
-  MapCostFunction(double w, double r, GridGraph* map)
+  MapCostFunction(double w, double w_ext, double r, double r_ext, GridGraph* map)
   {
     m_w = w;
     m_r = r;
+    m_w_ext = w_ext;
+    m_r_ext = r_ext;
     m_map = map;
     resolution_inv_ = 1/m_map->getGridStep();
   }
 
-  inline void assign_values(double* F,
+  inline void assign_values(int i,
+                            double* F,
                             double** J,
                             const double &res,
                             const double &j0,
@@ -26,19 +29,19 @@ public:
                             const double &j2) const
   {
     // Residule
-    F[0] = res;
+    F[i] = res;
 
     // Jacobian
     if (J != nullptr)
     {
       if (J[0] != nullptr)
-        J[0][0] = j0;
+        J[0][i] = j0;
 
       if (J[1] != nullptr)
-        J[1][0] = j1;
+        J[1][i] = j1;
 
       if (J[2] != nullptr)
-        J[2][0] = j2;
+        J[2][i] = j2;
     }
   }
 
@@ -74,23 +77,32 @@ public:
 
     double dist = (1 - diff.z) * v0 + diff.z * v1;
 
+    // Get the gradient
+    double grad[3];
+    grad[2] = (v1 - v0) * resolution_inv_;
+    grad[1] = ((1 - diff.z) * (v10 - v00) + diff.z * (v11 - v01)) * resolution_inv_;
+    grad[0] = (1 - diff.z) * (1 -diff.y) * (values[1][0][0] - values[0][0][0]);
+    grad[0] += (1 - diff.z) *diff.y * (values[1][1][0] - values[0][1][0]);
+    grad[0] += diff.z * (1 -diff.y) * (values[1][0][1] - values[0][0][1]);
+    grad[0] += diff.z *diff.y * (values[1][1][1] - values[0][1][1]);
+    grad[0] *= resolution_inv_;
+
     if (dist < m_r +0.05)
     {
-      // Get the gradient
-      double grad[3];
-      grad[2] = (v1 - v0) * resolution_inv_;
-      grad[1] = ((1 - diff.z) * (v10 - v00) + diff.z * (v11 - v01)) * resolution_inv_;
-      grad[0] = (1 - diff.z) * (1 -diff.y) * (values[1][0][0] - values[0][0][0]);
-      grad[0] += (1 - diff.z) *diff.y * (values[1][1][0] - values[0][1][0]);
-      grad[0] += diff.z * (1 -diff.y) * (values[1][0][1] - values[0][0][1]);
-      grad[0] += diff.z *diff.y * (values[1][1][1] - values[0][1][1]);
-      grad[0] *= resolution_inv_;
-
-      assign_values(F,J,(m_r+0.05-dist)*m_w,-m_w*grad[0],-m_w*grad[1],-m_w*grad[2]);
+      assign_values(0,F,J,(m_r+0.05-dist)*m_w,-m_w*grad[0],-m_w*grad[1],-m_w*grad[2]);
     }
     else
     {
-      assign_values(F,J,0,0,0,0);
+      assign_values(0,F,J,0,0,0,0);
+    }
+
+    if (dist < m_r_ext +0.05)
+    {
+      assign_values(1,F,J,(m_r_ext+0.05-dist)*m_w_ext,-m_w_ext*grad[0],-m_w_ext*grad[1],-m_w_ext*grad[2]);
+    }
+    else
+    {
+      assign_values(1,F,J,0,0,0,0);
     }
 
 
@@ -112,8 +124,8 @@ public:
   }
 
 private:
-  double m_w;
-  double m_r;
+  double m_w, m_w_ext;
+  double m_r, m_r_ext;
   double resolution_inv_;
   GridGraph *m_map;
 };

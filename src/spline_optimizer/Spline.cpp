@@ -502,7 +502,7 @@ void Spline::add_map_cost(ceres::Problem* problem, GridGraph* map)
 
   for (int i=0;i<m_n+1;i++)
   {
-    problem->AddResidualBlock(new SPL_OPTI::MapCostFunction(50.0,1.0,map),nullptr,&m_ctrl_points(i,0),&m_ctrl_points(i,1),&m_ctrl_points(i,2));
+    problem->AddResidualBlock(new SPL_OPTI::MapCostFunction(50.0,1.0,0.3,1.4,map),nullptr,&m_ctrl_points(i,0),&m_ctrl_points(i,1),&m_ctrl_points(i,2));
   }
 }
 
