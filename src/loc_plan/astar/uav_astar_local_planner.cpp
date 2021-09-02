@@ -11,7 +11,8 @@ template <typename T> int sgn(T val)
 UAVAstarMotionPlanner::UAVAstarMotionPlanner():
   UAVLocalMotionPlanner(),
   m_guide_line_received(false),
-  m_planning_started(false)
+  m_planning_started(false),
+  m_line_map(nullptr)
 {
   m_nh.param<float>("/nndp_cpp/fly_height",m_take_off_height,2.0);
   m_nh.param<float>("/nndp_cpp/leap_height",m_leap_height,0.4);
@@ -96,7 +97,29 @@ void UAVAstarMotionPlanner::plan_call_back(const ros::TimerEvent&)
 void UAVAstarMotionPlanner::guide_line_call_back(const cpc_motion_planning::guide_line::ConstPtr &msg)
 {
   m_guide_line_received = true;
-  m_guide_line = *msg;
+  m_guide_line.pts = msg->pts;
+
+  if (m_line_map == nullptr)
+  {
+    // Initialize the Line map for PSO planner
+    CUDA_GEO::pos origin(msg->line_map.x_origin,msg->line_map.y_origin,msg->line_map.z_origin);
+    int3 m_line_map_size = make_int3(msg->line_map.x_size,msg->line_map.y_size,msg->line_map.z_size);
+    m_line_map = new EDTMap(origin,msg->line_map.width,m_line_map_size);
+    m_line_map->setup_device();
+  }
+  else
+  {
+    // Set theLine map's origin and grid step
+    m_line_map->m_origin = CUDA_GEO::pos(msg->line_map.x_origin,msg->line_map.y_origin,msg->line_map.z_origin);
+    m_line_map->m_grid_step = msg->line_map.width;
+  }
+
+  // Copy the actual map data to GPU device
+  CUDA_MEMCPY_H2D(m_line_map->m_sd_map,msg->line_map.payload8.data(),static_cast<size_t>(m_line_map->m_byte_size));
+
+  // Set the map pointer for the evaluators
+  m_pso_planner->m_eva.m_line_map = *m_line_map;
+  m_emergent_planner->m_eva.m_line_map = *m_line_map;
 }
 
 void UAVAstarMotionPlanner::do_at_ground()
@@ -114,10 +137,12 @@ void UAVAstarMotionPlanner::do_at_ground()
     m_head_sov.set_yaw_target(m_curr_yaw_ref.p);
 
     //set carrot position to be above the ground at a certain fixed height
-    m_carrot.s = m_curr_ref;
-    m_carrot.s.p.z = m_take_off_height;
-    // do not turn on obstacle avoidance during take-off phase, the ground make it avoid aggressively
-    set_planner_goal(m_carrot,false);
+    m_local_carrot = m_curr_ref.p;
+    m_local_carrot.z = m_take_off_height;
+
+    //assign the take_off_carrot to the planners
+    m_pso_planner->m_eva.m_carrot = m_local_carrot;
+    m_emergent_planner->m_eva.m_carrot = m_local_carrot;
 
     // Egage and takeoff
     std_srvs::Empty::Request eReq;
@@ -142,7 +167,11 @@ void UAVAstarMotionPlanner::do_taking_off()
   if (m_curr_ref.p.z >= m_take_off_height - 0.2f && fabsf(m_curr_ref.v.z)<0.3f)
   {
     // Turn on obstacle avoidance using this line
-    set_planner_goal(m_carrot,true);
+    m_pso_planner->m_eva.m_in_air = true;
+    m_pso_planner->m_eva.m_consider_fov = true;
+
+    m_emergent_planner->m_eva.m_in_air = true;
+    m_emergent_planner->m_eva.m_consider_fov = true;
     m_fly_status = UAV::IN_AIR;
   }
 
@@ -155,8 +184,10 @@ void UAVAstarMotionPlanner::do_taking_off()
 void UAVAstarMotionPlanner::do_in_air()
 {
   auto start = std::chrono::steady_clock::now();
-  extract_carrot(m_carrot);
-  set_planner_goal(m_carrot,true);
+
+  extract_carrot(m_local_carrot);
+  m_pso_planner->m_eva.m_carrot = m_local_carrot;
+  m_emergent_planner->m_eva.m_carrot = m_local_carrot;
 
   calculate_trajectory<SIMPLE_UAV>(m_pso_planner,m_traj);
   if (m_pso_planner->result.collision)
@@ -166,7 +197,7 @@ void UAVAstarMotionPlanner::do_in_air()
   }
   else
   {
-    m_head_sov.cal_yaw_target(m_carrot.s.p,m_curr_ref);
+    m_head_sov.cal_yaw_target(m_local_carrot,m_curr_ref);
     m_yaw_traj = m_head_sov.generate_yaw_traj();
   }
   auto end = std::chrono::steady_clock::now();

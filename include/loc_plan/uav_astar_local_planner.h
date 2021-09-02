@@ -25,14 +25,6 @@ private:
   void cycle_init();
   void set_init_state(const UAV::UAVModel::State& trans, const JLT::State &yaw);
   //---
-  void set_planner_goal(UAV::SingleTargetEvaluator::Target goal, bool turn_on_obstacle_avoidance = true)
-  {
-    //set the goal with updated obstacle avoidance flag
-    goal.oa = turn_on_obstacle_avoidance;
-    m_pso_planner->m_eva.setTarget(goal);
-    m_emergent_planner->m_eva.setTarget(goal);
-  }
-  //---
   float calculate_distance(const float3 &a, geometry_msgs::Point &b)
   {
     return sqrtf((a.x - b.x)*(a.x - b.x) + (a.y - b.y)*(a.y - b.y) + (a.z - b.z)*(a.z - b.z));
@@ -118,7 +110,7 @@ private:
     return min_id;
   }
   //---
-  void extract_carrot(UAV::SingleTargetEvaluator::Target& carrot)
+  void extract_carrot(float3& carrot)
   {
     //Find those points that are LOS to the vehicle
     std::vector<bool> los_list(m_guide_line.pts.size());
@@ -142,14 +134,14 @@ private:
         break;
 
       //actually update the carrot
-      carrot.s.p = Point2float3(m_guide_line.pts[i]);
+      carrot = Point2float3(m_guide_line.pts[i]);
     }
 
     // For viewing the carrot in RVIZ
     pcl::PointXYZ clrP;
-    clrP.x = carrot.s.p.x;
-    clrP.y = carrot.s.p.y;
-    clrP.z = carrot.s.p.z;
+    clrP.x = carrot.x;
+    clrP.y = carrot.y;
+    clrP.z = carrot.z;
     m_carrot_pnt_cld->push_back(clrP);
     m_carrot_pub.publish(m_carrot_pnt_cld);
     m_carrot_pnt_cld->clear();
@@ -166,8 +158,8 @@ private:
 
   PSO::Planner<SIMPLE_UAV> *m_pso_planner;
   PSO::Planner<EMERGENT_UAV> *m_emergent_planner;
-  UAV::SingleTargetEvaluator::Target m_carrot;
   cpc_motion_planning::guide_line m_guide_line;
+  float3 m_local_carrot;
   UAV::UAVModel::State m_curr_ref;
   JLT::State m_curr_yaw_ref;
   cpc_motion_planning::ref_data m_ref_msg;
@@ -184,6 +176,7 @@ private:
   ros::Publisher m_carrot_pub;
   PointCloud::Ptr m_carrot_pnt_cld;
   float m_leap_height;
+  EDTMap *m_line_map;
 };
 
 #endif // UAV_ASTAR_MOTION_PLANNER_H

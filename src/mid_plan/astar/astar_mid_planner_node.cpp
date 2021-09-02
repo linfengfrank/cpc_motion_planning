@@ -16,6 +16,7 @@
 #include "cutt/cutt.h"
 
 #define SHOWPC
+//#define SHOWLINEMAP
 #define USE2D
 
 typedef pcl::PointCloud<pcl::PointXYZRGB> PointCloud;
@@ -267,7 +268,9 @@ void prepare_line_map(const std::vector<CUDA_GEO::pos> &trajectory)
   }
   CUDA_MEMCPY_H2D(m_line_map->m_sd_map,m_line_map->m_hst_sd_map,m_line_map->m_byte_size);
   GPU_EDT::edt_from_occupancy(m_line_map, m_rot_plan);
+#ifdef SHOWLINEMAP
   CUDA_MEMCPY_D2H(m_line_map->m_hst_sd_map,m_line_map->m_sd_map,m_line_map->m_byte_size);
+#endif
 }
 //---
 void prepare_guidance_line_msg(const std::vector<CUDA_GEO::pos> &trajectory)
@@ -359,8 +362,11 @@ void glb_plan(const ros::TimerEvent& msg)
     line_pub->publish(line_msg);
   }
 
+#ifdef SHOWLINEMAP
+    publish_line_map();
+#endif
+
 #ifdef SHOWPC
-  publish_line_map();
   publish_path(line_msg);
 #endif
 
