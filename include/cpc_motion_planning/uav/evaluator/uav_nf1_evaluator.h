@@ -10,11 +10,6 @@ class NF1Evaluator
 {
 public:
 
-  struct Target
-  {
-    bool oa;
-  };
-
   NF1Evaluator():m_stuck(false),m_in_air(false),m_consider_fov(false)
   {
     m_carrot = make_float3(0,0,0);
