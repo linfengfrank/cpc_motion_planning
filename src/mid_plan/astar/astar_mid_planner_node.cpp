@@ -41,6 +41,8 @@ ceres::Solver::Summary summary; // Ceres Solving summary
 EDTMap* m_line_map=nullptr; // Distance to line map, used to calcualte the distance go guidance line
 cuttHandle m_rot_plan[3]; // Rotation plan
 cpc_motion_planning::guide_line line_msg; //line msg to be published
+int plan_counter = 0;
+bool request_replan = false;
 //---
 void publish_path(const cpc_motion_planning::guide_line &path)
 {
@@ -174,6 +176,7 @@ void goalCallback(const geometry_msgs::PoseStamped::ConstPtr &msg)
   goal.x = msg->pose.position.x;
   goal.y = msg->pose.position.y;
   goal.z = msg->pose.position.z;
+  request_replan = true;
 }
 //---
 CUDA_GEO::coord select_start_coord()
@@ -255,6 +258,23 @@ Eigen::Matrix3d setup_ter_state(const std::vector<CUDA_GEO::pos> &guide_path)
   return s_ter;
 }
 //---
+bool check_guide_line_safety()
+{
+  for(size_t i=0; i<line_msg.pts.size(); i++)
+  {
+    CUDA_GEO::pos p(line_msg.pts[i].x,
+                    line_msg.pts[i].y,
+                    line_msg.pts[i].z);
+    CUDA_GEO::coord c = mid_map->pos2coord(p);
+
+    float dist = mid_map->getEdt(c.x,c.y,c.z,1000);
+
+    if (dist < mid_safety_radius)
+      return false;
+  }
+  return true;
+}
+//---
 void prepare_line_map(const std::vector<CUDA_GEO::pos> &trajectory)
 {
   m_line_map->clearOccupancy();
@@ -304,6 +324,15 @@ void glb_plan(const ros::TimerEvent& msg)
   if (!received_cmd || !received_map)
     return;
 
+  plan_counter++;
+  //determine whether we need to plan or not
+  // if the current line is not safe
+  // if the plan_counter reaches certain value
+  // if required by other moudle
+  if (!(!check_guide_line_safety() || plan_counter%10 == 0 || request_replan))
+    return;
+
+  request_replan = false;
   auto start_time = std::chrono::steady_clock::now();
 
   // Select the start and target coordinate
@@ -435,7 +464,7 @@ int main(int argc, char **argv)
   //-------- Finish initializing the spline optimization-------
 
   // Create the mid planner timer
-  glb_plan_timer = nh.createTimer(ros::Duration(1.0), &glb_plan);
+  glb_plan_timer = nh.createTimer(ros::Duration(0.4), &glb_plan);
 
   ros::spin();
 
