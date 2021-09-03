@@ -25,29 +25,33 @@ void de_cross_over_particle(const Model &m, Swarm &sw, int idx)
   typename Swarm::Trace var = sw.ptcls[r1].best_loc + (sw.ptcls[r2].best_loc - sw.ptcls[r3].best_loc)*0.8f;
 
   // random sample an index r, to be used in cross over later
-  int r = PSO::rand_int_gen(&(sw.ptcls[idx].rs),0,sw.steps*2-1);
+  int r = PSO::rand_int_gen(&(sw.ptcls[idx].rs),0,sw.steps*3-1);
 
   // corssover
   float cr;
   int step, dim;
-  for (int i=0; i<sw.steps*2; i++)
+  for (int i=0; i<sw.steps*3; i++)
   {
     cr = PSO::rand_float_gen(&(sw.ptcls[idx].rs),0,1);
-    step = i/2;
-    dim = i%2;
+    step = i/3;
+    dim = i%3;
     if (cr < 0.9f || i == r)
     {
       if (dim == 0)
         sw.ptcls[idx].curr_loc[step].x = var[step].x;
-      else
+      else if (dim == 1)
         sw.ptcls[idx].curr_loc[step].y = var[step].y;
+      else
+        sw.ptcls[idx].curr_loc[step].z = var[step].z;
     }
     else
     {
       if (dim == 0)
         sw.ptcls[idx].curr_loc[step].x = sw.ptcls[idx].best_loc[step].x;
-      else
+      else if (dim == 1)
         sw.ptcls[idx].curr_loc[step].y = sw.ptcls[idx].best_loc[step].y;
+      else
+        sw.ptcls[idx].curr_loc[step].z = sw.ptcls[idx].best_loc[step].z;
     }
   }
 
