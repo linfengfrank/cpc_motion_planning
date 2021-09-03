@@ -46,7 +46,7 @@ public:
   }
 
   __host__ __device__
-  State get_ini_state()
+  State get_ini_state() const
   {
     return m_s_ini;
   }

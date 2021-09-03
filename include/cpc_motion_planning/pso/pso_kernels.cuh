@@ -23,7 +23,7 @@ void initialize_particles(bool first_run,
 
 //---------
 template<class Model, class Controller, class Evaluator, class Swarm>
-void iterate_particles(float weight,
+void iterate_particles(float2 weight,
                        const EDTMap &map, const Evaluator &eva, const Model &m, const Controller &ctrl, const Swarm &sw);
 
 //---------

@@ -7,10 +7,10 @@ namespace PSO
 {
 //const int PSO_STEPS = 1; //planning steps
 //const float PSO_STEP_DT = 4.0f; //lasting time of each step
-const float PSO_TOTAL_T = 4.0f;
+const float PSO_TOTAL_T = 3.0f;
 const float PSO_SIM_DT = 0.1f;
 const float PSO_CTRL_DT = 0.05f;
-const int PSO_REPLAN_CYCLE = 4;
+const int PSO_REPLAN_CYCLE = 3;
 const float PSO_REPLAN_DT = PSO_REPLAN_CYCLE * PSO_CTRL_DT;
 const int PSO_PLAN_CONSUME_CYCLE = 2;
 
@@ -25,6 +25,18 @@ float rand_float_gen(curandState *rs, float min, float max)
   myrandf *= (max - min);
   myrandf += min;
   return myrandf;
+}
+
+__host__ __device__ __forceinline__
+int rand_int_gen(curandState *rs, int min, int max)
+{
+  float output_float = rand_float_gen(rs, static_cast<float>(min), static_cast<float>(max)+0.9999f);
+  int output = static_cast<int>(output_float);
+
+  if (output > max) output = max;
+  if (output < min) output = min;
+
+  return output;
 }
 
 __host__ __device__ __forceinline__

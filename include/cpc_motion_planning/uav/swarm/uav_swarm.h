@@ -148,6 +148,18 @@ public:
 
   //---
   __host__ __device__
+  void bound_ptcl_best_location(const UAVModel::State &s_ini, Particle &p)
+  {
+    for (int n = 0; n < STEP; n++)
+    {
+      PSO::bound_between(p.best_loc.site[n].x,  -6.0f,  +6.0f);
+      PSO::bound_between(p.best_loc.site[n].y,  -6.0f,  +6.0f);
+      PSO::bound_between(p.best_loc.site[n].z,  -6.0f,  +6.0f);
+    }
+  }
+
+  //---
+  __host__ __device__
   void initialize_a_particle(const UAVModel::State &s_ini, Particle &p)
   {
     for (int i=0; i< STEP; i++)

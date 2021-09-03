@@ -51,7 +51,7 @@ public:
   void plan(const EDTMap &map)
   {
     cublasStatus_t cbls_stt;
-
+    float2 weight;
     for (int ctt = 0; ctt <m_num_of_episodes; ctt ++)
     {
       initialize_particles<Model, Controller, Evaluator, Swarm>(m_first_time, map, m_eva,m_model,m_ctrl_dev,m_swarm);
@@ -59,7 +59,8 @@ public:
       m_first_time = false;
       for (int i=0;i<m_num_of_epoches;i++)
       {
-        float weight = 0.95-(0.95-0.4)/static_cast<float>(m_num_of_epoches)*static_cast<float>(i);
+        weight.x = 0.95-(0.95-0.4)/static_cast<float>(m_num_of_epoches)*static_cast<float>(i);
+        weight.y = 0.2f-(0.2f-0.0)/static_cast<float>(m_num_of_epoches*m_num_of_episodes)*static_cast<float>(i+ctt*m_num_of_epoches);
         iterate_particles<Model, Controller, Evaluator,Swarm>(weight, map, m_eva,m_model,m_ctrl_dev,m_swarm);
         update_best_ptcl();
       }
