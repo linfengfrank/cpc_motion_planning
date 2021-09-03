@@ -30,7 +30,7 @@ public:
 
     // -------------- Control Cost -------------- //
     // add the control cost
-    cost += 0.1f*sqrtf(s.a.x*s.a.x + s.a.y*s.a.y + s.a.z*s.a.z);
+    cost += 0.3f*sqrtf(s.a.x*s.a.x + s.a.y*s.a.y + s.a.z*s.a.z);
 
     if (m_in_air)
     {

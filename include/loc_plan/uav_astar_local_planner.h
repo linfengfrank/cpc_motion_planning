@@ -2,7 +2,7 @@
 #define UAV_ASTAR_MOTION_PLANNER_H
 #include <loc_plan/uav_base_local_planner.h>
 #include <cpc_motion_planning/guide_line.h>
-#define SIMPLE_UAV UAV::UAVModel,UAV::UAVDPControl,UAV::SingleTargetEvaluator,UAV::UAVSwarm<1>
+#define SIMPLE_UAV UAV::UAVModel,UAV::UAVDPControl,UAV::SingleTargetEvaluator,UAV::UAVSwarm<3>
 #define EMERGENT_UAV UAV::UAVModel,UAV::UAVJLTControl,UAV::SingleTargetEvaluator,UAV::UAVSwarm<1>
 
 class UAVAstarMotionPlanner : public UAVLocalMotionPlanner

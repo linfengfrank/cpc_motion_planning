@@ -26,7 +26,7 @@ UAVAstarMotionPlanner::UAVAstarMotionPlanner():
 
   m_planning_timer = m_nh.createTimer(ros::Duration(PSO::PSO_REPLAN_DT), &UAVAstarMotionPlanner::plan_call_back, this);
 
-  m_pso_planner = new PSO::Planner<SIMPLE_UAV>(150,30,1);
+  m_pso_planner = new PSO::Planner<SIMPLE_UAV>(100,40,2);
   m_pso_planner->initialize();
 
   m_emergent_planner = new PSO::Planner<EMERGENT_UAV>(50,20,1);
