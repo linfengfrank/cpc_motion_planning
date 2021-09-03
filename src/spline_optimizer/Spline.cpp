@@ -451,7 +451,7 @@ void Spline::add_start_cost(ceres::Problem* problem)
 {
   for (int d=0; d<m_D; d++)
   {
-    m_cf_start[d] = new SPL_OPTI::StartCostFunction(30);
+    m_cf_start[d] = new SPL_OPTI::StartCostFunction(10);
     m_cf_start[d]->m_s_ini = m_s_ini.col(d);
     problem->AddResidualBlock(m_cf_start[d],nullptr,
                              &m_ctrl_points(0,d), &m_ctrl_points(1,d), &m_ctrl_points(2,d),&m_beta);
@@ -462,7 +462,7 @@ void Spline::add_finish_cost(ceres::Problem* problem)
 {
   for (int d=0; d<m_D; d++)
   {
-    m_cf_finish[d] = new SPL_OPTI::FinishCostFunction(30);
+    m_cf_finish[d] = new SPL_OPTI::FinishCostFunction(2);
     m_cf_finish[d]->m_s_ter = m_s_ter.col(d);
     problem->AddResidualBlock(m_cf_finish[d],nullptr,
                              &m_ctrl_points(m_n-2,d), &m_ctrl_points(m_n-1,d), &m_ctrl_points(m_n,d),&m_beta);
