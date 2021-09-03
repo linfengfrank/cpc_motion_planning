@@ -298,6 +298,7 @@ int main(int argc, char **argv)
   ros::Subscriber map_sub = nh.subscribe("edt_map", 1, &mapCallback);
   ros::Subscriber stuck_sub = nh.subscribe("stuck", 1, &stuckCallback);
   ros::Subscriber glb_tgt_sub = nh.subscribe("/move_base_simple/goal", 1, &goalCallback);
+  ros::Subscriber task_tgt_sub = nh.subscribe("task_planner/goal", 1, &goalCallback);
   ros::Subscriber state_sub = nh.subscribe("ref_traj", 1, get_reference);
   *line_pub = nh.advertise<cpc_motion_planning::guide_line>("mid_layer/guide_line",1);
 

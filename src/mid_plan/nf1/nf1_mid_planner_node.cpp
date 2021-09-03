@@ -252,7 +252,7 @@ int main(int argc, char **argv)
   // Subscribers
   ros::Subscriber map_sub = nh.subscribe("edt_map", 1, &mapCallback);
   ros::Subscriber glb_tgt_sub = nh.subscribe("/move_base_simple/goal", 1, &goalCallback);
-
+  ros::Subscriber task_tgt_sub = nh.subscribe("task_planner/goal", 1, &goalCallback);
   // other initilization
   pclOut->header.frame_id = "/world";
   mid_safety_radius = 0.51f;
