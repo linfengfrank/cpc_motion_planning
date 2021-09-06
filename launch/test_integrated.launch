@@ -8,7 +8,7 @@
 <remap from="/set_global_goal" to ="/move_base_simple/goal"/>
 <remap from="/slam_odom" to ="/UgvOdomTopic"/>
 </node>
-<node pkg="cpc_motion_planning" type="integrated_planning_node" name="integrated_planning_node" output="screen">
+<node pkg="cpc_motion_planning" type="integrated_planning_node" name="integrated_planning_node" output="log">
 <remap from="/set_global_goal" to ="/path_global_goal"/>
 <remap from="/set_middle_goal" to ="/mid_goal"/>
 <remap from="/raw_odom" to ="/odom"/>
