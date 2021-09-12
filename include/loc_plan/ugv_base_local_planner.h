@@ -21,7 +21,14 @@
 #include <cpc_motion_planning/path.h>
 
 //#define PRED_STATE
+//#define ADD_DELAY
 #define SHOW_PC
+
+#ifdef ADD_DELAY
+#include <message_filters/time_sequencer.h>
+#include "message_filters/subscriber.h"
+#include <message_filters/sync_policies/approximate_time.h>
+#endif
 namespace UGV
 {
 enum STATUS {
@@ -257,6 +264,11 @@ protected:
   UGV::STATUS m_status;
   float m_stuck_pbty,m_lowpass_stuck_pbty;
   float m_lowpass_v,m_lowpass_w;
+
+#ifdef ADD_DELAY
+  message_filters::Subscriber<nav_msgs::Odometry> m_sub;
+  message_filters::TimeSequencer<nav_msgs::Odometry> *m_seq;
+#endif
 };
 
 #endif // UGV_BASE_LOCAL_PLANNER_H
