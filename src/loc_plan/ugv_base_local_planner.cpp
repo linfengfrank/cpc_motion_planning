@@ -14,7 +14,13 @@ UGVLocalMotionPlanner::UGVLocalMotionPlanner():
 {
   m_map_sub = m_nh.subscribe("/edt_map", 1, &UGVLocalMotionPlanner::map_call_back, this);
   m_raw_odom_sub = m_nh.subscribe("/raw_odom", 1, &UGVLocalMotionPlanner::raw_odo_call_back, this);
+#ifdef ADD_DELAY
+  m_sub.subscribe(m_nh, "/slam_odom", 1);
+  m_seq = new message_filters::TimeSequencer<nav_msgs::Odometry> (m_sub, ros::Duration(0.2), ros::Duration(0.01), 10);
+  m_seq->registerCallback(&UGVLocalMotionPlanner::slam_odo_call_back, this);
+#else
   m_slam_odom_sub = m_nh.subscribe("/slam_odom", 1, &UGVLocalMotionPlanner::slam_odo_call_back, this);
+#endif
   m_traj_pub = m_nh.advertise<PointCloud> ("pred_traj", 1);
   m_traj_pnt_cld = PointCloud::Ptr(new PointCloud);
   m_traj_pnt_cld->header.frame_id = "/world";
