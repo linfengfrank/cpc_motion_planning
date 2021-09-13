@@ -190,15 +190,16 @@ public:
         else
         {
           //normal mode
-          cost += 1.0f*nf_cost + 0.005f*s.v*s.v + 0.005f*s.w*s.w;//1.0f*sqrtf(0.005f*s.v*s.v + 1.0f*s.w*s.w*gain);
-          float yaw_diff;
-          if (is_forward)
-            yaw_diff = s.theta - getDesiredHeading(c);//bilinear_theta(s.p, m_nf1_map);//getDesiredHeading(c);
-          else
-            yaw_diff = s.theta + CUDA_F_PI - getDesiredHeading(c);
+          cost += 0.4f*nf_cost+0.25f*s.v*s.v + 1.0f*fabsf(s.w)*fabsf(s.v);//1.0f*sqrtf(0.005f*s.v*s.v + 1.0f*s.w*s.w*gain);
 
-          yaw_diff = yaw_diff - floorf((yaw_diff + CUDA_F_PI) / (2 * CUDA_F_PI)) * 2 * CUDA_F_PI;
-          cost += yaw_diff*yaw_diff*s.v*s.v;
+          //float yaw_diff;
+          //if (is_forward)
+          //  yaw_diff = s.theta - getDesiredHeading(c);//bilinear_theta(s.p, m_nf1_map);//getDesiredHeading(c);
+          //else
+          //  yaw_diff = s.theta + CUDA_F_PI - getDesiredHeading(c);
+
+          //yaw_diff = yaw_diff - floorf((yaw_diff + CUDA_F_PI) / (2 * CUDA_F_PI)) * 2 * CUDA_F_PI;
+          //cost += yaw_diff*yaw_diff*s.v*s.v;
         }
       }
     }
@@ -218,7 +219,7 @@ public:
 
     if(!m_pure_turning && m_nf1_received && !m_stuck)
     {
-      cost += 4.0f * calculate_nf1_cost(s,0.3f);
+      cost += 20.0f * calculate_nf1_cost(s,0.3f);
     }
 
     return  cost;
