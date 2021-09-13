@@ -180,7 +180,7 @@ public:
       {
         //either stuck or normal mode
         CUDA_GEO::coord c = m_nf1_map.pos2coord(make_float3(s.p.x,s.p.y,0));
-        float nf_cost = calculate_nf1_cost(s, 0.3f);
+        float nf_cost = calculate_nf1_cost(s, 0.0f);
         if (m_stuck)
         {
           //stuck mode, encourage random move to get out of stuck
@@ -190,7 +190,7 @@ public:
         else
         {
           //normal mode
-          cost += 0.4f*nf_cost+0.25f*s.v*s.v + 1.0f*fabsf(s.w)*fabsf(s.v);//1.0f*sqrtf(0.005f*s.v*s.v + 1.0f*s.w*s.w*gain);
+          cost += 0.1f*nf_cost+0.25f*s.v*s.v + 1.5f*fabsf(s.w)*fabsf(s.v);//1.0f*sqrtf(0.005f*s.v*s.v + 1.0f*s.w*s.w*gain);
 
           //float yaw_diff;
           //if (is_forward)
