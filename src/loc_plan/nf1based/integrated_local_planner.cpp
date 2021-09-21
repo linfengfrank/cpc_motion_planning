@@ -29,6 +29,7 @@ IntLocalPlanner::IntLocalPlanner():
   m_nh.param<int>("/episode_num",m_episode_num,2);
   m_nh.param<float>("/local_safety_radius",local_safety_radius,0.401f);
   m_nh.param<bool>("/use_simple_filter",m_use_simple_filter,true);
+  m_nh.param<bool>("/use_adrc",m_use_adrc,true);
 
   m_nf1_sub = m_nh.subscribe("/nf1",1,&IntLocalPlanner::nf1_call_back, this);
 
@@ -518,9 +519,18 @@ void IntLocalPlanner::cycle_init()
 
   cycle_initialized = true;
   bool is_heading_ref;
-  float psi = get_heading(m_slam_odo);//select_mes_ref_heading(is_heading_ref,get_heading(m_slam_odo), m_ref_theta, m_tht_err_reset_ctt, 0.25f);
+  float psi;
 
-  is_heading_ref = false;
+  if(m_use_adrc)
+  {
+    psi = get_heading(m_slam_odo);
+    is_heading_ref = false;
+  }
+  else
+  {
+    psi = select_mes_ref_heading(is_heading_ref,get_heading(m_slam_odo), m_ref_theta, m_tht_err_reset_ctt, 0.25f);
+  }
+
   UGV::UGVModel::State s = predict_state(m_slam_odo,psi,m_ref_start_idx,is_heading_ref);
 
   s.v = select_mes_ref(m_raw_odo.twist.twist.linear.x, m_ref_v, m_v_err_reset_ctt);
