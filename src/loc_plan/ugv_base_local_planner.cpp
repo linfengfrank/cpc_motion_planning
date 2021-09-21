@@ -22,6 +22,7 @@ UGVLocalMotionPlanner::UGVLocalMotionPlanner():
   m_slam_odom_sub = m_nh.subscribe("/slam_odom", 1, &UGVLocalMotionPlanner::slam_odo_call_back, this);
 #endif
   m_traj_pub = m_nh.advertise<PointCloud> ("pred_traj", 1);
+  m_simulate_traj_pub = m_nh.advertise<PointCloud> ("simulated_traj", 1);
   m_traj_pnt_cld = PointCloud::Ptr(new PointCloud);
   m_traj_pnt_cld->header.frame_id = "/world";
 }
@@ -334,5 +335,62 @@ bool UGVLocalMotionPlanner::is_stuck_lowpass(const UGV::UGVModel::State& s, cons
   {
     return false;
   }
+}
+
+// This function check whether there is a collision by simulating a tracking of m_traj from the
+// true initial state (aka. consider the tracking error).
+bool UGVLocalMotionPlanner::true_state_collision_exam(const nav_msgs::Odometry &odom, const std::vector<UGV::UGVModel::State> &traj,
+                                                      float yaw_ctrl_gain, float safety_radius, float w_scale, float exam_time)
+{
+  //Get the true state from odom information
+  UGV::UGVModel::State s;
+  s.p.x = odom.pose.pose.position.x;
+  s.p.y = odom.pose.pose.position.y;
+  s.s = 0;
+  s.theta = get_heading(odom);
+
+  //Simulating the tracking of the trajectory
+  float dt = PSO::PSO_CTRL_DT;
+  float min_dist = 1000;
+  for (int i=0; i*dt<=exam_time && i < traj.size(); i++)
+  {
+    s.v = traj[i].v;
+    // For the yaw, we have a controller, and a simulated slip (w_scale)
+    s.w = traj[i].w + yaw_ctrl_gain * in_pi(traj[i].theta - s.theta);
+    s.w= s.w> 0.6? 0.6:s.w;
+    s.w= s.w< -0.6? -0.6:s.w;
+    s.w *= w_scale;
+
+    //s and theta
+    s.s = s.s + s.v*dt;
+    s.theta = s.theta + s.w*dt;
+
+    // x and y
+    s.p.x = s.p.x + (s.v*dt)*cos(s.theta + s.w*dt);
+    s.p.y = s.p.y + (s.v*dt)*sin(s.theta + s.w*dt);
+
+    //Check whether there is a collision
+    float dist = get_min_dist_from_host_edt(s);
+    if (dist < min_dist)
+      min_dist = dist;
+
+#ifdef SHOW_PC
+    pcl::PointXYZ clrP;
+    clrP.x = s.p.x;
+    clrP.y = s.p.y;
+    clrP.z = 0;
+    m_traj_pnt_cld->points.push_back(clrP);
+#endif
+  }
+
+#ifdef SHOW_PC
+  m_simulate_traj_pub.publish(m_traj_pnt_cld);
+  m_traj_pnt_cld->clear();
+#endif
+
+  if (min_dist < safety_radius)
+    return false;
+  else
+    return true;
 }
 
