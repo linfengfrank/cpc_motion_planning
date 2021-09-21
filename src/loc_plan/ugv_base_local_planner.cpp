@@ -339,9 +339,14 @@ bool UGVLocalMotionPlanner::is_stuck_lowpass(const UGV::UGVModel::State& s, cons
 
 // This function check whether there is a collision by simulating a tracking of m_traj from the
 // true initial state (aka. consider the tracking error).
-bool UGVLocalMotionPlanner::true_state_collision_exam(const nav_msgs::Odometry &odom, const std::vector<UGV::UGVModel::State> &traj,
+bool UGVLocalMotionPlanner::true_state_collision_exam(bool use_adrc, const nav_msgs::Odometry &odom, const std::vector<UGV::UGVModel::State> &traj,
                                                       float yaw_ctrl_gain, float safety_radius, float w_scale, float exam_time)
 {
+  //If it is in ADRC mode, no need to do the checking
+  //directly return true (aka. no collision).
+  if (use_adrc)
+    return true;
+
   //Get the true state from odom information
   UGV::UGVModel::State s;
   s.p.x = odom.pose.pose.position.x;

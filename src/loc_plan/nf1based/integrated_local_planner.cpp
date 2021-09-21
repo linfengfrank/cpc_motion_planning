@@ -335,7 +335,7 @@ bool IntLocalPlanner::do_normal_teb()
 
   if (m_teb_planner->bestTeb() && m_teb_planner->bestTeb()->get_reference(4,0.05, ref))
   {
-    if(smooth_reference(ini_state, ref, m_traj, m_use_simple_filter) && true_state_collision_exam(m_slam_odo, m_traj, 2, 0.35f))
+    if(smooth_reference(ini_state, ref, m_traj, m_use_simple_filter) && true_state_collision_exam(m_use_adrc, m_slam_odo, m_traj, 2, 0.35f))
       return true;
     else
       return false;
@@ -412,7 +412,7 @@ bool IntLocalPlanner::do_normal_pso()
 
   m_drive_dir_pub.publish(drive_dir);
 
-  if (m_pso_planner->result.collision || !true_state_collision_exam(m_slam_odo, m_traj, 2, 0.35f))
+  if (m_pso_planner->result.collision || !true_state_collision_exam(m_use_adrc, m_slam_odo, m_traj, 2, 0.35f))
   {
     m_braking_start_cycle = m_plan_cycle;
     m_status = UGV::BRAKING;
@@ -431,7 +431,7 @@ void IntLocalPlanner::do_stuck()
   calculate_trajectory<SIMPLE_UGV>(m_pso_planner, m_traj);
 
   //Goto: Braking
-  if (m_pso_planner->result.collision || !true_state_collision_exam(m_slam_odo, m_traj, 2, 0.35f))
+  if (m_pso_planner->result.collision || !true_state_collision_exam(m_use_adrc, m_slam_odo, m_traj, 2, 0.35f))
   {
     m_braking_start_cycle = m_plan_cycle;
     m_status = UGV::BRAKING;
