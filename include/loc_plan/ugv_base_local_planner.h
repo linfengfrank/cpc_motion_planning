@@ -226,7 +226,7 @@ protected:
   // This function check whether there is a collision by simulating a tracking of m_traj from the
   // true initial state (aka. consider the tracking error).
   bool true_state_collision_exam(bool use_adrc, const nav_msgs::Odometry &odom, const std::vector<UGV::UGVModel::State> &traj,
-                                 float yaw_ctrl_gain, float safety_radius, float w_scale = 0.65f, float exam_time = 1.0f);
+                                 float yaw_ctrl_gain, float safety_radius, float w_scale, float exam_time = 1.0f);
 
 #ifdef SHOW_PC
   void plot_trajectory(const std::vector<UGV::UGVModel::State> &traj);

@@ -361,7 +361,8 @@ bool UGVLocalMotionPlanner::true_state_collision_exam(bool use_adrc, const nav_m
   {
     s.v = traj[i].v;
     // For the yaw, we have a controller, and a simulated slip (w_scale)
-    s.w = traj[i].w + yaw_ctrl_gain * in_pi(traj[i].theta - s.theta);
+    // The controller shall be exactly the same as the controller in the cpc_ref_publisher pacakge (main.cpp)
+    s.w = traj[i].w/w_scale + yaw_ctrl_gain * in_pi(traj[i].theta - s.theta);
     s.w= s.w> 0.6? 0.6:s.w;
     s.w= s.w< -0.6? -0.6:s.w;
     s.w *= w_scale;
