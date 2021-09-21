@@ -29,6 +29,8 @@ IntLocalPlanner::IntLocalPlanner():
   m_nh.param<int>("/episode_num",m_episode_num,2);
   m_nh.param<float>("/local_safety_radius",local_safety_radius,0.401f);
   m_nh.param<bool>("/use_simple_filter",m_use_simple_filter,true);
+  m_nh.param<double>("/turning_efficiency",m_turning_efficiency,1.0);
+  m_nh.param<bool>("/use_adrc",m_use_adrc,true);
 
   m_nf1_sub = m_nh.subscribe("/nf1",1,&IntLocalPlanner::nf1_call_back, this);
 
@@ -334,7 +336,11 @@ bool IntLocalPlanner::do_normal_teb()
 
   if (m_teb_planner->bestTeb() && m_teb_planner->bestTeb()->get_reference(4,0.05, ref))
   {
-    return smooth_reference(ini_state, ref, m_traj, m_use_simple_filter);
+    if(smooth_reference(ini_state, ref, m_traj, m_use_simple_filter) &&
+       true_state_collision_exam(m_use_adrc, m_slam_odo, m_traj, 2, 0.35f,m_turning_efficiency))
+      return true;
+    else
+      return false;
   }
   else
   {
@@ -408,7 +414,8 @@ bool IntLocalPlanner::do_normal_pso()
 
   m_drive_dir_pub.publish(drive_dir);
 
-  if (m_pso_planner->result.collision)
+  if (m_pso_planner->result.collision ||
+      !true_state_collision_exam(m_use_adrc, m_slam_odo, m_traj, 2, 0.35f,m_turning_efficiency))
   {
     m_braking_start_cycle = m_plan_cycle;
     m_status = UGV::BRAKING;
@@ -427,7 +434,8 @@ void IntLocalPlanner::do_stuck()
   calculate_trajectory<SIMPLE_UGV>(m_pso_planner, m_traj);
 
   //Goto: Braking
-  if (m_pso_planner->result.collision)
+  if (m_pso_planner->result.collision ||
+      !true_state_collision_exam(m_use_adrc, m_slam_odo, m_traj, 2, 0.35f,m_turning_efficiency))
   {
     m_braking_start_cycle = m_plan_cycle;
     m_status = UGV::BRAKING;
@@ -518,9 +526,18 @@ void IntLocalPlanner::cycle_init()
 
   cycle_initialized = true;
   bool is_heading_ref;
-  float psi = get_heading(m_slam_odo);//select_mes_ref_heading(is_heading_ref,get_heading(m_slam_odo), m_ref_theta, m_tht_err_reset_ctt, 0.25f);
+  float psi;
 
-  is_heading_ref = false;
+  if(m_use_adrc)
+  {
+    psi = get_heading(m_slam_odo);
+    is_heading_ref = false;
+  }
+  else
+  {
+    psi = select_mes_ref_heading(is_heading_ref,get_heading(m_slam_odo), m_ref_theta, m_tht_err_reset_ctt, 0.25f);
+  }
+
   UGV::UGVModel::State s = predict_state(m_slam_odo,psi,m_ref_start_idx,is_heading_ref);
 
   s.v = select_mes_ref(m_raw_odo.twist.twist.linear.x, m_ref_v, m_v_err_reset_ctt);

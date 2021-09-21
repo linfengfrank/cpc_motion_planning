@@ -105,6 +105,8 @@ private:
   int m_batch_num;
   int m_episode_num;
   NF1MapDT *m_nf1_map;
+  double m_turning_efficiency;
+  bool m_use_adrc;
 
   //--- Teb planner
   teb::HomotopyClassPlannerPtr m_teb_planner;
