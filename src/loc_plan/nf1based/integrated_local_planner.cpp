@@ -250,6 +250,32 @@ void IntLocalPlanner::do_start()
   }
 }
 //=====================================
+void IntLocalPlanner::check_reach_and_stuck()
+{
+  UGV::UGVModel::State ini_state = m_pso_planner->m_model.get_ini_state();
+  if(is_pos_reached(ini_state,m_goal.s,m_goal.reaching_radius))
+  {
+    float2 carrot_diff = ini_state.p - m_carrot.p;
+    if (sqrtf(dot(carrot_diff,carrot_diff))<m_goal.reaching_radius)
+    {
+      m_status = UGV::POS_REACHED;
+      std_msgs::Int32MultiArray reach_msg;
+      reach_msg.data.push_back(m_goal.path_id);
+      reach_msg.data.push_back(m_goal.act_id);
+      m_tgt_reached_pub.publish(reach_msg);
+      return; // Confirmed reach, return, do not check stuck
+    }
+  }
+
+  if(is_stuck(m_traj,m_carrot) || is_stuck_lowpass(m_pso_planner->m_model.get_ini_state(),m_carrot))
+  {
+    m_teb_planner->clearPlanner();
+    m_status = UGV::STUCK;
+    m_stuck_start_cycle = m_plan_cycle;
+    return; // Confirmed stuck, no more other actions
+  }
+}
+
 void IntLocalPlanner::do_normal()
 {
   cycle_init();
@@ -258,48 +284,27 @@ void IntLocalPlanner::do_normal()
   //Planning
   m_task_is_new = false;
 
-  UGV::UGVModel::State ini_state = m_pso_planner->m_model.get_ini_state();
-
+  // First try TEB planner
   if (do_normal_teb())
   {
-    // TEB planning success, publish its driving direction
-    std_msgs::Int32 drive_dir;
-    if (m_teb_planner->m_is_forward)
-      drive_dir.data = cpc_aux_mapping::nf1_task::TYPE_FORWARD;
-    else
-      drive_dir.data = cpc_aux_mapping::nf1_task::TYPE_BACKWARD;
-
-    m_drive_dir_pub.publish(drive_dir);
+    publish_drive_direction_teb();
+    check_reach_and_stuck();
   }
-  else
+  else if (do_normal_pso()) //If it does not work try PSO planner
   {
-    std::cout<<"!!!emergent mode!!!"<<std::endl;
-    do_normal_pso();
+    std::cout<<"!!!PSO (emergent) mode!!!"<<std::endl;
+    publish_drive_direction_pso();
+    check_reach_and_stuck();
   }
-
-  //Goto: Stuck
-  if(is_stuck(m_traj,m_carrot) || is_stuck_lowpass(m_pso_planner->m_model.get_ini_state(),m_carrot))
+  else // All planer fails, BREAK the vehicle
   {
-    m_teb_planner->clearPlanner();
-    m_status = UGV::STUCK;
-    m_stuck_start_cycle = m_plan_cycle;
+    m_braking_start_cycle = m_plan_cycle;
+    m_status = UGV::BRAKING;
+    cycle_process_based_on_status();
+    return;
   }
-
-  //Goto: Pos_reached
-  if(is_pos_reached(ini_state,m_goal.s,m_goal.reaching_radius))
-  {
-      float2 carrot_diff = ini_state.p - m_carrot.p;
-      if (sqrtf(dot(carrot_diff,carrot_diff))<m_goal.reaching_radius)
-      {
-        m_status = UGV::POS_REACHED;
-        std_msgs::Int32MultiArray reach_msg;
-        reach_msg.data.push_back(m_goal.path_id);
-        reach_msg.data.push_back(m_goal.act_id);
-        m_tgt_reached_pub.publish(reach_msg);
-      }
-  }
-
 }
+
 bool IntLocalPlanner::do_normal_teb()
 {
   UGV::UGVModel::State ini_state = m_pso_planner->m_model.get_ini_state();
@@ -395,34 +400,12 @@ bool IntLocalPlanner::do_normal_pso()
 {
   calculate_trajectory<SIMPLE_UGV>(m_pso_planner, m_traj, m_use_de);
 
-  //Update the drive direction
-  std_msgs::Int32 drive_dir;
-  if(m_pso_planner->m_eva.m_using_auto_direction)
-  {
-    if (m_pso_planner->result.best_loc[0].z > 0)
-      drive_dir.data = cpc_aux_mapping::nf1_task::TYPE_FORWARD;
-    else
-      drive_dir.data = cpc_aux_mapping::nf1_task::TYPE_BACKWARD;
-  }
-  else
-  {
-    if (m_pso_planner->m_eva.is_forward)
-      drive_dir.data = cpc_aux_mapping::nf1_task::TYPE_FORWARD;
-    else
-      drive_dir.data = cpc_aux_mapping::nf1_task::TYPE_BACKWARD;
-  }
-
-  m_drive_dir_pub.publish(drive_dir);
-
+  // Check whether the planned trajectory is successful (has collision or not)
   if (m_pso_planner->result.collision ||
       !true_state_collision_exam(m_use_adrc, m_slam_odo, m_traj, 2, 0.35f,m_turning_efficiency))
-  {
-    m_braking_start_cycle = m_plan_cycle;
-    m_status = UGV::BRAKING;
-    cycle_process_based_on_status();
-  }
-
-  return true;
+    return false;
+  else
+    return true;
 }
 //=====================================
 void IntLocalPlanner::do_stuck()
