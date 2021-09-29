@@ -375,14 +375,9 @@ float UGVLocalMotionPlanner::find_traj_min_dist_to_obstacle(const std::vector<UG
 
 // This function check whether there is a collision by simulating a tracking of m_traj from the
 // true initial state (aka. consider the tracking error).
-bool UGVLocalMotionPlanner::true_state_collision_exam(bool use_adrc, const nav_msgs::Odometry &odom, const std::vector<UGV::UGVModel::State> &ref,
+bool UGVLocalMotionPlanner::true_state_collision_exam(const nav_msgs::Odometry &odom, const std::vector<UGV::UGVModel::State> &ref,
                                                       float yaw_ctrl_gain, float safety_radius, float w_scale, float exam_time)
 {
-  //If it is in ADRC mode, no need to do the checking
-  //directly return true (aka. no collision).
-  if (use_adrc)
-    return true;
-
   // Simulate the trajectory tracking process
   std::vector<UGV::UGVModel::State> sim_traj = simulate_from_current_state(ref,odom,yaw_ctrl_gain,w_scale,exam_time);
 

@@ -307,23 +307,34 @@ void IntLocalPlanner::do_normal()
 
 bool IntLocalPlanner::do_normal_teb()
 {
+  // Setup the initial pose
   UGV::UGVModel::State ini_state = m_pso_planner->m_model.get_ini_state();
   teb::PoseSE2 robot_pose(ini_state.p.x, ini_state.p.y, ini_state.theta);
+
+  // Setup the goal pose
   teb::PoseSE2 robot_goal(m_carrot.p.x, m_carrot.p.y, m_carrot.theta);
+
+  // Setup the initial velocity
   geometry_msgs::Twist robot_vel;
   robot_vel.linear.x = ini_state.v;
   robot_vel.angular.z = ini_state.w;
 
+  // Setup the EDT map
   if (!m_teb_planner->get_edt_map())
     m_teb_planner->set_edt_map(m_edt_map);
 
+  // Get and set the initial guess of the trajectory
   std::vector<double2> init = get_init_path_guess();
   //std::cout<<init.size()<<std::endl;
   m_teb_planner->set_init_plan(init);
 
+  // If we are using the ltv mpc to do the smoothing, the checking horizon shall be the MPC's horizon
   int checking_hor = m_use_simple_filter ? m_cfg.trajectory.feasibility_check_no_poses : N_hor;
+
+  // Do the planning
   bool success = m_teb_planner->plan(robot_pose, robot_goal, checking_hor, &robot_vel, m_teb_planner->m_is_forward);
 
+  // Check the planning results
   if (!success)
   {
     m_teb_planner->clearPlanner();
@@ -337,21 +348,28 @@ bool IntLocalPlanner::do_normal_teb()
     return false;
   }
 
+  // Try read out the reference from the planning result (a list of poses)
   std::vector<teb::Reference> ref;
-
-  if (m_teb_planner->bestTeb() && m_teb_planner->bestTeb()->get_reference(4,0.05, ref))
+  if (!(m_teb_planner->bestTeb() && m_teb_planner->bestTeb()->get_reference(4,0.05, ref)))
   {
-    if(smooth_reference(ini_state, ref, m_traj, m_use_simple_filter) &&
-       true_state_collision_exam(m_use_adrc, m_slam_odo, m_traj, 2, 0.35f,m_turning_efficiency))
-      return true;
-    else
-      return false;
-  }
-  else
-  {
+    // If cannot get the ref, clear the planner as its answer is not correct
     m_teb_planner->clearPlanner();
     return false;
   }
+
+  // If cannot smooth the reference, return false
+  if (!smooth_reference(ini_state, ref, m_traj, m_use_simple_filter))
+  {
+    return false;
+  }
+
+  // If not in ADRC mode (tracking mode), the simulated trajectory might collide with obstacle
+  if (!m_use_adrc && !true_state_collision_exam(m_slam_odo, m_traj, 2, 0.39f,m_turning_efficiency))
+  {
+    return false;
+  }
+
+  return true;
 }
 
 bool IntLocalPlanner::smooth_reference(const UGV::UGVModel::State &ini_state, const std::vector<teb::Reference> &raw_ref,
@@ -401,11 +419,18 @@ bool IntLocalPlanner::do_normal_pso()
   calculate_trajectory<SIMPLE_UGV>(m_pso_planner, m_traj, m_use_de);
 
   // Check whether the planned trajectory is successful (has collision or not)
-  if (m_pso_planner->result.collision ||
-      !true_state_collision_exam(m_use_adrc, m_slam_odo, m_traj, 2, 0.35f,m_turning_efficiency))
+  if (m_pso_planner->result.collision)
+  {
     return false;
-  else
-    return true;
+  }
+
+  // If not in ADRC mode (tracking mode), the simulated trajectory might collide with obstacle
+  if (!m_use_adrc && !true_state_collision_exam(m_slam_odo, m_traj, 2, 0.35f,m_turning_efficiency))
+  {
+    return false;
+  }
+
+  return true;
 }
 //=====================================
 void IntLocalPlanner::do_stuck()
@@ -418,7 +443,7 @@ void IntLocalPlanner::do_stuck()
 
   //Goto: Braking
   if (m_pso_planner->result.collision ||
-      !true_state_collision_exam(m_use_adrc, m_slam_odo, m_traj, 2, 0.35f,m_turning_efficiency))
+      (!m_use_adrc && !true_state_collision_exam(m_slam_odo, m_traj, 2, 0.35f,m_turning_efficiency)))
   {
     m_braking_start_cycle = m_plan_cycle;
     m_status = UGV::BRAKING;
