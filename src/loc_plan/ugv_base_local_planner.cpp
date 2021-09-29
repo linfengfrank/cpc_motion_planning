@@ -323,16 +323,10 @@ bool UGVLocalMotionPlanner::is_stuck_lowpass(const UGV::UGVModel::State& s, cons
   }
 }
 
-// This function check whether there is a collision by simulating a tracking of m_traj from the
-// true initial state (aka. consider the tracking error).
-bool UGVLocalMotionPlanner::true_state_collision_exam(bool use_adrc, const nav_msgs::Odometry &odom, const std::vector<UGV::UGVModel::State> &traj,
-                                                      float yaw_ctrl_gain, float safety_radius, float w_scale, float exam_time)
+std::vector<UGV::UGVModel::State> UGVLocalMotionPlanner::simulate_from_current_state(const std::vector<UGV::UGVModel::State> &ref, const nav_msgs::Odometry &odom,
+                                                              float yaw_ctrl_gain, float w_scale, float exam_time)
 {
-  //If it is in ADRC mode, no need to do the checking
-  //directly return true (aka. no collision).
-  if (use_adrc)
-    return true;
-
+  std::vector<UGV::UGVModel::State> output;
   //Get the true state from odom information
   UGV::UGVModel::State s;
   s.p.x = odom.pose.pose.position.x;
@@ -342,13 +336,12 @@ bool UGVLocalMotionPlanner::true_state_collision_exam(bool use_adrc, const nav_m
 
   //Simulating the tracking of the trajectory
   float dt = PSO::PSO_CTRL_DT;
-  float min_dist = 1000;
-  for (int i=0; i*dt<=exam_time && i < traj.size(); i++)
+  for (int i=0; i*dt<=exam_time && i < ref.size(); i++)
   {
-    s.v = traj[i].v;
+    s.v = ref[i].v;
     // For the yaw, we have a controller, and a simulated slip (w_scale)
     // The controller shall be exactly the same as the controller in the cpc_ref_publisher pacakge (main.cpp)
-    s.w = traj[i].w/w_scale + yaw_ctrl_gain * in_pi(traj[i].theta - s.theta);
+    s.w = ref[i].w/w_scale + yaw_ctrl_gain * in_pi(ref[i].theta - s.theta);
     s.w= s.w> 0.6? 0.6:s.w;
     s.w= s.w< -0.6? -0.6:s.w;
     s.w *= w_scale;
@@ -361,21 +354,50 @@ bool UGVLocalMotionPlanner::true_state_collision_exam(bool use_adrc, const nav_m
     s.p.x = s.p.x + (s.v*dt)*cos(s.theta + s.w*dt);
     s.p.y = s.p.y + (s.v*dt)*sin(s.theta + s.w*dt);
 
-    //Check whether there is a collision
-    float dist = get_min_dist_from_host_edt(s);
+    output.push_back(s);
+  }
+  return output;
+}
+
+float UGVLocalMotionPlanner::find_traj_min_dist_to_obstacle(const std::vector<UGV::UGVModel::State> &traj)
+{
+  // Find the smallest distance to obstacle
+  float min_dist = 1000;
+  for (const UGV::UGVModel::State &s : traj)
+  {
+    //Get dist to obstacle for current state s
+    float dist = get_dist_from_host_edt(s);
     if (dist < min_dist)
       min_dist = dist;
+  }
+  return min_dist;
+}
+
+// This function check whether there is a collision by simulating a tracking of m_traj from the
+// true initial state (aka. consider the tracking error).
+bool UGVLocalMotionPlanner::true_state_collision_exam(bool use_adrc, const nav_msgs::Odometry &odom, const std::vector<UGV::UGVModel::State> &ref,
+                                                      float yaw_ctrl_gain, float safety_radius, float w_scale, float exam_time)
+{
+  //If it is in ADRC mode, no need to do the checking
+  //directly return true (aka. no collision).
+  if (use_adrc)
+    return true;
+
+  // Simulate the trajectory tracking process
+  std::vector<UGV::UGVModel::State> sim_traj = simulate_from_current_state(ref,odom,yaw_ctrl_gain,w_scale,exam_time);
+
+  // Find the smallest distance to obstacle
+  float min_dist = find_traj_min_dist_to_obstacle(sim_traj);
 
 #ifdef SHOW_PC
+  for (UGV::UGVModel::State &s : sim_traj)
+  {
     pcl::PointXYZ clrP;
     clrP.x = s.p.x;
     clrP.y = s.p.y;
     clrP.z = 0;
     m_traj_pnt_cld->points.push_back(clrP);
-#endif
   }
-
-#ifdef SHOW_PC
   m_simulate_traj_pub.publish(m_traj_pnt_cld);
   m_traj_pnt_cld->clear();
 #endif

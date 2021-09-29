@@ -120,6 +120,13 @@ protected:
   // Check
   bool is_stuck_lowpass(const UGV::UGVModel::State& s, const UGV::UGVModel::State &tgt_state);
 
+  // Given a trajectory simulate tracking it from the current true initial state
+  std::vector<UGV::UGVModel::State> simulate_from_current_state(const std::vector<UGV::UGVModel::State> &ref, const nav_msgs::Odometry &odom,
+                                                                float yaw_ctrl_gain, float w_scale, float exam_time);
+
+  // Find the vehicle's min distance to obstacle when traveling on a trajectory
+  float find_traj_min_dist_to_obstacle(const std::vector<UGV::UGVModel::State> &traj);
+
   // Calculate the center position of the bounding circles of the 2 circle model of the vehicle
   void calculate_bounding_centres(const UGV::UGVModel::State &s, float2 &c_r, float2 &c_f) const
   {
@@ -129,7 +136,7 @@ protected:
   }
 
   // Given a vehicle state, check its minimum distace to obstacles
-  float get_min_dist_from_host_edt(const UGV::UGVModel::State &s) const
+  float get_dist_from_host_edt(const UGV::UGVModel::State &s) const
   {
     float2 c_f,c_r;
     calculate_bounding_centres(s, c_r, c_f);
