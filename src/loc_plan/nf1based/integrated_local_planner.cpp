@@ -276,6 +276,29 @@ void IntLocalPlanner::check_reach_and_stuck()
   }
 }
 
+void IntLocalPlanner::update_max_speed(const std::vector<UGV::UGVModel::State> &traj)
+{
+  float min_dist = traj_min_edt(traj);
+
+//  // If not using ADRC, also consider the simulated trajectory's minimum distance
+//  if (!m_use_adrc)
+//  {
+//    float sim_traj_min_dist = tracking_min_edt(m_slam_odo, m_traj, 2,m_turning_efficiency);
+
+//    if (sim_traj_min_dist < min_dist)
+//      min_dist = sim_traj_min_dist;
+//  }
+  float new_max_speed = 0.5f*min_dist;
+  new_max_speed = new_max_speed<0.2f ? 0.2f : new_max_speed;
+  new_max_speed = new_max_speed>0.7f ? 0.7f : new_max_speed;
+
+  std::cout<<"new_max_speed: "<<new_max_speed<<std::endl;
+  m_cfg.robot.max_vel_x = new_max_speed;
+  m_cfg.robot.max_vel_x_backwards = new_max_speed;
+
+  m_pso_planner->m_swarm.set_var_s(2*new_max_speed);
+}
+
 void IntLocalPlanner::do_normal()
 {
   cycle_init();
@@ -287,12 +310,14 @@ void IntLocalPlanner::do_normal()
   // First try TEB planner
   if (do_normal_teb())
   {
+    update_max_speed(m_traj);
     publish_drive_direction_teb();
     check_reach_and_stuck();
   }
   else if (do_normal_pso()) //If it does not work try PSO planner
   {
     std::cout<<"!!!PSO (emergent) mode!!!"<<std::endl;
+    update_max_speed(m_traj);
     publish_drive_direction_pso();
     check_reach_and_stuck();
   }
@@ -364,7 +389,7 @@ bool IntLocalPlanner::do_normal_teb()
   }
 
   // If not in ADRC mode (tracking mode), the simulated trajectory might collide with obstacle
-  if (!m_use_adrc && !true_state_collision_exam(m_slam_odo, m_traj, 2, 0.39f,m_turning_efficiency))
+  if (!is_tracking_safe(m_slam_odo, m_traj))
   {
     return false;
   }
@@ -425,7 +450,7 @@ bool IntLocalPlanner::do_normal_pso()
   }
 
   // If not in ADRC mode (tracking mode), the simulated trajectory might collide with obstacle
-  if (!m_use_adrc && !true_state_collision_exam(m_slam_odo, m_traj, 2, 0.35f,m_turning_efficiency))
+  if (!is_tracking_safe(m_slam_odo, m_traj))
   {
     return false;
   }
@@ -443,7 +468,7 @@ void IntLocalPlanner::do_stuck()
 
   //Goto: Braking
   if (m_pso_planner->result.collision ||
-      (!m_use_adrc && !true_state_collision_exam(m_slam_odo, m_traj, 2, 0.35f,m_turning_efficiency)))
+      !is_tracking_safe(m_slam_odo, m_traj))
   {
     m_braking_start_cycle = m_plan_cycle;
     m_status = UGV::BRAKING;

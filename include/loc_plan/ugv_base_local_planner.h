@@ -89,10 +89,6 @@ protected:
   // Add the trajectory state into the reference message to be published
   void add_to_ref_msg(cpc_motion_planning::ref_data& ref_msg, int ref_counter, const UGV::UGVModel::State &traj, const ros::Time &curr_t);
 
-  // This function check whether there is a collision by simulating a tracking of m_traj from the
-  // true initial state (aka. consider the tracking error).
-  bool true_state_collision_exam(const nav_msgs::Odometry &odom, const std::vector<UGV::UGVModel::State> &traj,
-                                 float yaw_ctrl_gain, float safety_radius, float w_scale, float exam_time = 1.0f);
   // Show the planned trajectory
 #ifdef SHOW_PC
   void plot_trajectory(const std::vector<UGV::UGVModel::State> &traj);
@@ -120,12 +116,16 @@ protected:
   // Check
   bool is_stuck_lowpass(const UGV::UGVModel::State& s, const UGV::UGVModel::State &tgt_state);
 
+  // This function simulate a ref tracking process and return the simulated trajectory's min distance to obstacle
+  float tracking_min_edt(const nav_msgs::Odometry &odom, const std::vector<UGV::UGVModel::State> &traj,
+                                 float yaw_ctrl_gain, float w_scale, float exam_time = 1.0f);
+
   // Given a trajectory simulate tracking it from the current true initial state
-  std::vector<UGV::UGVModel::State> simulate_from_current_state(const std::vector<UGV::UGVModel::State> &ref, const nav_msgs::Odometry &odom,
-                                                                float yaw_ctrl_gain, float w_scale, float exam_time);
+  std::vector<UGV::UGVModel::State> simulate_tracking(const std::vector<UGV::UGVModel::State> &ref, const nav_msgs::Odometry &odom,
+                                                                float yaw_ctrl_gain, float w_scale, float exam_time = 1.0f);
 
   // Find the vehicle's min distance to obstacle when traveling on a trajectory
-  float find_traj_min_dist_to_obstacle(const std::vector<UGV::UGVModel::State> &traj);
+  float traj_min_edt(const std::vector<UGV::UGVModel::State> &traj);
 
   // Calculate the center position of the bounding circles of the 2 circle model of the vehicle
   void calculate_bounding_centres(const UGV::UGVModel::State &s, float2 &c_r, float2 &c_f) const

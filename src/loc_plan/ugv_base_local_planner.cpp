@@ -323,7 +323,7 @@ bool UGVLocalMotionPlanner::is_stuck_lowpass(const UGV::UGVModel::State& s, cons
   }
 }
 
-std::vector<UGV::UGVModel::State> UGVLocalMotionPlanner::simulate_from_current_state(const std::vector<UGV::UGVModel::State> &ref, const nav_msgs::Odometry &odom,
+std::vector<UGV::UGVModel::State> UGVLocalMotionPlanner::simulate_tracking(const std::vector<UGV::UGVModel::State> &ref, const nav_msgs::Odometry &odom,
                                                               float yaw_ctrl_gain, float w_scale, float exam_time)
 {
   std::vector<UGV::UGVModel::State> output;
@@ -359,7 +359,7 @@ std::vector<UGV::UGVModel::State> UGVLocalMotionPlanner::simulate_from_current_s
   return output;
 }
 
-float UGVLocalMotionPlanner::find_traj_min_dist_to_obstacle(const std::vector<UGV::UGVModel::State> &traj)
+float UGVLocalMotionPlanner::traj_min_edt(const std::vector<UGV::UGVModel::State> &traj)
 {
   // Find the smallest distance to obstacle
   float min_dist = 1000;
@@ -375,14 +375,14 @@ float UGVLocalMotionPlanner::find_traj_min_dist_to_obstacle(const std::vector<UG
 
 // This function check whether there is a collision by simulating a tracking of m_traj from the
 // true initial state (aka. consider the tracking error).
-bool UGVLocalMotionPlanner::true_state_collision_exam(const nav_msgs::Odometry &odom, const std::vector<UGV::UGVModel::State> &ref,
-                                                      float yaw_ctrl_gain, float safety_radius, float w_scale, float exam_time)
+float UGVLocalMotionPlanner::tracking_min_edt(const nav_msgs::Odometry &odom, const std::vector<UGV::UGVModel::State> &ref,
+                                                      float yaw_ctrl_gain, float w_scale, float exam_time)
 {
   // Simulate the trajectory tracking process
-  std::vector<UGV::UGVModel::State> sim_traj = simulate_from_current_state(ref,odom,yaw_ctrl_gain,w_scale,exam_time);
+  std::vector<UGV::UGVModel::State> sim_traj = simulate_tracking(ref,odom,yaw_ctrl_gain,w_scale,exam_time);
 
   // Find the smallest distance to obstacle
-  float min_dist = find_traj_min_dist_to_obstacle(sim_traj);
+  float min_dist = traj_min_edt(sim_traj);
 
 #ifdef SHOW_PC
   for (UGV::UGVModel::State &s : sim_traj)
@@ -397,9 +397,6 @@ bool UGVLocalMotionPlanner::true_state_collision_exam(const nav_msgs::Odometry &
   m_traj_pnt_cld->clear();
 #endif
 
-  if (min_dist < safety_radius)
-    return false;
-  else
-    return true;
+  return min_dist;
 }
 
