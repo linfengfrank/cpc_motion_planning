@@ -154,6 +154,7 @@ private:
   NF1MapDT *m_nf1_map;
   double m_turning_efficiency;
   bool m_use_adrc;
+  bool m_allow_update_max_speed;
 
   //--- Teb planner
   teb::HomotopyClassPlannerPtr m_teb_planner;

@@ -31,6 +31,7 @@ IntLocalPlanner::IntLocalPlanner():
   m_nh.param<bool>("/use_simple_filter",m_use_simple_filter,true);
   m_nh.param<double>("/turning_efficiency",m_turning_efficiency,1.0);
   m_nh.param<bool>("/use_adrc",m_use_adrc,true);
+  m_nh.param<bool>("/allow_update_max_speed",m_allow_update_max_speed,false);
 
   m_nf1_sub = m_nh.subscribe("/nf1",1,&IntLocalPlanner::nf1_call_back, this);
 
@@ -253,41 +254,42 @@ void IntLocalPlanner::do_start()
 void IntLocalPlanner::check_reach_and_stuck()
 {
   UGV::UGVModel::State ini_state = m_pso_planner->m_model.get_ini_state();
-  if(is_pos_reached(ini_state,m_goal.s,m_goal.reaching_radius))
+  float2 carrot_diff = ini_state.p - m_carrot.p;
+  //Check both goal and carrot are reached
+  if(is_pos_reached(ini_state,m_goal.s,m_goal.reaching_radius) &&
+     sqrtf(dot(carrot_diff,carrot_diff))<m_goal.reaching_radius)
   {
-    float2 carrot_diff = ini_state.p - m_carrot.p;
-    if (sqrtf(dot(carrot_diff,carrot_diff))<m_goal.reaching_radius)
-    {
-      m_status = UGV::POS_REACHED;
-      std_msgs::Int32MultiArray reach_msg;
-      reach_msg.data.push_back(m_goal.path_id);
-      reach_msg.data.push_back(m_goal.act_id);
-      m_tgt_reached_pub.publish(reach_msg);
-      return; // Confirmed reach, return, do not check stuck
-    }
+    m_status = UGV::POS_REACHED;
+    std_msgs::Int32MultiArray reach_msg;
+    reach_msg.data.push_back(m_goal.path_id);
+    reach_msg.data.push_back(m_goal.act_id);
+    m_tgt_reached_pub.publish(reach_msg);
   }
-
-  if(is_stuck(m_traj,m_carrot) || is_stuck_lowpass(m_pso_planner->m_model.get_ini_state(),m_carrot))
+  else if(is_stuck(m_traj,m_carrot) ||
+          is_stuck_lowpass(m_pso_planner->m_model.get_ini_state(),m_carrot))
   {
+    // If not reached yet, check whether it is stucked
     m_teb_planner->clearPlanner();
     m_status = UGV::STUCK;
     m_stuck_start_cycle = m_plan_cycle;
-    return; // Confirmed stuck, no more other actions
   }
 }
 
 void IntLocalPlanner::update_max_speed(const std::vector<UGV::UGVModel::State> &traj)
 {
+  if (!m_allow_update_max_speed)
+    return;
+
   float min_dist = traj_min_edt(traj);
 
-//  // If not using ADRC, also consider the simulated trajectory's minimum distance
-//  if (!m_use_adrc)
-//  {
-//    float sim_traj_min_dist = tracking_min_edt(m_slam_odo, m_traj, 2,m_turning_efficiency);
+  // If not using ADRC, also consider the simulated trajectory's minimum distance
+  if (!m_use_adrc)
+  {
+    float sim_traj_min_dist = tracking_min_edt(m_slam_odo, m_traj, 2, m_turning_efficiency);
 
-//    if (sim_traj_min_dist < min_dist)
-//      min_dist = sim_traj_min_dist;
-//  }
+    if (sim_traj_min_dist < min_dist)
+      min_dist = sim_traj_min_dist;
+  }
   float new_max_speed = 0.5f*min_dist;
   new_max_speed = new_max_speed<0.2f ? 0.2f : new_max_speed;
   new_max_speed = new_max_speed>0.7f ? 0.7f : new_max_speed;
@@ -326,7 +328,6 @@ void IntLocalPlanner::do_normal()
     m_braking_start_cycle = m_plan_cycle;
     m_status = UGV::BRAKING;
     cycle_process_based_on_status();
-    return;
   }
 }
 
@@ -466,21 +467,21 @@ void IntLocalPlanner::do_stuck()
   m_pso_planner->m_eva.m_stuck = true;
   calculate_trajectory<SIMPLE_UGV>(m_pso_planner, m_traj);
 
-  //Goto: Braking
   if (m_pso_planner->result.collision ||
       !is_tracking_safe(m_slam_odo, m_traj))
   {
+    //Goto: Braking
     m_braking_start_cycle = m_plan_cycle;
     m_status = UGV::BRAKING;
     cycle_process_based_on_status();
   }
-
-  //Goto: Normal
-  if (m_plan_cycle - m_stuck_start_cycle >= 10)
+  else if (m_plan_cycle - m_stuck_start_cycle >= 10)
   {
+    //Goto: Normal
     m_status = UGV::NORMAL;
     m_pso_planner->m_eva.m_stuck = false;
   }
+  // else stays in this state
 }
 //=====================================
 void IntLocalPlanner::do_emergent()
