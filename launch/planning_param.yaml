@@ -26,7 +26,8 @@ Qd: [2.0, 2.0, 1.0]
 Rd: [0.2, 0.2]
 Sd: [0.5, 0.5]
 turning_efficiency: 1.0
-use_adrc: true
+use_adrc: false
+allow_update_max_speed: false
 
 #var_s: 2.0
 #var_theta: 1.0
