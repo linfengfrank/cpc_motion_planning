@@ -119,7 +119,7 @@ private:
   bool is_tracking_safe(const nav_msgs::Odometry &odom, const std::vector<UGV::UGVModel::State> &ref)
   {
     // If not in ADRC mode (tracking mode), the simulated trajectory might collide with obstacle
-    if(!m_use_adrc && tracking_min_edt(odom, ref, 2, m_turning_efficiency) > PSO::MIN_DIST)
+    if(!m_use_adrc && tracking_min_edt(odom, ref, 2, m_turning_efficiency) < PSO::MIN_DIST)
       return false;
     else
       return true;
