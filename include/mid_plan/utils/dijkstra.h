@@ -22,12 +22,6 @@ private:
   SortedSet<nodeInfo*> _OQ;
   bool get_root_idx(int &idx, const CUDA_GEO::coord &mc, EDTMap* line_map);
 
-  void calculate_bounding_centres(const CUDA_GEO::pos &p, const float &theta, CUDA_GEO::pos &c_r, CUDA_GEO::pos &c_f) const
-  {
-    CUDA_GEO::pos uni_dir(cosf(theta),sinf(theta),0);
-    c_f = p + uni_dir*0.25f;
-    c_r = p - uni_dir*0.25f;
-  }
   bool two_circle_collision(const CUDA_GEO::pos &c_r, const CUDA_GEO::pos &c_f,float safety_radius)
   {
     CUDA_GEO::coord c;

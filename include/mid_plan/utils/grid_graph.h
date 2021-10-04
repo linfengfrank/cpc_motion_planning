@@ -70,6 +70,13 @@ public:
     return _val_map[coord2index(c)].d;
   }
 
+  void calculate_bounding_centres(const CUDA_GEO::pos &p, const float &theta, CUDA_GEO::pos &c_r, CUDA_GEO::pos &c_f) const
+  {
+    CUDA_GEO::pos uni_dir(cosf(theta),sinf(theta),0);
+    c_f = p + uni_dir*0.25f;
+    c_r = p - uni_dir*0.25f;
+  }
+
 public:
   virtual ~GridGraph();
 
