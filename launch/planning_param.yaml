@@ -28,7 +28,7 @@ Sd: [0.5, 0.5]
 turning_efficiency: 1.0
 use_adrc: false
 allow_update_max_speed: false
-cpc_footprint_offset: 0.3 #add a cpc_ infront to diff between the teb params, TODO: use namespace later.
+cpc_footprint_offset: 0.25 #add a cpc_ infront to diff between the teb params, TODO: use namespace later.
 
 #var_s: 2.0
 #var_theta: 1.0
