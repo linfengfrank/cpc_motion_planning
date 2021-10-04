@@ -45,6 +45,8 @@ class GridGraph : public MapBase
 {
 public:
   GridGraph(int maxX, int maxY, int maxZ);
+  virtual ~GridGraph();
+
   // TODO: unify the two obstalce cost function
   float getObsCostAndOccupancy(CUDA_GEO::coord s, float default_value, bool &occupied, bool extend=false, float obstacle_dist = MID_SAFE_DIST) const;
   float obsCostAt(CUDA_GEO::coord s, float default_value, float obstacle_dist = MID_SAFE_DIST, float weight = 10.0f) const;
@@ -83,39 +85,10 @@ public:
   void calculate_bounding_centres(const CUDA_GEO::pos &p, const float &theta, CUDA_GEO::pos &c_r, CUDA_GEO::pos &c_f) const
   {
     CUDA_GEO::pos uni_dir(cosf(theta),sinf(theta),0);
-    c_f = p + uni_dir*0.25f;
-    c_r = p - uni_dir*0.25f;
+    c_f = p + uni_dir*_footprint_offset;
+    c_r = p - uni_dir*_footprint_offset;
   }
 
-public:
-  virtual ~GridGraph();
-
-protected:
-  SeenDist *_val_map; // Value map, store EDT value
-  nodeInfo *_id_map; // Identity map, store Dijkstra related params
-  nodeInfo *_init_id_map; // A copy for reset
-  SortedSet<nodeInfo*> _PQ; // Priority queue
-  int _mapByteSize; // Map size in bytes
-  int _w, _h, _d; // The dimension of the grid map
-
-protected:
-  // Access a particular node
-  nodeInfo *getNode(CUDA_GEO::coord);
-
-  // Map grid coordinate to index
-  inline int coord2index(const CUDA_GEO::coord & s) const
-  {
-    return s.z*_w*_h+s.y*_w+s.x;
-  }
-
-  // Calcuate the distance between two grid coordinate
-  inline float dist(const CUDA_GEO::coord & c1, const CUDA_GEO::coord & c2)
-  {
-    CUDA_GEO::coord c = c1-c2;
-    return sqrtf(static_cast<float>(c.square()));
-  }
-
-public:
   // Check two coord are LOS or not
   bool isLOS(const CUDA_GEO::coord &p0Index, const CUDA_GEO::coord &p1Index, float obstacle_dist = MID_SAFE_DIST)
   {
@@ -171,6 +144,33 @@ public:
 
     return sqrtf((vehicle_pos-proj_pnt).square());
   }
+
+protected:
+  // Access a particular node
+  nodeInfo *getNode(CUDA_GEO::coord);
+
+  // Map grid coordinate to index
+  inline int coord2index(const CUDA_GEO::coord & s) const
+  {
+    return s.z*_w*_h+s.y*_w+s.x;
+  }
+
+  // Calcuate the distance between two grid coordinate
+  inline float dist(const CUDA_GEO::coord & c1, const CUDA_GEO::coord & c2)
+  {
+    CUDA_GEO::coord c = c1-c2;
+    return sqrtf(static_cast<float>(c.square()));
+  }
+
+protected:
+  SeenDist *_val_map; // Value map, store EDT value
+  nodeInfo *_id_map; // Identity map, store Dijkstra related params
+  nodeInfo *_init_id_map; // A copy for reset
+  SortedSet<nodeInfo*> _PQ; // Priority queue
+  int _mapByteSize; // Map size in bytes
+  int _w, _h, _d; // The dimension of the grid map
+  float _footprint_offset; // The offset distance for the two point model
+
 };
 
 #endif // GRID_GRAPH

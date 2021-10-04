@@ -2,12 +2,18 @@
 #include <string.h>
 #include <chrono>
 #include <ros/console.h>
+#include <ros/ros.h>
 GridGraph::GridGraph(int maxX, int maxY, int maxZ):
   MapBase(),
   _w(maxX),
   _h(maxY),
-  _d(maxZ)
+  _d(maxZ),
+  _footprint_offset(0.25f)
 {
+  // Read in the parameters
+  ros::NodeHandle nh;
+  nh.param<float>("cpc_footprint_offset",_footprint_offset,0.25f);
+
   // Value map to store the seenDist map received from the edt node
   _val_map = new SeenDist[_w*_h*_d];
   memset(_val_map, 0, static_cast<size_t>(_w*_h*_d)*sizeof(SeenDist));

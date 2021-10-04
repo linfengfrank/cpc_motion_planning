@@ -48,6 +48,8 @@ IntLocalPlanner::IntLocalPlanner():
   m_pso_planner->m_swarm.set_var(make_float3(var_s,var_theta,1.0f));
   m_pso_planner->m_eva.m_using_auto_direction = use_auto_direction;
   m_pso_planner->m_eva.m_safety_radius = local_safety_radius;
+  m_pso_planner->m_eva.m_footprint_offset = m_footprint_offset;
+
   m_pso_planner->m_file_location = dp_file_location;
   m_pso_planner->initialize();
 

@@ -10,8 +10,12 @@ UGVLocalMotionPlanner::UGVLocalMotionPlanner():
   m_stuck_pbty(0.0f),
   m_lowpass_stuck_pbty(0.0f),
   m_lowpass_v(0.0f),
-  m_lowpass_w(0.0f)
+  m_lowpass_w(0.0f),
+  m_footprint_offset(0.25f)
 {
+  // Read in the parameters
+  m_nh.param<float>("cpc_footprint_offset",m_footprint_offset,0.25f);
+
   // Initialize subscribers
   m_map_sub = m_nh.subscribe("/edt_map", 1, &UGVLocalMotionPlanner::map_call_back, this);
   m_raw_odom_sub = m_nh.subscribe("/raw_odom", 1, &UGVLocalMotionPlanner::raw_odo_call_back, this);

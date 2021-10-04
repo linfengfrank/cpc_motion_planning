@@ -131,8 +131,8 @@ protected:
   void calculate_bounding_centres(const UGV::UGVModel::State &s, float2 &c_r, float2 &c_f) const
   {
     float2 uni_dir = make_float2(cosf(s.theta),sinf(s.theta));
-    c_f = s.p + 0.25f*uni_dir;
-    c_r = s.p - 0.25f*uni_dir;
+    c_f = s.p + m_footprint_offset*uni_dir;
+    c_r = s.p - m_footprint_offset*uni_dir;
   }
 
   // Given a vehicle state, check its minimum distace to obstacles
@@ -297,6 +297,7 @@ protected:
 
   float m_stuck_pbty,m_lowpass_stuck_pbty; // Stuck probability and low_pass_checker's stuck probability
   float m_lowpass_v,m_lowpass_w; // Low pass linear and angular velocity, used to check stuck
+  float m_footprint_offset; // The offset distance for the two point model
 
 #ifdef ADD_DELAY
   message_filters::Subscriber<nav_msgs::Odometry> m_sub;
