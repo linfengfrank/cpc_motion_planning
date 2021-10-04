@@ -2,7 +2,7 @@ dp_file_location: /home/wheeltec/ugv_ws/ugv_1005_slow/
 var_s: 0.8
 var_theta: 1.0
 step_num: 4
-step_dt: 0.5
+step_dt: 0.8
 use_de: false
 use_auto_direction: true
 #clp: closest point
@@ -25,7 +25,10 @@ use_simple_filter: true
 Qd: [2.0, 2.0, 1.0]
 Rd: [0.2, 0.2]
 Sd: [0.5, 0.5]
-
+turning_efficiency: 1.0
+use_adrc: true
+allow_update_max_speed: false
+cpc_footprint_offset: 0.25 #add a cpc_ infront to diff between the teb params, TODO: use namespace later.
 
 #var_s: 2.0
 #var_theta: 1.0

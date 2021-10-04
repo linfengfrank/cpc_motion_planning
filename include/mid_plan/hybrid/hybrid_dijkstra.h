@@ -229,21 +229,19 @@ private:
     }
   }
 
-  void calculate_bounding_centres(const CUDA_GEO::coord &s, float2 &c_r, float2 &c_f) const
-  {
-    float theta = grid2theta(s.z);
-    float2 p;
-    p.x = s.x * _gridstep + _origin.x;
-    p.y = s.y * _gridstep + _origin.y;
-    float2 uni_dir = make_float2(cosf(theta),sinf(theta));
-    c_f = p + 0.25f*uni_dir;
-    c_r = p - 0.25f*uni_dir;
-  }
-
   float getMinDist(const CUDA_GEO::coord &s) const
   {
+    // Calculate the equivilent theta
+    float theta = grid2theta(s.z);
+
+    // Calculate the center position
+    CUDA_GEO::pos p;
+    p.x = s.x * _gridstep + _origin.x;
+    p.y = s.y * _gridstep + _origin.y;
+
     float2 c_f,c_r;
-    calculate_bounding_centres(s, c_r, c_f);
+    calculate_bounding_centres(p, theta, c_r, c_f);
+
     return min(getEDT(c_r),getEDT(c_f));
   }
 

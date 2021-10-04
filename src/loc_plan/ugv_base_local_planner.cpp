@@ -10,12 +10,28 @@ UGVLocalMotionPlanner::UGVLocalMotionPlanner():
   m_stuck_pbty(0.0f),
   m_lowpass_stuck_pbty(0.0f),
   m_lowpass_v(0.0f),
-  m_lowpass_w(0.0f)
+  m_lowpass_w(0.0f),
+  m_footprint_offset(0.25f)
 {
+  // Read in the parameters
+  m_nh.param<float>("cpc_footprint_offset",m_footprint_offset,0.25f);
+
+  // Initialize subscribers
   m_map_sub = m_nh.subscribe("/edt_map", 1, &UGVLocalMotionPlanner::map_call_back, this);
   m_raw_odom_sub = m_nh.subscribe("/raw_odom", 1, &UGVLocalMotionPlanner::raw_odo_call_back, this);
+#ifdef ADD_DELAY
+  m_sub.subscribe(m_nh, "/slam_odom", 1);
+  m_seq = new message_filters::TimeSequencer<nav_msgs::Odometry> (m_sub, ros::Duration(0.2), ros::Duration(0.01), 10);
+  m_seq->registerCallback(&UGVLocalMotionPlanner::slam_odo_call_back, this);
+#else
   m_slam_odom_sub = m_nh.subscribe("/slam_odom", 1, &UGVLocalMotionPlanner::slam_odo_call_back, this);
+#endif
+
+  // Initialize publishers
   m_traj_pub = m_nh.advertise<PointCloud> ("pred_traj", 1);
+  m_simulate_traj_pub = m_nh.advertise<PointCloud> ("simulated_traj", 1);
+
+  // Initialize point cloud to show the trajectory
   m_traj_pnt_cld = PointCloud::Ptr(new PointCloud);
   m_traj_pnt_cld->header.frame_id = "/world";
 }
@@ -34,6 +50,7 @@ void UGVLocalMotionPlanner::map_call_back(const cpc_aux_mapping::grid_map::Const
   m_received_map = true;
   if (m_edt_map == nullptr)
   {
+    // Construct and initialize the edt map
     CUDA_GEO::pos origin(msg->x_origin,msg->y_origin,msg->z_origin);
     int3 edt_map_size = make_int3(msg->x_size,msg->y_size,msg->z_size);
     m_edt_map = new EDTMap(origin,msg->width,edt_map_size);
@@ -42,10 +59,15 @@ void UGVLocalMotionPlanner::map_call_back(const cpc_aux_mapping::grid_map::Const
   }
   else
   {
+    // Set the edt map's origin location
     m_edt_map->m_origin = CUDA_GEO::pos(msg->x_origin,msg->y_origin,msg->z_origin);
     m_edt_map->m_grid_step = msg->width;
   }
+
+  // Copy map data to the device
   CUDA_MEMCPY_H2D(m_edt_map->m_sd_map,msg->payload8.data(),static_cast<size_t>(m_edt_map->m_byte_size));
+
+  // Copy map data to the host
   if (m_create_host_edt)
     memcpy(m_edt_map->m_hst_sd_map,msg->payload8.data(),static_cast<size_t>(m_edt_map->m_byte_size));
 }
@@ -70,7 +92,7 @@ UGV::UGVModel::State UGVLocalMotionPlanner::predict_state(const nav_msgs::Odomet
   s.s = 0;
   s.theta = psi;
 #ifdef PRED_STATE
-  // Find the most related cmd
+  // Find the most related cmd in time
   while (m_cmd_q.size()>0)
   {
     if (m_cmd_q.front().t.toSec() <= odom.header.stamp.toSec())
@@ -79,6 +101,7 @@ UGV::UGVModel::State UGVLocalMotionPlanner::predict_state(const nav_msgs::Odomet
       break;
   }
 
+  // Use the cmd to perform forward simulation to predicte the state until the ref_start_idx
   for (const CmdLog &tmp : m_cmd_q)
   {
     if (tmp.id < ref_start_idx)
@@ -109,10 +132,12 @@ void UGVLocalMotionPlanner::update_reference_log(const cpc_motion_planning::ref_
 #ifdef PRED_STATE
   if(m_cmd_q.empty())
   {
+    // queue is empty, just directly add ref into queue
     load_into_queue(ref, curr_t);
   }
   else
   {
+    // queue not empty, remove the original content until no more duplicated cmd id
     int diff = ref.ids[0] - m_cmd_q.front().id;
     while(static_cast<int>(m_cmd_q.size()) > diff && !m_cmd_q.empty())
     {
@@ -224,6 +249,7 @@ bool UGVLocalMotionPlanner::is_stuck(const std::vector<UGV::UGVModel::State> &tr
 
   if (m_stuck_pbty > 1)
   {
+    // Remeber to set all forms of stuck probability
     m_lowpass_stuck_pbty = 0;
     m_stuck_pbty = 0;
     return true;
@@ -274,43 +300,13 @@ bool UGVLocalMotionPlanner::is_stuck_instant(const std::vector<UGV::UGVModel::St
   return far_from_tgt && no_turning && no_moving_intention;
 }
 
-bool UGVLocalMotionPlanner::is_stuck_instant_horizon(const std::vector<UGV::UGVModel::State> &traj, const UGV::UGVModel::State &tgt_state)
-{
-  if (m_status <= UGV::START)
-      return false;
-
-  bool far_from_tgt = false;
-  bool no_moving_intention = false;
-
-  // check is it far from target
-  if (!is_pos_reached(traj[0],tgt_state))
-      far_from_tgt = true;
-
-  // check whether the vehicle is about to move
-  float max_dist = 0;
-  float dist;
-  UGV::UGVModel::State ini_s = traj[0];
-  float2 p_shift = make_float2(0,0);
-
-  for (UGV::UGVModel::State s : traj)
-  {
-      p_shift = ini_s.p - s.p;
-      dist = sqrtf(dot(p_shift,p_shift));
-      if (dist > max_dist)
-          max_dist = dist;
-  }
-  if (max_dist < 0.4f)
-      no_moving_intention = true;
-
-
-  return far_from_tgt && no_moving_intention;
-}
-
 bool UGVLocalMotionPlanner::is_stuck_lowpass(const UGV::UGVModel::State& s, const UGV::UGVModel::State &tgt_state)
 {
+  // Use a low pass filter on the current velocity
   m_lowpass_v = 0.8f*m_lowpass_v + 0.2f*s.v;
   m_lowpass_w = 0.8f*m_lowpass_w + 0.2f*s.w;
 
+  // If the current linear and rotational speed are both very small, increase the stuck probability
   if (fabsf(m_lowpass_v) < 0.08f && fabsf(m_lowpass_w) < 0.08f && !is_pos_reached(s,tgt_state))
     m_lowpass_stuck_pbty +=0.1f;
   else
@@ -320,6 +316,7 @@ bool UGVLocalMotionPlanner::is_stuck_lowpass(const UGV::UGVModel::State& s, cons
 
   if (m_lowpass_stuck_pbty > 1)
   {
+    // Remeber to set all forms of stuck probability
     m_lowpass_stuck_pbty = 0;
     m_stuck_pbty = 0;
     return true;
@@ -328,5 +325,82 @@ bool UGVLocalMotionPlanner::is_stuck_lowpass(const UGV::UGVModel::State& s, cons
   {
     return false;
   }
+}
+
+std::vector<UGV::UGVModel::State> UGVLocalMotionPlanner::simulate_tracking(const std::vector<UGV::UGVModel::State> &ref, const nav_msgs::Odometry &odom,
+                                                              float yaw_ctrl_gain, float w_scale, float exam_time)
+{
+  std::vector<UGV::UGVModel::State> output;
+  //Get the true state from odom information
+  UGV::UGVModel::State s;
+  s.p.x = odom.pose.pose.position.x;
+  s.p.y = odom.pose.pose.position.y;
+  s.s = 0;
+  s.theta = get_heading(odom);
+
+  //Simulating the tracking of the trajectory
+  float dt = PSO::PSO_CTRL_DT;
+  for (int i=0; i*dt<=exam_time && i < ref.size(); i++)
+  {
+    s.v = ref[i].v;
+    // For the yaw, we have a controller, and a simulated slip (w_scale)
+    // The controller shall be exactly the same as the controller in the cpc_ref_publisher pacakge (main.cpp)
+    s.w = ref[i].w/w_scale + yaw_ctrl_gain * in_pi(ref[i].theta - s.theta);
+    s.w= s.w> 0.6? 0.6:s.w;
+    s.w= s.w< -0.6? -0.6:s.w;
+    s.w *= w_scale;
+
+    //s and theta
+    s.s = s.s + s.v*dt;
+    s.theta = s.theta + s.w*dt;
+
+    // x and y
+    s.p.x = s.p.x + (s.v*dt)*cos(s.theta + s.w*dt);
+    s.p.y = s.p.y + (s.v*dt)*sin(s.theta + s.w*dt);
+
+    output.push_back(s);
+  }
+  return output;
+}
+
+float UGVLocalMotionPlanner::traj_min_edt(const std::vector<UGV::UGVModel::State> &traj)
+{
+  // Find the smallest distance to obstacle
+  float min_dist = 1000;
+  for (const UGV::UGVModel::State &s : traj)
+  {
+    //Get dist to obstacle for current state s
+    float dist = get_dist_from_host_edt(s);
+    if (dist < min_dist)
+      min_dist = dist;
+  }
+  return min_dist;
+}
+
+// This function check whether there is a collision by simulating a tracking of m_traj from the
+// true initial state (aka. consider the tracking error).
+float UGVLocalMotionPlanner::tracking_min_edt(const nav_msgs::Odometry &odom, const std::vector<UGV::UGVModel::State> &ref,
+                                                      float yaw_ctrl_gain, float w_scale, float exam_time)
+{
+  // Simulate the trajectory tracking process
+  std::vector<UGV::UGVModel::State> sim_traj = simulate_tracking(ref,odom,yaw_ctrl_gain,w_scale,exam_time);
+
+  // Find the smallest distance to obstacle
+  float min_dist = traj_min_edt(sim_traj);
+
+#ifdef SHOW_PC
+  for (UGV::UGVModel::State &s : sim_traj)
+  {
+    pcl::PointXYZ clrP;
+    clrP.x = s.p.x;
+    clrP.y = s.p.y;
+    clrP.z = 0;
+    m_traj_pnt_cld->points.push_back(clrP);
+  }
+  m_simulate_traj_pub.publish(m_traj_pnt_cld);
+  m_traj_pnt_cld->clear();
+#endif
+
+  return min_dist;
 }
 

@@ -46,6 +46,11 @@ private:
   void cycle_init();
   std::vector<double2> get_init_path_guess();
   bool get_smallest_child(const CUDA_GEO::coord &c, CUDA_GEO::coord &bc);
+  bool smooth_reference(const UGV::UGVModel::State &ini_state, const std::vector<teb::Reference> &raw_ref,
+                        std::vector<UGV::UGVModel::State> &final_ref, bool use_simple_filter);
+  void check_reach_and_stuck();
+  // upate the vehicle's maximum speed with the current trajectory's minimum distance to obstacle
+  void update_max_speed(const std::vector<UGV::UGVModel::State> &traj);
 
   bool check_tgt_is_same(const UGV::NF1Evaluator::Target &t1, const UGV::NF1Evaluator::Target &t2)
   {
@@ -75,9 +80,51 @@ private:
     return achieved_v;
   }
 
+  int bool_to_drive_type(bool is_forward)
+  {
+    if (is_forward)
+      return cpc_aux_mapping::nf1_task::TYPE_FORWARD;
+    else
+      return cpc_aux_mapping::nf1_task::TYPE_BACKWARD;
+  }
+
   //---
-  bool smooth_reference(const UGV::UGVModel::State &ini_state, const std::vector<teb::Reference> &raw_ref,
-                        std::vector<UGV::UGVModel::State> &final_ref, bool use_simple_filter);
+  void publish_drive_direction_teb()
+  {
+    // For the TEB planner, its driving direction is pre-determined
+    std_msgs::Int32 drive_dir;
+    drive_dir.data = bool_to_drive_type(m_teb_planner->m_is_forward);
+    m_drive_dir_pub.publish(drive_dir);
+  }
+
+  void publish_drive_direction_pso()
+  {
+    // For the PSO planner, its driving direction can be changed in the planner
+    // if m_using_auto_direction is true
+    std_msgs::Int32 drive_dir;
+
+    // If auto_direction is true, we take the driving direction of
+    // the first segment of PSO's trajectory
+    // m_pso_planner->result.best_loc[0].z > 0 means forward, < 0 means backward.
+    // If the auto_direction is false, then just use the  is_forward data
+    // stored inside the evaluator (shall be assigned from the NF1 map).
+    if(m_pso_planner->m_eva.m_using_auto_direction)
+      drive_dir.data = bool_to_drive_type(m_pso_planner->result.best_loc[0].z > 0);
+    else
+      drive_dir.data = bool_to_drive_type(m_pso_planner->m_eva.is_forward);
+
+    m_drive_dir_pub.publish(drive_dir);
+  }
+
+  bool is_tracking_safe(const nav_msgs::Odometry &odom, const std::vector<UGV::UGVModel::State> &ref)
+  {
+    // If not in ADRC mode (tracking mode), the simulated trajectory might collide with obstacle
+    if(!m_use_adrc && tracking_min_edt(odom, ref, 2, m_turning_efficiency) < PSO::MIN_DIST)
+      return false;
+    else
+      return true;
+  }
+
 private:
   ros::Subscriber m_nf1_sub;
   ros::Timer m_planning_timer;
@@ -105,6 +152,9 @@ private:
   int m_batch_num;
   int m_episode_num;
   NF1MapDT *m_nf1_map;
+  double m_turning_efficiency;
+  bool m_use_adrc;
+  bool m_allow_update_max_speed;
 
   //--- Teb planner
   teb::HomotopyClassPlannerPtr m_teb_planner;

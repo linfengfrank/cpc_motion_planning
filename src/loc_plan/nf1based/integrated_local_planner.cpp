@@ -29,6 +29,9 @@ IntLocalPlanner::IntLocalPlanner():
   m_nh.param<int>("/episode_num",m_episode_num,2);
   m_nh.param<float>("/local_safety_radius",local_safety_radius,0.401f);
   m_nh.param<bool>("/use_simple_filter",m_use_simple_filter,true);
+  m_nh.param<double>("/turning_efficiency",m_turning_efficiency,1.0);
+  m_nh.param<bool>("/use_adrc",m_use_adrc,true);
+  m_nh.param<bool>("/allow_update_max_speed",m_allow_update_max_speed,false);
 
   m_nf1_sub = m_nh.subscribe("/nf1",1,&IntLocalPlanner::nf1_call_back, this);
 
@@ -45,6 +48,8 @@ IntLocalPlanner::IntLocalPlanner():
   m_pso_planner->m_swarm.set_var(make_float3(var_s,var_theta,1.0f));
   m_pso_planner->m_eva.m_using_auto_direction = use_auto_direction;
   m_pso_planner->m_eva.m_safety_radius = local_safety_radius;
+  m_pso_planner->m_eva.m_footprint_offset = m_footprint_offset;
+
   m_pso_planner->m_file_location = dp_file_location;
   m_pso_planner->initialize();
 
@@ -248,6 +253,56 @@ void IntLocalPlanner::do_start()
   }
 }
 //=====================================
+void IntLocalPlanner::check_reach_and_stuck()
+{
+  UGV::UGVModel::State ini_state = m_pso_planner->m_model.get_ini_state();
+  float2 carrot_diff = ini_state.p - m_carrot.p;
+  //Check both goal and carrot are reached
+  if(is_pos_reached(ini_state,m_goal.s,m_goal.reaching_radius) &&
+     sqrtf(dot(carrot_diff,carrot_diff))<m_goal.reaching_radius)
+  {
+    m_status = UGV::POS_REACHED;
+    std_msgs::Int32MultiArray reach_msg;
+    reach_msg.data.push_back(m_goal.path_id);
+    reach_msg.data.push_back(m_goal.act_id);
+    m_tgt_reached_pub.publish(reach_msg);
+  }
+  else if(is_stuck(m_traj,m_carrot) ||
+          is_stuck_lowpass(m_pso_planner->m_model.get_ini_state(),m_carrot))
+  {
+    // If not reached yet, check whether it is stucked
+    m_teb_planner->clearPlanner();
+    m_status = UGV::STUCK;
+    m_stuck_start_cycle = m_plan_cycle;
+  }
+}
+
+void IntLocalPlanner::update_max_speed(const std::vector<UGV::UGVModel::State> &traj)
+{
+  if (!m_allow_update_max_speed)
+    return;
+
+  float min_dist = traj_min_edt(traj);
+
+  // If not using ADRC, also consider the simulated trajectory's minimum distance
+  if (!m_use_adrc)
+  {
+    float sim_traj_min_dist = tracking_min_edt(m_slam_odo, m_traj, 2, m_turning_efficiency);
+
+    if (sim_traj_min_dist < min_dist)
+      min_dist = sim_traj_min_dist;
+  }
+  float new_max_speed = 0.5f*min_dist;
+  new_max_speed = new_max_speed<0.2f ? 0.2f : new_max_speed;
+  new_max_speed = new_max_speed>0.7f ? 0.7f : new_max_speed;
+
+  std::cout<<"new_max_speed: "<<new_max_speed<<std::endl;
+  m_cfg.robot.max_vel_x = new_max_speed;
+  m_cfg.robot.max_vel_x_backwards = new_max_speed;
+
+  m_pso_planner->m_swarm.set_var_s(2*new_max_speed);
+}
+
 void IntLocalPlanner::do_normal()
 {
   cycle_init();
@@ -256,73 +311,58 @@ void IntLocalPlanner::do_normal()
   //Planning
   m_task_is_new = false;
 
-  UGV::UGVModel::State ini_state = m_pso_planner->m_model.get_ini_state();
-
-  auto start_time = std::chrono::steady_clock::now();
+  // First try TEB planner
   if (do_normal_teb())
   {
-    // TEB planning success, publish its driving direction
-    std_msgs::Int32 drive_dir;
-    if (m_teb_planner->m_is_forward)
-      drive_dir.data = cpc_aux_mapping::nf1_task::TYPE_FORWARD;
-    else
-      drive_dir.data = cpc_aux_mapping::nf1_task::TYPE_BACKWARD;
-
-    m_drive_dir_pub.publish(drive_dir);
+    update_max_speed(m_traj);
+    publish_drive_direction_teb();
+    check_reach_and_stuck();
   }
-  else
+  else if (do_normal_pso()) //If it does not work try PSO planner
   {
-    std::cout<<"!!!emergent mode!!!"<<std::endl;
-    do_normal_pso();
+    std::cout<<"!!!PSO (emergent) mode!!!"<<std::endl;
+    update_max_speed(m_traj);
+    publish_drive_direction_pso();
+    check_reach_and_stuck();
   }
-
-  auto end_time = std::chrono::steady_clock::now();
-      std::cout << "Local planning time: "
-                << std::chrono::duration_cast<std::chrono::milliseconds>(end_time - start_time).count()
-                << " ms"<< std::endl;
-
-  //Goto: Stuck
-  if(is_stuck(m_traj,m_carrot) || is_stuck_lowpass(m_pso_planner->m_model.get_ini_state(),m_carrot))
+  else // All planer fails, BREAK the vehicle
   {
-    m_teb_planner->clearPlanner();
-    m_status = UGV::STUCK;
-    m_stuck_start_cycle = m_plan_cycle;
+    m_braking_start_cycle = m_plan_cycle;
+    m_status = UGV::BRAKING;
+    cycle_process_based_on_status();
   }
-
-  //Goto: Pos_reached
-  if(is_pos_reached(ini_state,m_goal.s,m_goal.reaching_radius))
-  {
-      float2 carrot_diff = ini_state.p - m_carrot.p;
-      if (sqrtf(dot(carrot_diff,carrot_diff))<m_goal.reaching_radius)
-      {
-        m_status = UGV::POS_REACHED;
-        std_msgs::Int32MultiArray reach_msg;
-        reach_msg.data.push_back(m_goal.path_id);
-        reach_msg.data.push_back(m_goal.act_id);
-        m_tgt_reached_pub.publish(reach_msg);
-      }
-  }
-
 }
+
 bool IntLocalPlanner::do_normal_teb()
 {
+  // Setup the initial pose
   UGV::UGVModel::State ini_state = m_pso_planner->m_model.get_ini_state();
   teb::PoseSE2 robot_pose(ini_state.p.x, ini_state.p.y, ini_state.theta);
+
+  // Setup the goal pose
   teb::PoseSE2 robot_goal(m_carrot.p.x, m_carrot.p.y, m_carrot.theta);
+
+  // Setup the initial velocity
   geometry_msgs::Twist robot_vel;
   robot_vel.linear.x = ini_state.v;
   robot_vel.angular.z = ini_state.w;
 
+  // Setup the EDT map
   if (!m_teb_planner->get_edt_map())
     m_teb_planner->set_edt_map(m_edt_map);
 
+  // Get and set the initial guess of the trajectory
   std::vector<double2> init = get_init_path_guess();
   //std::cout<<init.size()<<std::endl;
   m_teb_planner->set_init_plan(init);
 
+  // If we are using the ltv mpc to do the smoothing, the checking horizon shall be the MPC's horizon
   int checking_hor = m_use_simple_filter ? m_cfg.trajectory.feasibility_check_no_poses : N_hor;
+
+  // Do the planning
   bool success = m_teb_planner->plan(robot_pose, robot_goal, checking_hor, &robot_vel, m_teb_planner->m_is_forward);
 
+  // Check the planning results
   if (!success)
   {
     m_teb_planner->clearPlanner();
@@ -336,18 +376,28 @@ bool IntLocalPlanner::do_normal_teb()
     return false;
   }
 
-  std::cout<<"size: "<<m_teb_planner->bestTeb()->teb().sizePoses()<<std::endl;
+  // Try read out the reference from the planning result (a list of poses)
   std::vector<teb::Reference> ref;
-
-  if (m_teb_planner->bestTeb() && m_teb_planner->bestTeb()->get_reference(4,0.05, ref))
+  if (!(m_teb_planner->bestTeb() && m_teb_planner->bestTeb()->get_reference(4,0.05, ref)))
   {
-    return smooth_reference(ini_state, ref, m_traj, m_use_simple_filter);
-  }
-  else
-  {
+    // If cannot get the ref, clear the planner as its answer is not correct
     m_teb_planner->clearPlanner();
     return false;
   }
+
+  // If cannot smooth the reference, return false
+  if (!smooth_reference(ini_state, ref, m_traj, m_use_simple_filter))
+  {
+    return false;
+  }
+
+  // If not in ADRC mode (tracking mode), the simulated trajectory might collide with obstacle
+  if (!is_tracking_safe(m_slam_odo, m_traj))
+  {
+    return false;
+  }
+
+  return true;
 }
 
 bool IntLocalPlanner::smooth_reference(const UGV::UGVModel::State &ini_state, const std::vector<teb::Reference> &raw_ref,
@@ -396,30 +446,16 @@ bool IntLocalPlanner::do_normal_pso()
 {
   calculate_trajectory<SIMPLE_UGV>(m_pso_planner, m_traj, m_use_de);
 
-  //Update the drive direction
-  std_msgs::Int32 drive_dir;
-  if(m_pso_planner->m_eva.m_using_auto_direction)
-  {
-    if (m_pso_planner->result.best_loc[0].z > 0)
-      drive_dir.data = cpc_aux_mapping::nf1_task::TYPE_FORWARD;
-    else
-      drive_dir.data = cpc_aux_mapping::nf1_task::TYPE_BACKWARD;
-  }
-  else
-  {
-    if (m_pso_planner->m_eva.is_forward)
-      drive_dir.data = cpc_aux_mapping::nf1_task::TYPE_FORWARD;
-    else
-      drive_dir.data = cpc_aux_mapping::nf1_task::TYPE_BACKWARD;
-  }
-
-  m_drive_dir_pub.publish(drive_dir);
-
+  // Check whether the planned trajectory is successful (has collision or not)
   if (m_pso_planner->result.collision)
   {
-    m_braking_start_cycle = m_plan_cycle;
-    m_status = UGV::BRAKING;
-    cycle_process_based_on_status();
+    return false;
+  }
+
+  // If not in ADRC mode (tracking mode), the simulated trajectory might collide with obstacle
+  if (!is_tracking_safe(m_slam_odo, m_traj))
+  {
+    return false;
   }
 
   return true;
@@ -433,20 +469,21 @@ void IntLocalPlanner::do_stuck()
   m_pso_planner->m_eva.m_stuck = true;
   calculate_trajectory<SIMPLE_UGV>(m_pso_planner, m_traj);
 
-  //Goto: Braking
-  if (m_pso_planner->result.collision)
+  if (m_pso_planner->result.collision ||
+      !is_tracking_safe(m_slam_odo, m_traj))
   {
+    //Goto: Braking
     m_braking_start_cycle = m_plan_cycle;
     m_status = UGV::BRAKING;
     cycle_process_based_on_status();
   }
-
-  //Goto: Normal
-  if (m_plan_cycle - m_stuck_start_cycle >= 10)
+  else if (m_plan_cycle - m_stuck_start_cycle >= 10)
   {
+    //Goto: Normal
     m_status = UGV::NORMAL;
     m_pso_planner->m_eva.m_stuck = false;
   }
+  // else stays in this state
 }
 //=====================================
 void IntLocalPlanner::do_emergent()
@@ -525,9 +562,18 @@ void IntLocalPlanner::cycle_init()
 
   cycle_initialized = true;
   bool is_heading_ref;
-  float psi = get_heading(m_slam_odo);//select_mes_ref_heading(is_heading_ref,get_heading(m_slam_odo), m_ref_theta, m_tht_err_reset_ctt, 0.25f);
+  float psi;
 
-  is_heading_ref = false;
+  if(m_use_adrc)
+  {
+    psi = get_heading(m_slam_odo);
+    is_heading_ref = false;
+  }
+  else
+  {
+    psi = select_mes_ref_heading(is_heading_ref,get_heading(m_slam_odo), m_ref_theta, m_tht_err_reset_ctt, 0.25f);
+  }
+
   UGV::UGVModel::State s = predict_state(m_slam_odo,psi,m_ref_start_idx,is_heading_ref);
 
   s.v = select_mes_ref(m_raw_odo.twist.twist.linear.x, m_ref_v, m_v_err_reset_ctt);

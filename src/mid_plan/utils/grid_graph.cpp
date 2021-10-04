@@ -2,12 +2,18 @@
 #include <string.h>
 #include <chrono>
 #include <ros/console.h>
+#include <ros/ros.h>
 GridGraph::GridGraph(int maxX, int maxY, int maxZ):
   MapBase(),
   _w(maxX),
   _h(maxY),
-  _d(maxZ)
+  _d(maxZ),
+  _footprint_offset(0.25f)
 {
+  // Read in the parameters
+  ros::NodeHandle nh;
+  nh.param<float>("cpc_footprint_offset",_footprint_offset,0.25f);
+
   // Value map to store the seenDist map received from the edt node
   _val_map = new SeenDist[_w*_h*_d];
   memset(_val_map, 0, static_cast<size_t>(_w*_h*_d)*sizeof(SeenDist));
@@ -153,20 +159,6 @@ float GridGraph::getEdt(const CUDA_GEO::coord & s, const float default_value) co
     return default_value;
 
   return _val_map[coord2index(s)].d * _gridstep;
-}
-
-void GridGraph::copyIdData(const cpc_aux_mapping::grid_map::ConstPtr &msg)
-{
-  if (msg->x_size != _w || msg->y_size != _h || msg->z_size != _d)
-  {
-    printf("Dimension mismatch during map data copying!\n Map is not copied!\n");
-    return;
-  }
-
-  setMapSpecs(CUDA_GEO::pos(static_cast<float>(msg->x_origin),
-                            static_cast<float>(msg->y_origin),
-                            static_cast<float>(msg->z_origin)), msg->width);
-  memcpy (_id_map, msg->payload8.data(), sizeof(nodeInfo)*static_cast<size_t>(_w*_h*_d));
 }
 
 void GridGraph::copyEdtData(const cpc_aux_mapping::grid_map::ConstPtr &msg)
