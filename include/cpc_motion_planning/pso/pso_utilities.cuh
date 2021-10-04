@@ -28,8 +28,9 @@ struct EvaData
   float min_dist;
   float current_v;
   bool is_forward;
+  float3 u;
   __host__ __device__
-  EvaData():collision(false),min_dist(0),current_v(0),is_forward(true)
+  EvaData():collision(false),min_dist(0),current_v(0),is_forward(true),u(make_float3(0,0,0))
   {
 
   }

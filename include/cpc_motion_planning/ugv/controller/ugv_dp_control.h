@@ -141,10 +141,10 @@ public:
       }
       prev_i = i;
 
-      float3 u = dp_control(s, site_target);
-      m.model_forward(s,u,dt);
+      data.u = dp_control(s, site_target);
+      m.model_forward(s,data.u,dt);
 
-      cost += 0.5f*u.y*u.y + 1.0f*u.x*u.x;
+      cost += 0.5f*data.u.y*data.u.y + 0.5f*data.u.x*data.u.x;
       cost += eva.process_cost(s,map,t,data);
 
       update_collision_state(collision_state, data.min_dist, initial_dist, first_collision_time, t);

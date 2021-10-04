@@ -143,7 +143,13 @@ public:
         else
         {
           //normal mode
-          cost += 0.5f*nf_cost+0.25f*s.v*s.v + 1.0f*fabsf(s.w)*fabsf(s.v);//1.0f*sqrtf(0.005f*s.v*s.v + 1.0f*s.w*s.w*gain);
+          cost += 0.5f*nf_cost+0.25f*s.v*s.v;
+
+          //absolute centrifugal force
+          cost += 1.0f*fabsf(s.w)*fabsf(s.v);
+
+          //derivative of absolute centrifugal force
+          cost += 0.5f*(fabsf(s.w * data.u.x) + fabsf(s.v * data.u.y));
 
           //float yaw_diff;
           //if (is_forward)
