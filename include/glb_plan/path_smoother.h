@@ -73,8 +73,8 @@ private:
 
   float2 get_gradient(const CUDA_GEO::coord &ctr, const CUDA_GEO::coord &oth)
   {
-    float cost_ctr = edt2cost(m_gh->getGridStep()*m_gh->getEdtValue(ctr));
-    float cost_oth = edt2cost(m_gh->getGridStep()*m_gh->getEdtValue(oth));
+    float cost_ctr = edt2cost(m_gh->getEdt(ctr,0));
+    float cost_oth = edt2cost(m_gh->getEdt(oth,0));
     CUDA_GEO::coord diff = oth - ctr;
     float2 delta = make_float2(diff.x,diff.y);
     return (cost_ctr - cost_oth)*delta;

@@ -155,20 +155,6 @@ float GridGraph::getEdt(const CUDA_GEO::coord & s, const float default_value) co
   return _val_map[coord2index(s)].d * _gridstep;
 }
 
-void GridGraph::copyIdData(const cpc_aux_mapping::grid_map::ConstPtr &msg)
-{
-  if (msg->x_size != _w || msg->y_size != _h || msg->z_size != _d)
-  {
-    printf("Dimension mismatch during map data copying!\n Map is not copied!\n");
-    return;
-  }
-
-  setMapSpecs(CUDA_GEO::pos(static_cast<float>(msg->x_origin),
-                            static_cast<float>(msg->y_origin),
-                            static_cast<float>(msg->z_origin)), msg->width);
-  memcpy (_id_map, msg->payload8.data(), sizeof(nodeInfo)*static_cast<size_t>(_w*_h*_d));
-}
-
 void GridGraph::copyEdtData(const cpc_aux_mapping::grid_map::ConstPtr &msg)
 {
   if (msg->x_size != _w || msg->y_size != _h || msg->z_size != _d)
