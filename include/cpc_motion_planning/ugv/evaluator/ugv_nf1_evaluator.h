@@ -34,7 +34,8 @@ public:
     m_nf1_received = false;
     m_stuck = false;
     m_using_auto_direction = false;
-    m_max_speed = 1.0f;
+    m_R_F = 0.5f;
+    m_R_F_dot = 0.5f;
   }
 
   ~NF1Evaluator()
@@ -146,10 +147,10 @@ public:
           cost += 0.5f*nf_cost+0.25f*s.v*s.v;
 
           //absolute centrifugal force
-          cost += 1.0f*fabsf(s.w)*fabsf(s.v);
+          cost += m_R_F*fabsf(s.w)*fabsf(s.v);
 
           //derivative of absolute centrifugal force
-          cost += 0.5f*(fabsf(s.w * data.u.x) + fabsf(s.v * data.u.y));
+          cost += m_R_F_dot*(fabsf(s.w * data.u.x) + fabsf(s.v * data.u.y));
 
           //float yaw_diff;
           //if (is_forward)
@@ -192,7 +193,7 @@ public:
   NF1MapDT m_nf1_map;
   bool m_nf1_received;
   bool m_using_auto_direction;
-  float m_max_speed;
+  float m_R_F, m_R_F_dot;
 };
 }
 

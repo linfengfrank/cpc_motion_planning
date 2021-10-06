@@ -14,7 +14,7 @@ IntLocalPlanner::IntLocalPlanner():
   m_nf1_map(nullptr)
 {
   std::string dp_file_location;
-  float var_s, var_theta, step_dt, local_safety_radius;
+  float var_s, var_theta, step_dt, local_safety_radius, R_F, R_F_dot;
   int step_num;
   bool use_auto_direction;
   m_nh.param<std::string>("/dp_file_location",dp_file_location,"");
@@ -32,6 +32,8 @@ IntLocalPlanner::IntLocalPlanner():
   m_nh.param<double>("/turning_efficiency",m_turning_efficiency,1.0);
   m_nh.param<bool>("/use_adrc",m_use_adrc,true);
   m_nh.param<bool>("/allow_update_max_speed",m_allow_update_max_speed,false);
+  m_nh.param<float>("/R_F", R_F, 0.5f);
+  m_nh.param<float>("/R_F_dot", R_F_dot, 0.5f);
 
   m_nf1_sub = m_nh.subscribe("/nf1",1,&IntLocalPlanner::nf1_call_back, this);
 
@@ -49,6 +51,8 @@ IntLocalPlanner::IntLocalPlanner():
   m_pso_planner->m_eva.m_using_auto_direction = use_auto_direction;
   m_pso_planner->m_eva.m_safety_radius = local_safety_radius;
   m_pso_planner->m_eva.m_footprint_offset = m_footprint_offset;
+  m_pso_planner->m_eva.m_R_F = R_F;
+  m_pso_planner->m_eva.m_R_F_dot = R_F_dot;
 
   m_pso_planner->m_file_location = dp_file_location;
   m_pso_planner->initialize();
