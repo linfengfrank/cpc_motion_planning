@@ -1,5 +1,5 @@
 #include <ros/ros.h>
-#include <loc_plan/nf1based/integrated_local_planner.h>
+#include <loc_plan/integrated/pipeline.h>
 #include <chrono>
 
 float RandomFloat(float a, float b) {
@@ -15,7 +15,7 @@ int main(int argc, char *argv[])
 
 
 
-  IntLocalPlanner p;
+  Pipeline p;
   ros::spin();
 
 

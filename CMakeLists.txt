@@ -201,13 +201,20 @@ target_link_libraries(teb_node
     ${CUDA_LIBRARIES}
     ${catkin_LIBRARIES})
 
+#cuda_add_executable(integrated_planning_node
+#    src/loc_plan/nf1based/integrated_local_planner.cpp
+#    src/loc_plan/nf1based/integrated_local_planner_node.cpp
+#    src/loc_plan/ugv_base_local_planner.cpp
+#    src/pure_pursuit/pure_pursuit_ctrl.cpp
+#    src/kernel/pso_kernels.cu
+#    src/ltv_acc_filter.cpp)
+
 cuda_add_executable(integrated_planning_node
-    src/loc_plan/nf1based/integrated_local_planner.cpp
-    src/loc_plan/nf1based/integrated_local_planner_node.cpp
-    src/loc_plan/ugv_base_local_planner.cpp
-    src/pure_pursuit/pure_pursuit_ctrl.cpp
-    src/kernel/pso_kernels.cu
-    src/ltv_acc_filter.cpp)
+    src/loc_plan/integrated/integrated_local_planner_node.cpp
+    src/loc_plan/integrated/pipeline.cpp
+    src/loc_plan/integrated/state.cpp
+    src/loc_plan/integrated/normal_teb_state.cpp
+    src/loc_plan/integrated/start_idle_state.cpp)
 
 target_link_libraries(integrated_planning_node
     ${CUDA_curand_LIBRARY}

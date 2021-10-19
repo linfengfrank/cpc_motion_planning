@@ -1,4 +1,4 @@
-#include "loc_plan/nf1based/integrated_local_planner.h"
+#include "loc_plan/integrated/integrated_local_planner.h"
 #include "tf/tf.h"
 #include <chrono>
 #include <std_msgs/String.h>
