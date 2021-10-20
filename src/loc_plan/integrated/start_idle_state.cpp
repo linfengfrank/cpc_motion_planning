@@ -16,8 +16,9 @@ void StartIdleState::on_enter(Pipeline *p)
 #ifdef PRINT_STATE_DEBUG_INFO
   std::cout<<"Start_Idile "<< p->get_cycle()<<std::endl;
 #endif
+  // Update the norminal yaw state
   if (p->m_bb.m_slam_odo_received)
-    p->m_bb.m_ref_theta = p->get_heading(p->m_bb.m_slam_odo);
+    p->m_ref_theta = p->get_heading(p->m_bb.m_slam_odo);
 }
 
 void StartIdleState::on_exit(Pipeline *p)

@@ -214,7 +214,9 @@ cuda_add_executable(integrated_planning_node
     src/loc_plan/integrated/pipeline.cpp
     src/loc_plan/integrated/state.cpp
     src/loc_plan/integrated/normal_teb_state.cpp
-    src/loc_plan/integrated/start_idle_state.cpp)
+    src/loc_plan/integrated/start_idle_state.cpp
+    src/loc_plan/integrated/black_board.cpp
+    src/ltv_acc_filter.cpp)
 
 target_link_libraries(integrated_planning_node
     ${CUDA_curand_LIBRARY}
