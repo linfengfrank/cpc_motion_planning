@@ -1,5 +1,5 @@
-#include "loc_plan/integrated/normal_teb_state.h"
-#include "loc_plan/integrated/pipeline.h"
+#include "loc_plan/integrated/states/normal_teb_state.h"
+#include "loc_plan/integrated/local_planner_pipeline.h"
 
 NormalTebState::NormalTebState()
 {
@@ -63,21 +63,26 @@ NormalTebState::NormalTebState()
 
 }
 
-void NormalTebState::on_enter(Pipeline *p)
+void NormalTebState::attach_to_pipe(Pipeline *p)
+{
+  m_p = static_cast<LocalPlannerPipeline*>(p);
+}
+
+void NormalTebState::on_enter()
 {
 #ifdef PRINT_STATE_DEBUG_INFO
-  std::cout<<"Normal TEB "<< p->get_cycle()<<std::endl;
+  std::cout<<"Normal TEB "<< m_p->get_cycle()<<std::endl;
 #endif
 
   // Set driving direction
-  set_driving_dir(p);
+  set_driving_dir();
 
   // Setup the initial pose
-  UGV::UGVModel::State ini_state = p->m_bb.m_init_state;
+  UGV::UGVModel::State ini_state = m_p->m_bb.m_init_state;
   teb::PoseSE2 robot_pose(ini_state.p.x, ini_state.p.y, ini_state.theta);
 
   // Setup the goal pose
-  teb::PoseSE2 robot_goal(p->m_bb.m_carrot.p.x, p->m_bb.m_carrot.p.y, p->m_bb.m_carrot.theta);
+  teb::PoseSE2 robot_goal(m_p->m_bb.m_carrot.p.x, m_p->m_bb.m_carrot.p.y, m_p->m_bb.m_carrot.theta);
 
   // Setup the initial velocity
   geometry_msgs::Twist robot_vel;
@@ -86,10 +91,10 @@ void NormalTebState::on_enter(Pipeline *p)
 
   // Setup the EDT map
   if (!m_teb_planner->get_edt_map())
-    m_teb_planner->set_edt_map(p->m_bb.m_edt_map);
+    m_teb_planner->set_edt_map(m_p->m_bb.m_edt_map);
 
   // Get and set the initial guess of the trajectory
-  std::vector<double2> init = get_init_path_guess(p);
+  std::vector<double2> init = get_init_path_guess();
   //std::cout<<init.size()<<std::endl;
   m_teb_planner->set_init_plan(init);
 
@@ -131,27 +136,27 @@ void NormalTebState::on_enter(Pipeline *p)
   }
 
   // If not in ADRC mode (tracking mode), the simulated trajectory might collide with obstacle
-  if (!p->is_tracking_safe(p->m_bb.m_slam_odo, m_teb_traj))
+  if (!m_p->is_tracking_safe(m_p->m_bb.m_slam_odo, m_teb_traj))
   {
     m_plan_success = false;
     return;
   }
 }
 
-void NormalTebState::on_exit(Pipeline *p)
+void NormalTebState::on_exit()
 {
   if (is_true(SUCCESS))
   {
-    p->m_bb.m_ref_traj = m_teb_traj;
-    set_exec_drive_direction(p);
+    m_p->m_bb.m_ref_traj = m_teb_traj;
+    set_exec_drive_direction();
   }
   else
   {
-    p->full_stop_trajectory(p->m_bb.m_ref_traj,p->m_bb.m_init_state);
+    m_p->full_stop_trajectory(m_p->m_bb.m_ref_traj,m_p->m_bb.m_init_state);
   }
 }
 
-State& NormalTebState::toggle(Pipeline* pipe)
+State& NormalTebState::toggle()
 {
   return NormalTebState::getInstance();
 //  if(is_true(REACH))
@@ -174,19 +179,19 @@ State& NormalTebState::getInstance()
   return singleton;
 }
 
-void NormalTebState::check_proposition(Pipeline* pipe)
+void NormalTebState::check_proposition()
 {
   // First check wheter the planning is successful
-  check_prop(SUCCESS, pipe);
+  check_prop(SUCCESS);
 
   // Only check for reach and stuck when the plan is successful
   if (is_true(SUCCESS))
   {
-    check_prop(REACH,pipe);
+    check_prop(REACH);
 
     // If it already reached the target, no need to check STUCK.
     if(!is_true(REACH))
-      check_prop(STUCK,pipe);
+      check_prop(STUCK);
     else
       set_prop(STUCK,false);
   }
@@ -197,10 +202,10 @@ void NormalTebState::check_proposition(Pipeline* pipe)
   }
 }
 
-bool NormalTebState::check_stuck(Pipeline* pipe)
+bool NormalTebState::check_stuck()
 {
-  if(pipe->is_stuck(m_teb_traj, pipe->m_bb.m_carrot) ||
-     pipe->is_stuck_lowpass(pipe->m_bb.m_init_state,pipe->m_bb.m_carrot))
+  if(m_p->is_stuck(m_teb_traj, m_p->m_bb.m_carrot) ||
+     m_p->is_stuck_lowpass(m_p->m_bb.m_init_state,m_p->m_bb.m_carrot))
   {
     return true;
   }
@@ -210,13 +215,13 @@ bool NormalTebState::check_stuck(Pipeline* pipe)
   }
 }
 
-bool NormalTebState::check_reach(Pipeline* pipe)
+bool NormalTebState::check_reach()
 {
-  UGV::NF1Evaluator::Target goal = pipe->m_bb.m_goal;
-  UGV::UGVModel::State ini_state = pipe->m_bb.m_init_state;
-  float2 carrot_diff = ini_state.p - pipe->m_bb.m_carrot.p;
+  UGV::NF1Evaluator::Target goal = m_p->m_bb.m_goal;
+  UGV::UGVModel::State ini_state = m_p->m_bb.m_init_state;
+  float2 carrot_diff = ini_state.p - m_p->m_bb.m_carrot.p;
   //Check both goal and carrot are reached
-  if(pipe->is_pos_reached(ini_state, goal.s, goal.reaching_radius) &&
+  if(m_p->is_pos_reached(ini_state, goal.s, goal.reaching_radius) &&
      sqrtf(dot(carrot_diff,carrot_diff)) < goal.reaching_radius)
   {
     return true;
@@ -227,7 +232,7 @@ bool NormalTebState::check_reach(Pipeline* pipe)
   }
 }
 
-bool NormalTebState::check_success(Pipeline *pipe)
+bool NormalTebState::check_success()
 {
   if (m_plan_success)
     return true;
@@ -235,24 +240,24 @@ bool NormalTebState::check_success(Pipeline *pipe)
     return false;
 }
 
-std::vector<double2> NormalTebState::get_init_path_guess(Pipeline *pipe)
+std::vector<double2> NormalTebState::get_init_path_guess()
 {
   std::vector<double2> guess;
-  UGV::UGVModel::State ini_state = pipe->m_bb.m_init_state;
+  UGV::UGVModel::State ini_state = m_p->m_bb.m_init_state;
 
   CUDA_GEO::pos p;
   p.x = ini_state.p.x;
   p.y = ini_state.p.y;
   guess.push_back(make_double2(p.x, p.y));
-  CUDA_GEO::coord c = pipe->m_bb.m_nf1_map->pos2coord(p);
+  CUDA_GEO::coord c = m_p->m_bb.m_nf1_map->pos2coord(p);
   CUDA_GEO::coord bc;
   // First calculate the positions
   while(1)
   {
-    if(get_smallest_child(pipe->m_bb.m_nf1_map,c,bc))
+    if(get_smallest_child(m_p->m_bb.m_nf1_map,c,bc))
     {
       c = bc;
-      p = pipe->m_bb.m_nf1_map->coord2pos(c);
+      p = m_p->m_bb.m_nf1_map->coord2pos(c);
       guess.push_back(make_double2(p.x, p.y));
     }
     else
@@ -364,23 +369,23 @@ float NormalTebState::acc_filter(float curr_v, float tgt_v, const float acc_lim,
   return achieved_v;
 }
 
-void NormalTebState::set_driving_dir(Pipeline *p)
+void NormalTebState::set_driving_dir()
 {
   // setup the drive type
-  if (p->m_bb.m_task_drive_dir == cpc_aux_mapping::nf1_task::TYPE_FORWARD)
+  if (m_p->m_bb.m_task_drive_dir == cpc_aux_mapping::nf1_task::TYPE_FORWARD)
     m_teb_planner->m_is_forward = true;
 
-  else if (p->m_bb.m_task_drive_dir == cpc_aux_mapping::nf1_task::TYPE_BACKWARD)
+  else if (m_p->m_bb.m_task_drive_dir == cpc_aux_mapping::nf1_task::TYPE_BACKWARD)
     m_teb_planner->m_is_forward = false;
 
-  else if (p->m_bb.m_task_drive_dir == cpc_aux_mapping::nf1_task::TYPE_ROTATE)
+  else if (m_p->m_bb.m_task_drive_dir == cpc_aux_mapping::nf1_task::TYPE_ROTATE)
     m_teb_planner->m_is_forward = true;
 }
 
-void NormalTebState::set_exec_drive_direction(Pipeline *p)
+void NormalTebState::set_exec_drive_direction()
 {
   // For the TEB planner, its driving direction is pre-determined
-  p->m_bb.m_exec_drive_dir = p->bool_to_drive_type(m_teb_planner->m_is_forward);
+  m_p->m_bb.m_exec_drive_dir = m_p->bool_to_drive_type(m_teb_planner->m_is_forward);
 }
 
 

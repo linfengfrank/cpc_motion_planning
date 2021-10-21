@@ -4,6 +4,8 @@
 #include <loc_plan/integrated/state.h>
 #include <iostream>
 
+class LocalPlannerPipeline;
+
 // Every state has to be a singleton class
 class StartIdleState : public State
 {
@@ -16,11 +18,11 @@ class StartIdleState : public State
         MAX_SIZE
     };
 public:
-    void on_enter(Pipeline* pipe);
-    void on_exit(Pipeline* pipe);
-    State& toggle(Pipeline* pipe);
-    //void check_proposition(Pipeline* pipe);
+    void on_enter();
+    void on_exit();
+    State& toggle();
     static State & getInstance(); // Get instance of the singleton class
+    void attach_to_pipe(Pipeline *p);
 
 private:
     // private constructor, copy constructor and = operator for the singleton class
@@ -29,8 +31,11 @@ private:
     StartIdleState& operator=(const StartIdleState& other);
 
 private:
+    LocalPlannerPipeline *m_p = nullptr;
+
+private:
     // Proposition evaluation functions
-    bool check_ready_to_go(Pipeline* pipe);
+    bool check_ready_to_go();
 
 };
 

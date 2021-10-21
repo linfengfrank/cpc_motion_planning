@@ -15,7 +15,7 @@
 #define ADD_PROPOSITION(PPS, eva_function) \
 { \
   Proposition p; \
-  p.eva_func = std::bind(eva_function, this, std::placeholders::_1); \
+  p.eva_func = std::bind(eva_function, this); \
   m_props[PPS] = p; \
   } \
 
@@ -25,10 +25,10 @@ struct Proposition
 {
   bool checked; // Whether the proposition has been checked
   bool state; // State of the proposition
-  std::function<bool(Pipeline*)> eva_func; // Function pointer to evaluation function
-  void evaulate(Pipeline* pipe) // Call evaluation function
+  std::function<bool()> eva_func; // Function pointer to evaluation function
+  void evaulate() // Call evaluation function
   {
-    state = eva_func(pipe);
+    state = eva_func();
     checked = true;
   }
 
@@ -48,18 +48,20 @@ struct TokenLog
 class State
 {
 public:
-  virtual void on_enter(Pipeline* pipe) = 0; // The stuff a state will execute during entrance
-  virtual void on_exit(Pipeline* pipe) = 0; // The stuff a state will execute during exit
-  virtual State& toggle(Pipeline* pipe) = 0; // Determine the next state
-  virtual void check_props(Pipeline* pipe) // Check propositions
+  virtual void on_enter() = 0; // The stuff a state will execute during entrance
+  virtual void on_exit() = 0; // The stuff a state will execute during exit
+  virtual State& toggle() = 0; // Determine the next state
+  virtual void check_props() // Check propositions
   {
     for (Proposition &p : m_props)
-      p.evaulate(pipe);
+      p.evaulate();
   }
 
-  void check_prop(int i, Pipeline* pipe)
+  virtual void attach_to_pipe(Pipeline *p) = 0; // Attach to a specific pipeline
+
+  void check_prop(int i)
   {
-    m_props[i].evaulate(pipe);
+    m_props[i].evaulate();
   }
 
   void set_prop(int i, bool val)
