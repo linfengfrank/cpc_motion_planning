@@ -12,7 +12,7 @@ public:
     virtual ~Pipeline();
 
     // The entrance function that run our state machine
-    void execute(const ros::TimerEvent&);
+    virtual void execute(const ros::TimerEvent&);
 
     // Preparation function called per cycle
     virtual void prepare_cycle() = 0;
@@ -30,6 +30,12 @@ public:
     int get_cycle()
     {
         return m_cycle;
+    }
+
+    void start_timer()
+    {
+      //Start the timer
+      m_planning_timer = m_nh.createTimer(ros::Duration(0.2), &Pipeline::execute, this);
     }
 
 protected:

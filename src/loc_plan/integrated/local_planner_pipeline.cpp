@@ -10,9 +10,7 @@ LocalPlannerPipeline::LocalPlannerPipeline()
   StartIdleState::getInstance().attach_to_pipe(this);
 
   m_state = &StartIdleState::getInstance();
-
-
-
+  start_timer();
 }
 
 void LocalPlannerPipeline::prepare_cycle()

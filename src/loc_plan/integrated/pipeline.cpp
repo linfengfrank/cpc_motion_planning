@@ -4,9 +4,6 @@ Pipeline::Pipeline()
 {
   m_state = nullptr;
   m_cycle = 0;
-
-  //Start the timer
-  m_planning_timer = m_nh.createTimer(ros::Duration(0.2), &Pipeline::execute, this);
 }
 
 Pipeline::~Pipeline()
