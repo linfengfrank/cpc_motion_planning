@@ -3,8 +3,20 @@
 #include "loc_plan/integrated/pipeline.h"
 #include <loc_plan/integrated/black_board.h>
 
+//#define PRED_STATE
 class LocalPlannerPipeline : public Pipeline
 {
+#ifdef PRED_STATE
+public:
+  struct CmdLog
+  {
+    ros::Time t;
+    int id;
+    float v;
+    float w;
+    float theta;
+  };
+#endif
 public:
   LocalPlannerPipeline();
 
@@ -94,13 +106,18 @@ public:
 
   bool is_pos_reached(const UGV::UGVModel::State &s, const UGV::UGVModel::State &tgt_state, float reaching_radius = 0.8f);
 
-  void update_reference_log(const cpc_motion_planning::ref_data &ref, const ros::Time &curr_t);
-
   std::vector<StampedUGVState> make_stamped_reference(int start_idx, const std::vector<UGV::UGVModel::State> &raw_ref);
 
   void update_norminal_states(const std::vector<StampedUGVState> &stamped_ref);
 
   int bool_to_drive_type(bool is_forward);
+
+  // Store the reference into a queue for state prediction purpose
+#ifdef PRED_STATE
+  std::deque<CmdLog> m_cmd_q; // A queue used to log the command value
+  void update_reference_log(const cpc_motion_planning::ref_data &ref, const ros::Time &curr_t);
+  void load_into_queue(const cpc_motion_planning::ref_data &ref, const ros::Time &curr_t);
+#endif
 
 };
 

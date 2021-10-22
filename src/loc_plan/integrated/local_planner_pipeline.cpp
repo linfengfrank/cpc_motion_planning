@@ -27,6 +27,9 @@ void LocalPlannerPipeline::finish_cycle()
     m_bb.m_stamped_ref_traj = make_stamped_reference(m_ref_start_idx, m_bb.m_ref_traj);
     update_norminal_states(m_bb.m_stamped_ref_traj);
     m_bb.publish_reference(m_bb.m_stamped_ref_traj);
+#ifdef PRED_STATE
+    update_reference_log(m_bb.m_ref_msg, m_cycle_start_time);
+#endif
     increase_ref_gen_count();
 #ifdef SHOW_PC
     m_bb.plot_ref_trajectory(m_bb.m_ref_traj);
@@ -367,9 +370,9 @@ bool LocalPlannerPipeline::is_pos_reached(const UGV::UGVModel::State &s, const U
     return false;
 }
 
+#ifdef PRED_STATE
 void LocalPlannerPipeline::update_reference_log(const cpc_motion_planning::ref_data &ref, const ros::Time &curr_t)
 {
-#ifdef PRED_STATE
   if(m_cmd_q.empty())
   {
     // queue is empty, just directly add ref into queue
@@ -385,8 +388,24 @@ void LocalPlannerPipeline::update_reference_log(const cpc_motion_planning::ref_d
     }
     load_into_queue(ref, curr_t);
   }
-#endif
 }
+
+void LocalPlannerPipeline::load_into_queue(const cpc_motion_planning::ref_data &ref, const ros::Time &curr_t)
+{
+  for (int i=0; i<ref.cols; i++)
+  {
+    CmdLog tmp;
+    tmp.t = curr_t + ros::Duration((i+1)*PSO::PSO_CTRL_DT);
+
+    tmp.id = ref.ids[i];
+    tmp.v = ref.data[i*ref.rows];
+    tmp.w = ref.data[i*ref.rows + 1];
+    tmp.theta = ref.data[i*ref.rows + 2];
+    //std::cout<<"id: "<<ref.ids[i]<<", "<<tmp.t<<std::endl;
+    m_cmd_q.push_back(tmp);
+  }
+}
+#endif
 
 std::vector<StampedUGVState> LocalPlannerPipeline::make_stamped_reference(int start_idx, const std::vector<UGV::UGVModel::State> & raw_ref)
 {

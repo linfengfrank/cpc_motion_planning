@@ -14,7 +14,7 @@ Blackboard::Blackboard()
   m_raw_odom_sub = m_nh.subscribe("/raw_odom", 1, &Blackboard::raw_odo_call_back, this);
 #ifdef ADD_DELAY
   m_sub.subscribe(m_nh, "/slam_odom", 1);
-  m_seq = new message_filters::TimeSequencer<nav_msgs::Odometry> (m_sub, ros::Duration(0.2), ros::Duration(0.01), 10);
+  m_seq = new message_filters::TimeSequencer<nav_msgs::Odometry> (m_sub, ros::Duration(0.5), ros::Duration(0.01), 100);
   m_seq->registerCallback(&Blackboard::slam_odo_call_back, this);
 #else
   m_slam_odom_sub = m_nh.subscribe("/slam_odom", 1, &Blackboard::slam_odo_call_back, this);

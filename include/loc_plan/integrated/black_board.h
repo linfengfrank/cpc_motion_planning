@@ -14,6 +14,7 @@
 #include <pcl/point_types.h>
 
 #define SHOW_PC
+//#define ADD_DELAY
 
 #ifdef ADD_DELAY
 #include <message_filters/time_sequencer.h>
@@ -74,6 +75,11 @@ private:
 
   void add_to_ref_msg(cpc_motion_planning::ref_data& ref_msg, int ref_counter,
                       const UGV::UGVModel::State &traj_s, const ros::Time &t);
+
+#ifdef ADD_DELAY
+  message_filters::Subscriber<nav_msgs::Odometry> m_sub;
+  message_filters::TimeSequencer<nav_msgs::Odometry> *m_seq;
+#endif
 
 private:
   ros::NodeHandle m_nh;
