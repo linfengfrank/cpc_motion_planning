@@ -3,6 +3,7 @@
 #include "loc_plan/integrated/states/normal_teb_state.h"
 #include "loc_plan/integrated/states/normal_pso_state.h"
 #include "loc_plan/integrated/states/stuck_state.h"
+#include "loc_plan/integrated/states/brake_state.h"
 #include "tf/tf.h"
 
 
@@ -12,6 +13,7 @@ LocalPlannerPipeline::LocalPlannerPipeline()
   StartIdleState::getInstance().attach_to_pipe(this);
   NormalPsoState::getInstance().attach_to_pipe(this);
   StuckState::getInstance().attach_to_pipe(this);
+  BrakeState::getInstance().attach_to_pipe(this);
 
   m_state = &StartIdleState::getInstance();
   start_timer();

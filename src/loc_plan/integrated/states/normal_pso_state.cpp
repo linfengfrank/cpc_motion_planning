@@ -2,7 +2,7 @@
 #include "loc_plan/integrated/local_planner_pipeline.h"
 #include "loc_plan/integrated/states/normal_teb_state.h"
 #include "loc_plan/integrated/states/stuck_state.h"
-
+#include "loc_plan/integrated/states/brake_state.h"
 NormalPsoState::NormalPsoState()
 {
   // Resize the proposition container
@@ -109,7 +109,8 @@ State& NormalPsoState::toggle()
   }
   else
   {
-    return NormalPsoState::getInstance();
+    m_p->add_token();
+    return BrakeState::getInstance();
   }
 }
 

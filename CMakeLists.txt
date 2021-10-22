@@ -218,6 +218,7 @@ cuda_add_executable(integrated_planning_node
     src/loc_plan/integrated/states/normal_teb_state.cpp
     src/loc_plan/integrated/states/start_idle_state.cpp
     src/loc_plan/integrated/states/stuck_state.cpp
+    src/loc_plan/integrated/states/brake_state.cpp
     src/loc_plan/integrated/black_board.cpp
     src/ltv_acc_filter.cpp
     src/kernel/pso_kernels.cu)
