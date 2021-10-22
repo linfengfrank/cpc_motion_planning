@@ -44,6 +44,7 @@ protected:
     ros::Time m_cycle_start_time;
     ros::Timer m_planning_timer; // Main planning timer
     ros::NodeHandle m_nh;
+    bool m_state_switch_detected = true; // Flag denoting whether we are switching to another state
 
 public:
 

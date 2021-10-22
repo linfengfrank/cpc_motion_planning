@@ -28,29 +28,34 @@ class NormalPsoState : public State
   };
 
 public:
-  void on_enter() override;
-  void on_exit() override;
+  void on_execute() override;
+  void on_finish() override;
   State& toggle() override;
   void check_props() override;
   static State & getInstance(); // Get instance of the singleton class
   void attach_to_pipe(Pipeline *p) override;
 
+  void on_activation() override {}
+  void on_deactivation() override {}
+
   // Use the PSO planner to calculate the trajectory
-  template<class Model, class Controller, class Evaluator, class Swarm>
-  void calculate_trajectory(PSO::Planner<Model, Controller, Evaluator, Swarm> *planner,
-                            EDTMap * edt_map,
+  void calculate_trajectory(EDTMap * edt_map,
                             std::vector<UGV::UGVModel::State> &traj,
-                            bool use_de = false)
+                            bool is_stuck = false,
+                            bool pure_de = false)
   {
+    m_pso_planner->m_eva.m_stuck = is_stuck;
     // conduct the motion planning
-    if (use_de)
-      planner->plan_de(*edt_map);
+    if (pure_de)
+      m_pso_planner->plan_de(*edt_map);
     else
-      planner->plan(*edt_map);
+      m_pso_planner->plan(*edt_map);
 
     // generate the trajectory
-    traj = planner->generate_trajectory();
+    traj = m_pso_planner->generate_trajectory();
   }
+
+  bool is_result_safe();
 
 private:
   LocalPlannerPipeline *m_p = nullptr;

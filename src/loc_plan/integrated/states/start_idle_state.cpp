@@ -2,7 +2,7 @@
 #include "loc_plan/integrated/local_planner_pipeline.h"
 #include "loc_plan/integrated/states/normal_teb_state.h"
 #include "loc_plan/integrated/states/normal_pso_state.h"
-
+#include "loc_plan/integrated/states/stuck_state.h"
 StartIdleState::StartIdleState()
 {
   // Resize the proposition container
@@ -12,7 +12,7 @@ StartIdleState::StartIdleState()
   ADD_PROPOSITION(READY_TO_GO, &StartIdleState::check_ready_to_go);
 }
 
-void StartIdleState::on_enter()
+void StartIdleState::on_execute()
 {
 #ifdef PRINT_STATE_DEBUG_INFO
   std::cout<<"Start_Idile "<< m_p->get_cycle()<<std::endl;
@@ -22,7 +22,7 @@ void StartIdleState::on_enter()
     m_p->m_ref_theta = m_p->get_heading(m_p->m_bb.m_slam_odo);
 }
 
-void StartIdleState::on_exit()
+void StartIdleState::on_finish()
 {
 
 }
@@ -36,7 +36,7 @@ State& StartIdleState::toggle()
 {
   if(is_true(READY_TO_GO))
   {
-    return NormalPsoState::getInstance();
+    return NormalTebState::getInstance();
   }
   else
   {

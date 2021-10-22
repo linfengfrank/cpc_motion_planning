@@ -48,8 +48,10 @@ struct TokenLog
 class State
 {
 public:
-  virtual void on_enter() = 0; // The stuff a state will execute during entrance
-  virtual void on_exit() = 0; // The stuff a state will execute during exit
+  virtual void on_activation() = 0; // When enter this state from another state
+  virtual void on_deactivation() = 0; // When leave this state to another state
+  virtual void on_execute() = 0; // The stuff a state will execute during entrance
+  virtual void on_finish() = 0; // The stuff a state will execute during exit
   virtual State& toggle() = 0; // Determine the next state
   virtual void check_props() // Check propositions
   {

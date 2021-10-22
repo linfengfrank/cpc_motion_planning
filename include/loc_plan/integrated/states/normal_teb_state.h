@@ -25,12 +25,15 @@ class NormalTebState : public State
     MAX_SIZE
   };
 public:
-  void on_enter() override;
-  void on_exit() override;
+  void on_execute() override;
+  void on_finish() override;
   State& toggle() override;
   void check_props() override;
   static State & getInstance(); // Get instance of the singleton class
   void attach_to_pipe(Pipeline *p) override;
+
+  void on_activation() override {}
+  void on_deactivation() override {}
 
 private:
   LocalPlannerPipeline *m_p = nullptr;

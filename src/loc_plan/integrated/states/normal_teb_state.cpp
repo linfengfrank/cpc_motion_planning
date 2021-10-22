@@ -1,6 +1,7 @@
 #include "loc_plan/integrated/states/normal_teb_state.h"
 #include "loc_plan/integrated/local_planner_pipeline.h"
-
+#include "loc_plan/integrated/states/normal_pso_state.h"
+#include "loc_plan/integrated/states/stuck_state.h"
 NormalTebState::NormalTebState()
 {
   // Read in the parameters
@@ -68,7 +69,7 @@ void NormalTebState::attach_to_pipe(Pipeline *p)
   m_p = static_cast<LocalPlannerPipeline*>(p);
 }
 
-void NormalTebState::on_enter()
+void NormalTebState::on_execute()
 {
 #ifdef PRINT_STATE_DEBUG_INFO
   std::cout<<"Normal TEB "<< m_p->get_cycle()<<std::endl;
@@ -143,7 +144,7 @@ void NormalTebState::on_enter()
   }
 }
 
-void NormalTebState::on_exit()
+void NormalTebState::on_finish()
 {
   if (is_true(SUCCESS))
   {
@@ -158,19 +159,28 @@ void NormalTebState::on_exit()
 
 State& NormalTebState::toggle()
 {
-  return NormalTebState::getInstance();
-//  if(is_true(REACH))
-//  {
-//    return NormalTebState::getInstance();
-//  }
-//  else if (is_true(STUCK))
-//  {
-//    return NormalTebState::getInstance();
-//  }
-//  else
-//  {
-//    return NormalTebState::getInstance();
-//  }
+  if (is_true(SUCCESS))
+  {
+    if(is_true(REACH))
+    {
+      return NormalTebState::getInstance();
+    }
+    else if (is_true(STUCK))
+    {
+      return StuckState::getInstance();
+    }
+    else
+    {
+      return NormalTebState::getInstance();
+    }
+  }
+  else
+  {
+    m_p->add_token();
+    return NormalPsoState::getInstance();
+  }
+//  return NormalTebState::getInstance();
+
 }
 
 State& NormalTebState::getInstance()

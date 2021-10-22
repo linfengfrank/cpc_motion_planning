@@ -1,5 +1,7 @@
 #include "loc_plan/integrated/states/normal_pso_state.h"
 #include "loc_plan/integrated/local_planner_pipeline.h"
+#include "loc_plan/integrated/states/normal_teb_state.h"
+#include "loc_plan/integrated/states/stuck_state.h"
 
 NormalPsoState::NormalPsoState()
 {
@@ -51,7 +53,7 @@ void NormalPsoState::attach_to_pipe(Pipeline *p)
   m_p = static_cast<LocalPlannerPipeline*>(p);
 }
 
-void NormalPsoState::on_enter()
+void NormalPsoState::on_execute()
 {
 #ifdef PRINT_STATE_DEBUG_INFO
   std::cout<<"Normal_PSO "<< m_p->get_cycle()<<std::endl;
@@ -71,23 +73,11 @@ void NormalPsoState::on_enter()
   m_pso_planner->m_eva.setTarget(m_p->m_bb.m_goal);
 
   // Do the actual PSO planning
-  m_plan_success = true;
-  calculate_trajectory<SIMPLE_UGV>(m_pso_planner, m_p->m_bb.m_edt_map, m_pso_traj, m_use_de);
-
-  // Check whether the planned trajectory is successful (has collision or not)
-  if (m_pso_planner->result.collision)
-  {
-    m_plan_success = false;
-  }
-
-  // If not in ADRC mode (tracking mode), the simulated trajectory might collide with obstacle
-  if (!m_p->is_tracking_safe(m_p->m_bb.m_slam_odo, m_pso_traj))
-  {
-    m_plan_success = false;
-  }
+  calculate_trajectory(m_p->m_bb.m_edt_map, m_pso_traj, false, m_use_de);
+  m_plan_success = is_result_safe();
 }
 
-void NormalPsoState::on_exit()
+void NormalPsoState::on_finish()
 {
   if (is_true(SUCCESS))
   {
@@ -102,7 +92,25 @@ void NormalPsoState::on_exit()
 
 State& NormalPsoState::toggle()
 {
-  return NormalPsoState::getInstance();
+  if (is_true(SUCCESS))
+  {
+    if(is_true(REACH))
+    {
+      return NormalTebState::getInstance();
+    }
+    else if (is_true(STUCK))
+    {
+      return StuckState::getInstance();
+    }
+    else
+    {
+      return NormalTebState::getInstance();
+    }
+  }
+  else
+  {
+    return NormalPsoState::getInstance();
+  }
 }
 
 void NormalPsoState::check_props()
@@ -208,5 +216,21 @@ void NormalPsoState::set_exec_drive_direction()
     m_p->m_bb.m_exec_drive_dir = m_p->bool_to_drive_type(m_pso_planner->m_eva.is_forward);
 }
 
+bool NormalPsoState::is_result_safe()
+{
+  // Check whether the planned trajectory is successful (has collision or not)
+  if (m_pso_planner->result.collision)
+  {
+    return false;
+  }
+
+  // If not in ADRC mode (tracking mode), the simulated trajectory might collide with obstacle
+  if (!m_p->is_tracking_safe(m_p->m_bb.m_slam_odo, m_pso_traj))
+  {
+    return false;
+  }
+
+  return true;
+}
 
 
