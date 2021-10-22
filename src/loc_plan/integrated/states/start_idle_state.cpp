@@ -1,6 +1,7 @@
 #include "loc_plan/integrated/states/start_idle_state.h"
 #include "loc_plan/integrated/local_planner_pipeline.h"
 #include "loc_plan/integrated/states/normal_teb_state.h"
+#include "loc_plan/integrated/states/normal_pso_state.h"
 
 StartIdleState::StartIdleState()
 {
@@ -35,7 +36,7 @@ State& StartIdleState::toggle()
 {
   if(is_true(READY_TO_GO))
   {
-    return NormalTebState::getInstance();
+    return NormalPsoState::getInstance();
   }
   else
   {

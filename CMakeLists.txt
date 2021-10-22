@@ -214,10 +214,12 @@ cuda_add_executable(integrated_planning_node
     src/loc_plan/integrated/pipeline.cpp
     src/loc_plan/integrated/state.cpp
     src/loc_plan/integrated/local_planner_pipeline.cpp
+    src/loc_plan/integrated/states/normal_pso_state.cpp
     src/loc_plan/integrated/states/normal_teb_state.cpp
     src/loc_plan/integrated/states/start_idle_state.cpp
     src/loc_plan/integrated/black_board.cpp
-    src/ltv_acc_filter.cpp)
+    src/ltv_acc_filter.cpp
+    src/kernel/pso_kernels.cu)
 
 target_link_libraries(integrated_planning_node
     ${CUDA_curand_LIBRARY}

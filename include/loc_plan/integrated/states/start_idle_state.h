@@ -18,11 +18,11 @@ class StartIdleState : public State
         MAX_SIZE
     };
 public:
-    void on_enter();
-    void on_exit();
-    State& toggle();
+    void on_enter() override;
+    void on_exit() override;
+    State& toggle() override;
     static State & getInstance(); // Get instance of the singleton class
-    void attach_to_pipe(Pipeline *p);
+    void attach_to_pipe(Pipeline *p) override;
 
 private:
     // private constructor, copy constructor and = operator for the singleton class

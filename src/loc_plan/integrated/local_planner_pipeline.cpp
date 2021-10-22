@@ -1,6 +1,7 @@
 #include "loc_plan/integrated/local_planner_pipeline.h"
 #include "loc_plan/integrated/states/start_idle_state.h"
 #include "loc_plan/integrated/states/normal_teb_state.h"
+#include "loc_plan/integrated/states/normal_pso_state.h"
 #include "tf/tf.h"
 
 
@@ -8,6 +9,7 @@ LocalPlannerPipeline::LocalPlannerPipeline()
 {
   NormalTebState::getInstance().attach_to_pipe(this);
   StartIdleState::getInstance().attach_to_pipe(this);
+  NormalPsoState::getInstance().attach_to_pipe(this);
 
   m_state = &StartIdleState::getInstance();
   start_timer();

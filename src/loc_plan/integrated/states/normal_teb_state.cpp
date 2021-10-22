@@ -179,7 +179,7 @@ State& NormalTebState::getInstance()
   return singleton;
 }
 
-void NormalTebState::check_proposition()
+void NormalTebState::check_props()
 {
   // First check wheter the planning is successful
   check_prop(SUCCESS);
