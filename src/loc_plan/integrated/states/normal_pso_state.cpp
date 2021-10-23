@@ -3,6 +3,7 @@
 #include "loc_plan/integrated/states/normal_teb_state.h"
 #include "loc_plan/integrated/states/stuck_state.h"
 #include "loc_plan/integrated/states/brake_state.h"
+#include "loc_plan/integrated/states/reach_state.h"
 NormalPsoState::NormalPsoState()
 {
   // Resize the proposition container
@@ -81,7 +82,7 @@ State& NormalPsoState::toggle()
   {
     if(is_true(REACH))
     {
-      return NormalPsoState::getInstance();
+      return ReachState::getInstance();
     }
     else if (is_true(STUCK))
     {

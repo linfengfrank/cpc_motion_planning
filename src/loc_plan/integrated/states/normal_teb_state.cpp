@@ -2,6 +2,7 @@
 #include "loc_plan/integrated/local_planner_pipeline.h"
 #include "loc_plan/integrated/states/normal_pso_state.h"
 #include "loc_plan/integrated/states/stuck_state.h"
+#include "loc_plan/integrated/states/reach_state.h"
 NormalTebState::NormalTebState()
 {
   // Read in the parameters
@@ -163,7 +164,7 @@ State& NormalTebState::toggle()
   {
     if(is_true(REACH))
     {
-      return NormalTebState::getInstance();
+      return ReachState::getInstance();
     }
     else if (is_true(STUCK))
     {
