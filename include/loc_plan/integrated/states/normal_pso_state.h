@@ -42,20 +42,11 @@ public:
   void calculate_trajectory(EDTMap * edt_map,
                             std::vector<UGV::UGVModel::State> &traj,
                             bool is_stuck = false,
-                            bool pure_de = false)
-  {
-    m_pso_planner->m_eva.m_stuck = is_stuck;
-    // conduct the motion planning
-    if (pure_de)
-      m_pso_planner->plan_de(*edt_map);
-    else
-      m_pso_planner->plan(*edt_map);
+                            bool pure_de = false);
 
-    // generate the trajectory
-    traj = m_pso_planner->generate_trajectory();
-  }
-
+  bool run_pso_planner(std::vector<UGV::UGVModel::State> &traj, bool is_stuck);
   bool is_result_safe();
+  bool is_tracking_safe(const std::vector<UGV::UGVModel::State> &traj);
 
 private:
   LocalPlannerPipeline *m_p = nullptr;

@@ -59,22 +59,7 @@ void NormalPsoState::on_execute()
   std::cout<<"Normal_PSO "<< m_p->get_cycle()<<std::endl;
 #endif
 
-  // Set up the initial state
-  m_pso_planner->m_model.set_ini_state(m_p->m_bb.m_init_state);
-
-  // Set up the NF1 map
-  m_pso_planner->m_eva.m_nf1_map = *(m_p->m_bb.m_nf1_map);
-  m_pso_planner->m_eva.m_nf1_received = true;
-
-  // Setup the drive type
-  set_driving_dir();
-
-  // Setup the goal
-  m_pso_planner->m_eva.setTarget(m_p->m_bb.m_goal);
-
-  // Do the actual PSO planning
-  calculate_trajectory(m_p->m_bb.m_edt_map, m_pso_traj, false, m_use_de);
-  m_plan_success = is_result_safe();
+  m_plan_success = run_pso_planner(m_pso_traj,false);
 }
 
 void NormalPsoState::on_finish()
@@ -96,7 +81,7 @@ State& NormalPsoState::toggle()
   {
     if(is_true(REACH))
     {
-      return NormalTebState::getInstance();
+      return NormalPsoState::getInstance();
     }
     else if (is_true(STUCK))
     {
@@ -221,17 +206,55 @@ bool NormalPsoState::is_result_safe()
 {
   // Check whether the planned trajectory is successful (has collision or not)
   if (m_pso_planner->result.collision)
-  {
     return false;
-  }
+  else
+    return true;
+}
 
+bool NormalPsoState::is_tracking_safe(const std::vector<UGV::UGVModel::State> &traj)
+{
   // If not in ADRC mode (tracking mode), the simulated trajectory might collide with obstacle
-  if (!m_p->is_tracking_safe(m_p->m_bb.m_slam_odo, m_pso_traj))
-  {
+  if (!m_p->is_tracking_safe(m_p->m_bb.m_slam_odo, traj))
     return false;
-  }
+  else
+    return true;
+}
 
-  return true;
+// Use the PSO planner to calculate the trajectory
+void NormalPsoState::calculate_trajectory(EDTMap * edt_map,
+                          std::vector<UGV::UGVModel::State> &traj,
+                          bool is_stuck,
+                          bool pure_de)
+{
+  m_pso_planner->m_eva.m_stuck = is_stuck;
+  // conduct the motion planning
+  if (pure_de)
+    m_pso_planner->plan_de(*edt_map);
+  else
+    m_pso_planner->plan(*edt_map);
+
+  // generate the trajectory
+  traj = m_pso_planner->generate_trajectory();
+}
+
+bool NormalPsoState::run_pso_planner(std::vector<UGV::UGVModel::State> &traj, bool is_stuck)
+{
+  // Set up the initial state
+  m_pso_planner->m_model.set_ini_state(m_p->m_bb.m_init_state);
+
+  // Set up the NF1 map
+  m_pso_planner->m_eva.m_nf1_map = *(m_p->m_bb.m_nf1_map);
+  m_pso_planner->m_eva.m_nf1_received = true;
+
+  // Setup the drive type
+  set_driving_dir();
+
+  // Setup the goal
+  m_pso_planner->m_eva.setTarget(m_p->m_bb.m_goal);
+
+  // Do the actual PSO planning
+  calculate_trajectory(m_p->m_bb.m_edt_map, traj, is_stuck, m_use_de);
+  return (is_result_safe() && is_tracking_safe(traj));
 }
 
 

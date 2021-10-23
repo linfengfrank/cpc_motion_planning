@@ -2,7 +2,7 @@
 #include "loc_plan/integrated/local_planner_pipeline.h"
 #include "loc_plan/integrated/states/normal_teb_state.h"
 #include "loc_plan/integrated/states/normal_pso_state.h"
-
+#include "loc_plan/integrated/states/brake_state.h"
 StuckState::StuckState()
 {
   // Resize the proposition container
@@ -10,7 +10,7 @@ StuckState::StuckState()
 
   // Add in the propositions
   ADD_PROPOSITION(TIME_UP, &StuckState::check_time_up);
-  ADD_PROPOSITION(SUCCESS, &StuckState::check_time_up);
+  ADD_PROPOSITION(SUCCESS, &StuckState::check_success);
 }
 
 void StuckState::on_execute()
@@ -19,9 +19,8 @@ void StuckState::on_execute()
   std::cout<<"Stuck "<< m_p->get_cycle()<<std::endl;
 #endif
 
- m_pso->calculate_trajectory(m_p->m_bb.m_edt_map, m_stuck_traj, true);
+  m_plan_success = m_pso->run_pso_planner(m_stuck_traj,true);
 
- m_plan_success = m_pso->is_result_safe();
 }
 
 void StuckState::on_finish()
@@ -43,13 +42,21 @@ void StuckState::attach_to_pipe(Pipeline *p)
 
 State& StuckState::toggle()
 {
-  if(is_true(TIME_UP))
+  if(is_true(SUCCESS))
   {
-    return NormalTebState::getInstance();
+    if(is_true(TIME_UP))
+    {
+      return NormalPsoState::getInstance();
+    }
+    else
+    {
+      return StuckState::getInstance();
+    }
   }
   else
   {
-    return StuckState::getInstance();
+    m_p->add_token();
+    return BrakeState::getInstance();
   }
 }
 
