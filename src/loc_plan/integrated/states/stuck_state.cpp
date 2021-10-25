@@ -46,7 +46,7 @@ State& StuckState::toggle()
   {
     if(is_true(TIME_UP))
     {
-      return NormalPsoState::getInstance();
+      return NormalTebState::getInstance();
     }
     else
     {
