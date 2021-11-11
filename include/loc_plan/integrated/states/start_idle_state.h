@@ -1,7 +1,7 @@
 #ifndef START_IDLE_STATE_H
 #define START_IDLE_STATE_H
 
-#include <loc_plan/integrated/state.h>
+#include <cpc_motion_planning/state.h>
 #include <iostream>
 
 class LocalPlannerPipeline;

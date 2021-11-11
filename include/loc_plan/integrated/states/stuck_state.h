@@ -1,7 +1,7 @@
 #ifndef STUCK_STATE_H
 #define STUCK_STATE_H
 
-#include <loc_plan/integrated/state.h>
+#include <cpc_motion_planning/state.h>
 #include <iostream>
 #include <cpc_motion_planning/pso/pso_planner.h>
 

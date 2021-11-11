@@ -29,11 +29,11 @@ struct StampedUGVState
   ros::Time t;
 };
 
-class Blackboard
+class LocalBlackboard
 {
 public:
   typedef pcl::PointCloud<pcl::PointXYZ> PointCloud;
-  Blackboard();
+  LocalBlackboard();
   void publish_status_info(std::string &str);
 
   void plot_ref_trajectory(const std::vector<UGV::UGVModel::State> &traj);

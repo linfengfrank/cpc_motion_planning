@@ -1,7 +1,7 @@
 #ifndef NORMAL_PSO_STATE_H
 #define NORMAL_PSO_STATE_H
 
-#include <loc_plan/integrated/state.h>
+#include <cpc_motion_planning/state.h>
 #include <iostream>
 #include <ros/ros.h>
 #include <cpc_motion_planning/ugv/swarm/ugv_swarm.h>

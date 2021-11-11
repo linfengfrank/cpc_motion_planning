@@ -211,8 +211,8 @@ target_link_libraries(teb_node
 
 cuda_add_executable(integrated_planning_node
     src/loc_plan/integrated/integrated_local_planner_node.cpp
-    src/loc_plan/integrated/pipeline.cpp
-    src/loc_plan/integrated/state.cpp
+    src/pipeline.cpp
+    src/state.cpp
     src/loc_plan/integrated/local_planner_pipeline.cpp
     src/loc_plan/integrated/states/normal_pso_state.cpp
     src/loc_plan/integrated/states/normal_teb_state.cpp
@@ -220,7 +220,7 @@ cuda_add_executable(integrated_planning_node
     src/loc_plan/integrated/states/stuck_state.cpp
     src/loc_plan/integrated/states/brake_state.cpp
     src/loc_plan/integrated/states/reach_state.cpp
-    src/loc_plan/integrated/black_board.cpp
+    src/loc_plan/integrated/local_black_board.cpp
     src/ltv_acc_filter.cpp
     src/kernel/pso_kernels.cu)
 
@@ -232,11 +232,15 @@ target_link_libraries(integrated_planning_node
     OsqpEigen::OsqpEigen)
 
 cuda_add_executable(nf1_mid_planning_node
+    src/pipeline.cpp
+    src/state.cpp
     src/mid_plan/utils/grid_graph.cpp
     src/mid_plan/utils/dijkstra.cpp
     src/mid_plan/utils/a_star.cpp
     src/mid_plan/nf1based/nf1_mid_planner_node.cpp
     src/mid_plan/nf1based/nf1_mid_planner.cpp
+    src/mid_plan/nf1based/mid_planner_pipeline.cpp
+    src/mid_plan/nf1based/mid_black_board.cpp
     ../cpc_aux_mapping/src/kernel/edt_post_process.cu)
 
 target_link_libraries(nf1_mid_planning_node

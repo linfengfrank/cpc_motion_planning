@@ -1,6 +1,6 @@
 #ifndef NOMARL_STATE_H
 #define NOMARL_STATE_H
-#include <loc_plan/integrated/state.h>
+#include <cpc_motion_planning/state.h>
 #include <iostream>
 #include <teb_local_planner/optimal_planner.h>
 #include <teb_local_planner/homotopy_class_planner.h>

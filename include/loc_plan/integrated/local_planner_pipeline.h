@@ -1,7 +1,7 @@
 #ifndef LOCAL_PLANNER_PIPELINE_H
 #define LOCAL_PLANNER_PIPELINE_H
-#include "loc_plan/integrated/pipeline.h"
-#include <loc_plan/integrated/black_board.h>
+#include "cpc_motion_planning/pipeline.h"
+#include <loc_plan/integrated/local_black_board.h>
 
 //#define PRED_STATE
 class LocalPlannerPipeline : public Pipeline
@@ -27,7 +27,7 @@ public:
   void finish_cycle();
 
 public:
-  Blackboard m_bb; // Blackboard for data communication
+  LocalBlackboard m_bb; // Blackboard for data communication
   // Helper variables
   float m_stuck_pbty = 0;
   float m_lowpass_stuck_pbty = 0;

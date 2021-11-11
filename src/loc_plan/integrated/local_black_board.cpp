@@ -1,7 +1,7 @@
-#include <loc_plan/integrated/black_board.h>
+#include <loc_plan/integrated/local_black_board.h>
 #include <std_msgs/Int32.h>
 
-Blackboard::Blackboard()
+LocalBlackboard::LocalBlackboard()
 {
   // Read in the parameters
   m_nh.param<double>("/turning_efficiency",m_turning_efficiency,1.0);
@@ -9,15 +9,15 @@ Blackboard::Blackboard()
   m_nh.param<float>("cpc_footprint_offset",m_footprint_offset,0.25f);
 
   // Add in the subscribers
-  m_nf1_sub = m_nh.subscribe("/nf1",1,&Blackboard::nf1_call_back, this);
-  m_map_sub = m_nh.subscribe("/edt_map", 1, &Blackboard::map_call_back, this);
-  m_raw_odom_sub = m_nh.subscribe("/raw_odom", 1, &Blackboard::raw_odo_call_back, this);
+  m_nf1_sub = m_nh.subscribe("/nf1",1,&LocalBlackboard::nf1_call_back, this);
+  m_map_sub = m_nh.subscribe("/edt_map", 1, &LocalBlackboard::map_call_back, this);
+  m_raw_odom_sub = m_nh.subscribe("/raw_odom", 1, &LocalBlackboard::raw_odo_call_back, this);
 #ifdef ADD_DELAY
   m_sub.subscribe(m_nh, "/slam_odom", 1);
   m_seq = new message_filters::TimeSequencer<nav_msgs::Odometry> (m_sub, ros::Duration(0.5), ros::Duration(0.01), 100);
-  m_seq->registerCallback(&Blackboard::slam_odo_call_back, this);
+  m_seq->registerCallback(&LocalBlackboard::slam_odo_call_back, this);
 #else
-  m_slam_odom_sub = m_nh.subscribe("/slam_odom", 1, &Blackboard::slam_odo_call_back, this);
+  m_slam_odom_sub = m_nh.subscribe("/slam_odom", 1, &LocalBlackboard::slam_odo_call_back, this);
 #endif
 
   // Add in the publishers
@@ -35,7 +35,7 @@ Blackboard::Blackboard()
   m_ref_msg.rows = 5;
 }
 
-void Blackboard::publish_status_info(std::string &str)
+void LocalBlackboard::publish_status_info(std::string &str)
 {
   //Publish the ref status string for loging
   std_msgs::String msg;
@@ -43,7 +43,7 @@ void Blackboard::publish_status_info(std::string &str)
   m_status_pub.publish(msg);
 }
 
-void Blackboard::plot_ref_trajectory(const std::vector<UGV::UGVModel::State> &traj)
+void LocalBlackboard::plot_ref_trajectory(const std::vector<UGV::UGVModel::State> &traj)
 {
   for (UGV::UGVModel::State traj_s : traj)
   {
@@ -57,7 +57,7 @@ void Blackboard::plot_ref_trajectory(const std::vector<UGV::UGVModel::State> &tr
   m_traj_pnt_cld->clear();
 }
 
-void Blackboard::plot_sim_trajectory(const std::vector<UGV::UGVModel::State> &traj)
+void LocalBlackboard::plot_sim_trajectory(const std::vector<UGV::UGVModel::State> &traj)
 {
   for (UGV::UGVModel::State traj_s : traj)
   {
@@ -71,7 +71,7 @@ void Blackboard::plot_sim_trajectory(const std::vector<UGV::UGVModel::State> &tr
   m_traj_pnt_cld->clear();
 }
 
-void Blackboard::publish_reference(const std::vector<StampedUGVState>& stamped_traj)
+void LocalBlackboard::publish_reference(const std::vector<StampedUGVState>& stamped_traj)
 {
   // Clear old msg
   m_ref_msg.data.clear();
@@ -93,7 +93,7 @@ void Blackboard::publish_reference(const std::vector<StampedUGVState>& stamped_t
   m_drive_dir_pub.publish(exec_drive_dir);
 }
 
-void Blackboard::nf1_call_back(const cpc_aux_mapping::nf1_task::ConstPtr &msg)
+void LocalBlackboard::nf1_call_back(const cpc_aux_mapping::nf1_task::ConstPtr &msg)
 {
   m_goal_received = true;
   // Setup the NF1 map
@@ -134,7 +134,7 @@ void Blackboard::nf1_call_back(const cpc_aux_mapping::nf1_task::ConstPtr &msg)
   m_carrot.theta = msg->carrot_theta;
 }
 
-void Blackboard::map_call_back(const cpc_aux_mapping::grid_map::ConstPtr &msg)
+void LocalBlackboard::map_call_back(const cpc_aux_mapping::grid_map::ConstPtr &msg)
 {
   m_map_received = true;
   if (m_edt_map == nullptr)
@@ -161,20 +161,20 @@ void Blackboard::map_call_back(const cpc_aux_mapping::grid_map::ConstPtr &msg)
     memcpy(m_edt_map->m_hst_sd_map,msg->payload8.data(),static_cast<size_t>(m_edt_map->m_byte_size));
 }
 
-void Blackboard::raw_odo_call_back(const nav_msgs::Odometry::ConstPtr &msg)
+void LocalBlackboard::raw_odo_call_back(const nav_msgs::Odometry::ConstPtr &msg)
 {
   m_raw_odo_received = true;
   m_raw_odo = *msg;
 }
 
-void Blackboard::slam_odo_call_back(const nav_msgs::Odometry::ConstPtr &msg)
+void LocalBlackboard::slam_odo_call_back(const nav_msgs::Odometry::ConstPtr &msg)
 {
   m_slam_odo_received = true;
   m_slam_odo = *msg;
 }
 
 
-void Blackboard::add_to_ref_msg(cpc_motion_planning::ref_data& ref_msg, int ref_counter, const UGV::UGVModel::State &traj_s, const ros::Time &t)
+void LocalBlackboard::add_to_ref_msg(cpc_motion_planning::ref_data& ref_msg, int ref_counter, const UGV::UGVModel::State &traj_s, const ros::Time &t)
 {
   ref_msg.ids.push_back(ref_counter);
   ref_msg.time.push_back(t.toSec());
