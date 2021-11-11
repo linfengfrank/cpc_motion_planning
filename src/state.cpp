@@ -1,5 +1,5 @@
-#include <loc_plan/integrated/state.h>
-#include <loc_plan/integrated/pipeline.h>
+#include <cpc_motion_planning/state.h>
+#include <cpc_motion_planning/pipeline.h>
 
 void State::issue_token(Pipeline* pipe)
 {

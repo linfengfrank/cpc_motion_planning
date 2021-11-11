@@ -1,4 +1,4 @@
-#include "loc_plan/integrated/pipeline.h"
+#include "cpc_motion_planning/pipeline.h"
 
 Pipeline::Pipeline()
 {

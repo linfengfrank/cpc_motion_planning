@@ -1,6 +1,6 @@
 #ifndef UGV_PLANNER_H
 #define UGV_PLANNER_H
-#include <loc_plan/integrated/state.h>
+#include <cpc_motion_planning/state.h>
 #include <ros/ros.h>
 
 
