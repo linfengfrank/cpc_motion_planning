@@ -2,6 +2,7 @@
 
 MidBlackboard::MidBlackboard():
   m_received_map(false),
+  m_received_goal(false),
   m_drive_dir(-1),
   m_safety_radius(0.51f)
 {
@@ -80,19 +81,22 @@ void MidBlackboard::map_call_back(const cpc_aux_mapping::grid_map::ConstPtr& msg
 
 void MidBlackboard::goal_call_back(const geometry_msgs::PoseStamped::ConstPtr &msg)
 {
-  m_mission_mgr.set_loiter_mission(CUDA_GEO::pos(msg->pose.position.x, msg->pose.position.y, msg->pose.position.z));
+  m_received_goal= true;
+  m_loiter_goal = CUDA_GEO::pos(msg->pose.position.x, msg->pose.position.y, msg->pose.position.z);
+  float3 act_path_goal = make_float3(m_loiter_goal.x, m_loiter_goal.y, 0);
+  update_nf1_guidance_map_info(cpc_aux_mapping::nf1_task::TYPE_FORWARD, cpc_aux_mapping::nf1_task::ID_LOITER,
+                               m_loiter_goal_counter++, act_path_goal);
 }
 
 void MidBlackboard::glb_path_call_back(const cpc_motion_planning::path::ConstPtr &msg)
 {
-  m_mission_mgr.set_fullauto_mission(*msg);
-//  if (m_received_path || m_path.request_ctt != msg->request_ctt)
-//  {
-//    std::cout<<"Global path: "<<msg->request_ctt<<" received."<<std::endl;
-//    // Read in the data files
-//    m_received_path = true;
-//    m_path = *msg;
-//  }
+  if (m_received_path || m_path.request_ctt != msg->request_ctt)
+  {
+    std::cout<<"Global path: "<<msg->request_ctt<<" received."<<std::endl;
+    // Read in the data files
+    m_received_path = true;
+    m_path = *msg;
+  }
 }
 
 void MidBlackboard::slam_odo_call_back(const nav_msgs::Odometry::ConstPtr &msg)

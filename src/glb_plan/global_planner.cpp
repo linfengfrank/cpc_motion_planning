@@ -1,7 +1,8 @@
 #include "glb_plan/global_planner.h"
 #include "tf/tf.h"
+#include "cpc_aux_mapping/nf1_task.h"
 GlobalPlanner::GlobalPlanner():
-  m_glb_path_id(0),
+  m_glb_path_id(cpc_aux_mapping::nf1_task::ID_FIRST_MISSION),
   m_map_loaded(false),
   m_odom_received(false),
   m_home_position(make_float2(0,0)),

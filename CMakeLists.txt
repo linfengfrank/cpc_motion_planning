@@ -241,6 +241,8 @@ cuda_add_executable(nf1_mid_planning_node
     src/mid_plan/nf1based/nf1_mid_planner.cpp
     src/mid_plan/nf1based/mid_planner_pipeline.cpp
     src/mid_plan/nf1based/mid_black_board.cpp
+    src/mid_plan/nf1based/mission_manager.cpp
+    src/mid_plan/nf1based/states/idle_state.cpp
     ../cpc_aux_mapping/src/kernel/edt_post_process.cu)
 
 target_link_libraries(nf1_mid_planning_node
