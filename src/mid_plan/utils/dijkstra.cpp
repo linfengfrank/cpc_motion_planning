@@ -248,14 +248,14 @@ CUDA_GEO::coord Dijkstra::get_first_free_coord(CUDA_GEO::coord start,float safet
                 }
             }
         }
-
-        while(!_Q.empty()) _Q.pop();
-
-        if(found_free)
-            return mc;
-        else
-            return start;
     }
+
+    while(!_Q.empty()) _Q.pop();
+
+    if(found_free)
+        return mc;
+    else
+        return start;
 }
 
 
