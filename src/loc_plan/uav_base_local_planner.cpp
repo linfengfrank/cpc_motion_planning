@@ -14,7 +14,7 @@ UAVLocalMotionPlanner::UAVLocalMotionPlanner():
 #ifdef SHOWPC
   m_traj_pub = m_nh.advertise<PointCloud> ("pred_traj", 1);
   m_traj_pnt_cld = PointCloud::Ptr(new PointCloud);
-  m_traj_pnt_cld->header.frame_id = "/world";
+  m_traj_pnt_cld->header.frame_id = "/map";
 #endif
 }
 
