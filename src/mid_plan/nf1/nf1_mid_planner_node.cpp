@@ -258,7 +258,7 @@ int main(int argc, char **argv)
   // Subscribers
   ros::Subscriber map_sub = nh.subscribe("edt_map", 1, &mapCallback);
   ros::Subscriber glb_tgt_sub = nh.subscribe("/move_base_simple/goal", 1, &goalCallback);
-  ros::Subscriber pose_sub = nh.subscribe("/ground_truth/state", 1, &vehicle_pose_call_back);
+  ros::Subscriber pose_sub = nh.subscribe("ground_truth/state", 1, &vehicle_pose_call_back);
   ros::Subscriber task_tgt_sub = nh.subscribe("task_planner/goal", 1, &goalCallback);
 
   // other initilization

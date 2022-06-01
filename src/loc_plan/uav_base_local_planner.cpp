@@ -10,7 +10,7 @@ UAVLocalMotionPlanner::UAVLocalMotionPlanner():
   m_use_hst_map(false)
 {
   m_map_sub = m_nh.subscribe("edt_map", 1, &UAVLocalMotionPlanner::map_call_back, this);
-  m_pose_sub = m_nh.subscribe("/ground_truth/state", 1, &UAVLocalMotionPlanner::vehicle_pose_call_back, this);
+  m_pose_sub = m_nh.subscribe("ground_truth/state", 1, &UAVLocalMotionPlanner::vehicle_pose_call_back, this);
 #ifdef SHOWPC
   m_traj_pub = m_nh.advertise<PointCloud> ("pred_traj", 1);
   m_traj_pnt_cld = PointCloud::Ptr(new PointCloud);

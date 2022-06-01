@@ -7,14 +7,14 @@
         <arg name="vehicle" value="$(arg vehicle)"/>
     </include>
     <node pkg="cpc_motion_planning" type="nf1_mid_planning_node" name="nf1_mid_planning_node" output="screen">
-        <remap from= "/edt_map" to= "$(arg vehicle)/edt_map"/>
-        <!-- <remap from= "/ground_truth/odom" to= "$(arg vehicle)/mavros/odometry/out"/> -->
+        <remap from= "edt_map" to= "/cost_map"/>
+        <remap from= "ground_truth/state" to= "/iris_0/mavros/local_position/odom"/>
         <!-- <remap from= "/stuck" to= "$(arg vehicle)/stuck"/> -->
     </node>
     <node pkg="cpc_motion_planning" type="nf1_loc_planning_node" name="nf1_loc_planning_node" output="screen">
-        <remap from= "/ground_truth/state" to= "$(arg vehicle)/odom"/>
+        <remap from= "ground_truth/state" to= "/iris_0/mavros/local_position/odom"/>
         <remap from= "/mid_layer/goal" to= "$(arg vehicle)/mid_layer/goal"/>
-        <remap from= "/edt_map" to= "$(arg vehicle)/edt_map"/>
+        <remap from= "edt_map" to= "/cost_map"/>
     </node>
 
 </group>
